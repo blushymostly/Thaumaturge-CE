@@ -1,0 +1,109 @@
+{
+  "type": "thaumaturge:infusion",
+  "research": "thaumaturge:rod_silverwood",
+  "central": {
+    "item": "thaumaturge:log_silverwood"
+  },
+  "components": [
+    {
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:aer"
+          }
+        }
+      },
+      "type": "forge:partial_nbt"
+    },
+    {
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:terra"
+          }
+        }
+      },
+      "type": "forge:partial_nbt"
+    },
+    {
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:aqua"
+          }
+        }
+      },
+      "type": "forge:partial_nbt"
+    },
+    {
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:ignis"
+          }
+        }
+      },
+      "type": "forge:partial_nbt"
+    },
+    {
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:ordo"
+          }
+        }
+      },
+      "type": "forge:partial_nbt"
+    },
+    {
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:perditio"
+          }
+        }
+      },
+      "type": "forge:partial_nbt"
+    }
+  ],
+  "aspects": [
+    {
+      "amount": 9,
+      "aspect": "thaumaturge:aer"
+    },
+    {
+      "amount": 9,
+      "aspect": "thaumaturge:terra"
+    },
+    {
+      "amount": 9,
+      "aspect": "thaumaturge:aqua"
+    },
+    {
+      "amount": 9,
+      "aspect": "thaumaturge:ignis"
+    },
+    {
+      "amount": 9,
+      "aspect": "thaumaturge:ordo"
+    },
+    {
+      "amount": 9,
+      "aspect": "thaumaturge:perditio"
+    },
+    {
+      "amount": 9,
+      "aspect": "thaumaturge:praecantatio"
+    }
+  ],
+  "instability": 5,
+  "result": {
+    "item": "thaumaturge:wand_rod_silverwood"
+  }
+}

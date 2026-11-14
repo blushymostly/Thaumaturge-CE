@@ -100,6 +100,7 @@ public final class ThaumaturgeClient {
         event.registerBlockEntityRenderer(TTBlockEntities.ARCANE_WORKBENCH.get(), WorkbenchWandRenderer::new);
         event.registerBlockEntityRenderer(TTBlockEntities.RESEARCH_TABLE.get(), ResearchTableRenderer::new);
         event.registerBlockEntityRenderer(TTBlockEntities.NODE.get(), NodeRenderer::new);
+        event.registerBlockEntityRenderer(TTBlockEntities.JAR_NODE.get(), NodeRenderer::new);
         event.registerBlockEntityRenderer(TTBlockEntities.HUNGRY_CHEST.get(), HungryChestRenderer::new);
         event.registerBlockEntityRenderer(TTBlockEntities.DIOPTRA.get(), DioptraRenderer::new);
         event.registerBlockEntityRenderer(TTBlockEntities.INFUSION_MATRIX.get(),

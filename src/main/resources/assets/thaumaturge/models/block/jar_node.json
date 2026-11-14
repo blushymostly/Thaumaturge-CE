@@ -1,6 +1,3 @@
 {
-  "parent": "minecraft:block/cube_all",
-  "textures": {
-    "all": "thaumaturge:block/jar_side"
-  }
+  "parent": "thaumaturge:block/jar_normal"
 }

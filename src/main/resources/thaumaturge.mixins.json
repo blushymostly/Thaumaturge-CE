@@ -10,7 +10,7 @@
     "world.level.block.entity.AbstractFurnaceBlockEntityAccessor",
     "compat.expatternprovider.InfinityCellCreativeTabMixin"
   ],
-  "client": [],
+  "client": ["client.ItemInHandRendererMixin"],
   "injectors": {
     "defaultRequire": 1
   }

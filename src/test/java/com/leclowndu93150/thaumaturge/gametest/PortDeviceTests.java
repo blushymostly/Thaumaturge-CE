@@ -6,6 +6,7 @@ import com.leclowndu93150.thaumaturge.api.aspect.AspectList;
 import com.leclowndu93150.thaumaturge.api.aspect.TTAspects;
 import com.leclowndu93150.thaumaturge.api.nodes.NodeType;
 import com.leclowndu93150.thaumaturge.content.aura.AuraManager;
+import com.leclowndu93150.thaumaturge.content.aura.BlockEntityRechargePedestal;
 import com.leclowndu93150.thaumaturge.content.aura.node.BlockEntityNode;
 import com.leclowndu93150.thaumaturge.content.aura.node.NodeData;
 import com.leclowndu93150.thaumaturge.content.aura.relay.VisRelayNetwork;
@@ -153,12 +154,20 @@ public final class PortDeviceTests {
                 restored.load(nodeTag);
                 helper.assertTrue(restored.isEnergized() && VisRelayNetwork.connections(level, benchPos).size() == 1,
                         "The relay did not recover its energized source after reloading block-entity data");
-                helper.setBlock(new BlockPos(2, 2, 2), Blocks.STONE);
-                helper.assertTrue(VisRelayNetwork.connections(level, benchPos).isEmpty(), "The relay still drew through a solid block");
             } finally {
                 aura.setVis(savedVis);
             }
-            helper.succeed();
+            helper.setBlock(bench, TTBlocks.RECHARGE_PEDESTAL.get());
+            var pedestal = (BlockEntityRechargePedestal) helper.getBlockEntity(bench);
+            pedestal.setItem(new net.minecraft.world.item.ItemStack(com.leclowndu93150.thaumaturge.registry.TTItems.WAND.get()));
+            helper.runAfterDelay(15, () -> {
+                helper.assertTrue(com.leclowndu93150.thaumaturge.content.item.WandCharge.stored(pedestal.getItem(), TTAspects.AER) > 0,
+                        "The pedestal did not receive vis through relays beyond direct node range");
+                helper.setBlock(new BlockPos(2, 2, 2), Blocks.STONE);
+                helper.assertTrue(VisRelayNetwork.connections(level, helper.absolutePos(bench)).isEmpty(),
+                        "The relay still drew through a solid block");
+                helper.succeed();
+            });
         });
     }
 

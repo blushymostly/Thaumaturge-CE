@@ -1,6 +1,6 @@
 {
-  "parent": "minecraft:block/cube_all",
   "textures": {
-    "all": "thaumaturge:block/vis_battery_1"
-  }
+    "all": "thaumaturge:block/vis_battery_0"
+  },
+  "parent": "minecraft:block/cube_all"
 }

@@ -1,0 +1,6 @@
+{
+  "textures": {
+    "all": "thaumaturge:block/vis_battery_1"
+  },
+  "parent": "minecraft:block/cube_all"
+}

@@ -1,14 +1,23 @@
 package com.leclowndu93150.thaumaturge.content.item;
 
 import com.leclowndu93150.thaumaturge.content.particle.SparkleParticleOptions;
+import com.leclowndu93150.thaumaturge.network.TTNetwork;
+import com.leclowndu93150.thaumaturge.network.packet.ClientboundAuraDrawPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.network.PacketDistributor;
 
 final class WandFx {
     private WandFx() {}
+
+    static void drawAura(ServerLevel level, Player player, Vec3 origin, int color) {
+        var target = new PacketDistributor.TargetPoint(origin.x, origin.y, origin.z, 32, level.dimension());
+        TTNetwork.CHANNEL.send(PacketDistributor.NEAR.with(() -> target),
+                new ClientboundAuraDrawPacket(player.getId(), player.getUsedItemHand(), origin, color));
+    }
 
     static Vec3 tip(Player player, InteractionHand hand) {
         Vec3 forward = player.getLookAngle();

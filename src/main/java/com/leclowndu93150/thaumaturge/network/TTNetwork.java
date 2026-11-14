@@ -2,6 +2,7 @@ package com.leclowndu93150.thaumaturge.network;
 
 import com.leclowndu93150.thaumaturge.TTIds;
 import com.leclowndu93150.thaumaturge.network.packet.ClientboundAspectGainPacket;
+import com.leclowndu93150.thaumaturge.network.packet.ClientboundAuraDrawPacket;
 import com.leclowndu93150.thaumaturge.network.packet.ClientboundAuraSnapshotPacket;
 import com.leclowndu93150.thaumaturge.network.packet.ClientboundKnowledgeSyncPacket;
 import com.leclowndu93150.thaumaturge.network.packet.ServerboundRequestAuraChunkPacket;
@@ -22,7 +23,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public final class TTNetwork {
-    private static final String PROTOCOL = "6";
+    private static final String PROTOCOL = "7";
     public static final SimpleChannel CHANNEL = NetworkRegistry.ChannelBuilder.named(TTIds.rl("main")).networkProtocolVersion(() -> PROTOCOL)
             .clientAcceptedVersions(PROTOCOL::equals).serverAcceptedVersions(PROTOCOL::equals).simpleChannel();
 
@@ -73,6 +74,9 @@ public final class TTNetwork {
         CHANNEL.messageBuilder(ServerboundDeconCollectPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(ServerboundDeconCollectPacket::encode).decoder(ServerboundDeconCollectPacket::decode)
                 .consumerMainThread(ServerboundDeconCollectPacket::handle).add();
+        CHANNEL.messageBuilder(ClientboundAuraDrawPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(ClientboundAuraDrawPacket::encode).decoder(ClientboundAuraDrawPacket::decode)
+                .consumerMainThread(ClientboundAuraDrawPacket::handle).add();
     }
 
     public static void sendToPlayer(Object packet, ServerPlayer player) {

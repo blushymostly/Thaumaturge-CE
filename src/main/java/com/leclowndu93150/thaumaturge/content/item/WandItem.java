@@ -1,5 +1,7 @@
 package com.leclowndu93150.thaumaturge.content.item;
 
+import com.leclowndu93150.thaumaturge.TTIds;
+import com.leclowndu93150.thaumaturge.registry.TTAttachments;
 import com.leclowndu93150.thaumaturge.registry.TTItemData;
 import com.leclowndu93150.thaumaturge.api.aura.AuraHelper;
 import com.leclowndu93150.thaumaturge.content.world.crystal.BlockCrystal;
@@ -20,6 +22,9 @@ import net.minecraft.world.phys.Vec3;
 import java.util.function.Consumer;
 import com.leclowndu93150.thaumaturge.client.render.item.WandRenderer;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -39,6 +44,9 @@ public class WandItem extends Item {
     private static final int CHARGE_INTERVAL = 5;
     private static final int REFINE_CENTIVIS = 10;
     private static final int RAW_VIS_RATIO = 3;
+    private static final ResourceLocation ADVANCED_TAPPING = TTIds.rl("node_tapper_1");
+    private static final ResourceLocation MASTER_TAPPING = TTIds.rl("node_tapper_2");
+    private static final ResourceLocation NODE_PRESERVATION = TTIds.rl("node_preserve");
 
     public WandItem(Properties properties) {
         super(properties.stacksTo(1));
@@ -47,7 +55,19 @@ public class WandItem extends Item {
     @Override
     public void initializeClient(Consumer<IClientItemExtensions> consumer) {
         consumer.accept(new IClientItemExtensions() {
+            private static final HumanoidModel.ArmPose AIMING =
+                    HumanoidModel.ArmPose.create("THAUMATURGE_WAND", false, (model, entity, arm) -> {
+                        var castingArm = arm == HumanoidArm.RIGHT ? model.rightArm : model.leftArm;
+                        castingArm.xRot = model.head.xRot - Mth.PI / 4;
+                        castingArm.yRot = model.head.yRot;
+                        castingArm.zRot = 0;
+                    });
             private WandRenderer renderer;
+
+            @Override
+            public HumanoidModel.ArmPose getArmPose(LivingEntity entity, InteractionHand hand, ItemStack stack) {
+                return entity.isUsingItem() && entity.getUsedItemHand() == hand ? AIMING : null;
+            }
 
             @Override
             public BlockEntityWithoutLevelRenderer getCustomRenderer() {
@@ -67,7 +87,7 @@ public class WandItem extends Item {
 
     @Override
     public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
-        return slotChanged || !(newStack.getItem() instanceof WandItem) || isGreatwood(oldStack) != isGreatwood(newStack)
+        return slotChanged || !(newStack.getItem() instanceof WandItem) || !rod(oldStack).equals(rod(newStack))
                 || !ItemStack.matches(focus(oldStack), focus(newStack));
     }
 
@@ -82,6 +102,9 @@ public class WandItem extends Item {
     @Override
     public InteractionResult useOn(UseOnContext context) {
         Player player = context.getPlayer();
+        if (player != null && com.leclowndu93150.thaumaturge.content.aura.node.NodeJarRitual.use(context)) {
+            return InteractionResult.sidedSuccess(context.getLevel().isClientSide);
+        }
         return player == null ? InteractionResult.PASS : use(context.getLevel(), player, context.getHand()).getResult();
     }
 
@@ -106,7 +129,7 @@ public class WandItem extends Item {
 
     @Override
     public UseAnim getUseAnimation(ItemStack stack) {
-        return UseAnim.BOW;
+        return UseAnim.NONE;
     }
 
     @Override
@@ -116,10 +139,9 @@ public class WandItem extends Item {
         BlockHitResult hit = target(player);
         BlockEntityNode node = targetNode(level, hit);
         if (node != null) {
-            ResourceLocation aspect = drainPrimal(wand, node);
+            ResourceLocation aspect = tapNode(server, player, wand, node);
             if (aspect != null) {
-                WandFx.stream(server, Vec3.atCenterOf(node.getBlockPos()), WandFx.tip(player, player.getUsedItemHand()),
-                        TTAspects.get(aspect).color());
+                node.recordDrain(player, TTAspects.get(aspect).color());
             }
             return;
         }
@@ -138,10 +160,10 @@ public class WandItem extends Item {
         double drawn = AuraHelper.drainVis(level, player.blockPosition(), rawCost, false);
         int gained = WandCharge.add(wand, aspect, (int) (drawn * WandCharge.CENTIVIS_PER_VIS / RAW_VIS_RATIO));
         if (gained > 0) {
-            var random = level.getRandom();
-            Vec3 origin = player.getEyePosition().add((random.nextDouble() - 0.5) * 0.6,
-                    random.nextDouble() * 0.3, (random.nextDouble() - 0.5) * 0.6);
-            WandFx.stream(level, origin, WandFx.tip(player, player.getUsedItemHand()), TTAspects.get(aspect).color());
+            Vec3 origin = hit.getType() == HitResult.Type.BLOCK
+                    ? hit.getLocation().add(Vec3.atLowerCornerOf(hit.getDirection().getNormal()).scale(0.03))
+                    : player.getEyePosition().add(player.getLookAngle().scale(2.5));
+            WandFx.drawAura(level, player, origin, TTAspects.get(aspect).color());
         }
     }
 
@@ -158,6 +180,28 @@ public class WandItem extends Item {
 
     public static boolean drawFromNode(ItemStack wand, BlockEntityNode node) {
         return drainPrimal(wand, node) != null;
+    }
+
+    private static @Nullable ResourceLocation tapNode(ServerLevel level, Player player, ItemStack wand, BlockEntityNode node) {
+        if (node.isEnergized()) return drainPrimal(wand, node);
+
+        var knowledge = TTAttachments.knowledge(player);
+        int strength = 1;
+        if (knowledge.isComplete(ADVANCED_TAPPING)) strength++;
+        if (knowledge.isComplete(MASTER_TAPPING)) strength++;
+        int reserve = !player.isShiftKeyDown() && !rod(wand).equals("wood") && knowledge.isComplete(NODE_PRESERVATION) ? 1 : 0;
+        var eligible = WandCharge.PRIMALS.stream()
+                .filter(aspect -> node.getAspects().amountOf(aspect) > reserve
+                        && WandCharge.room(wand, aspect) >= WandCharge.CENTIVIS_PER_VIS)
+                .toList();
+        if (eligible.isEmpty()) return null;
+
+        ResourceLocation aspect = eligible.get(level.random.nextInt(eligible.size()));
+        int room = WandCharge.room(wand, aspect) / WandCharge.CENTIVIS_PER_VIS;
+        int offered = Math.min(strength, node.getAspects().amountOf(aspect) - reserve);
+        int taken = node.drain(aspect, Math.min(offered, room));
+        WandCharge.add(wand, aspect, taken * WandCharge.CENTIVIS_PER_VIS);
+        return aspect;
     }
 
     private static @Nullable ResourceLocation drainPrimal(ItemStack wand, BlockEntityNode node) {
@@ -183,18 +227,26 @@ public class WandItem extends Item {
     }
 
     public static float capacity(ItemStack wand) {
-        return isGreatwood(wand) ? 50 : MAX_VIS;
+        return switch (rod(wand)) {
+            case "silverwood" -> 100;
+            case "greatwood" -> 50;
+            default -> MAX_VIS;
+        };
     }
 
-    public static boolean isGreatwood(ItemStack wand) {
+    public static String rod(ItemStack wand) {
         var tag = wand.getTagElement(TTItemData.ROOT);
-        return tag != null && tag.getString("Rod").equals("greatwood");
+        return switch (tag == null ? "" : tag.getString("Rod")) {
+            case "greatwood" -> "greatwood";
+            case "silverwood" -> "silverwood";
+            default -> "wood";
+        };
     }
 
     @Override
     public Component getName(ItemStack stack) {
         return Component.translatable("item.thaumaturge.wand.named", Component.translatable("wand.thaumaturge.cap.iron"),
-                Component.translatable("wand.thaumaturge.rod." + (isGreatwood(stack) ? "greatwood" : "wood")));
+                Component.translatable("wand.thaumaturge.rod." + rod(stack)));
     }
 
     @Override

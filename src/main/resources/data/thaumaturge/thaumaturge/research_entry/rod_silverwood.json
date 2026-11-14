@@ -25,7 +25,8 @@
     {
       "text": "research.thaumaturge.rod_silverwood.stage_0",
       "recipes": [
-        "thaumaturge:infusion/wand_rod_silverwood"
+        "thaumaturge:infusion/wand_rod_silverwood",
+        "thaumaturge:wand/assembly/iron_silverwood"
       ]
     }
   ],

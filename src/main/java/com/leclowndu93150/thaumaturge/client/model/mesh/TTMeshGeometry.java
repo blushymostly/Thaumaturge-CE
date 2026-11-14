@@ -37,12 +37,14 @@ public final class TTMeshGeometry implements IUnbakedGeometry<TTMeshGeometry> {
     private final boolean flipV;
     private final boolean cornerSpace;
     private final boolean worldLight;
+    private final String nodeDevice;
 
-    public TTMeshGeometry(ResourceLocation model, boolean flipV, boolean cornerSpace, boolean worldLight) {
+    public TTMeshGeometry(ResourceLocation model, boolean flipV, boolean cornerSpace, boolean worldLight, String nodeDevice) {
         this.model = model;
         this.flipV = flipV;
         this.cornerSpace = cornerSpace;
         this.worldLight = worldLight;
+        this.nodeDevice = nodeDevice;
     }
 
     @Override
@@ -57,6 +59,11 @@ public final class TTMeshGeometry implements IUnbakedGeometry<TTMeshGeometry> {
         }
         if (cornerSpace) {
             transform.translate(-CENTER_OFFSET, -CENTER_OFFSET, -CENTER_OFFSET);
+        }
+        if (!nodeDevice.isEmpty()) {
+            boolean transducer = nodeDevice.equals("transducer");
+            transform.translate(0, transducer ? 0.5F : -0.5F, 0)
+                    .rotateX((float) (transducer ? Math.PI / 2 : -Math.PI / 2));
         }
 
         List<BakedQuad> unculled = new ArrayList<>();
@@ -74,7 +81,15 @@ public final class TTMeshGeometry implements IUnbakedGeometry<TTMeshGeometry> {
             if (particle == null) {
                 particle = sprite;
             }
-            TTMeshQuadBaker.bakePart(part, sprite, transform, flipV, worldLight, unculled);
+            if (!nodeDevice.isEmpty() && part.name().equals("piston")) {
+                for (int arm = 0; arm < 4; arm++) {
+                    Matrix4f armTransform = new Matrix4f(transform)
+                            .rotateZ((float) (arm * Math.PI / 2)).rotateX((float) (Math.PI / 4));
+                    TTMeshQuadBaker.bakePart(part, sprite, armTransform, flipV, worldLight, unculled);
+                }
+            } else {
+                TTMeshQuadBaker.bakePart(part, sprite, transform, flipV, worldLight, unculled);
+            }
         }
         if (particle == null && context.hasMaterial("particle")) {
             particle = spriteGetter.apply(context.getMaterial("particle"));

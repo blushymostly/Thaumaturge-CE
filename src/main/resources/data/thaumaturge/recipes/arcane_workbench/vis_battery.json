@@ -1,0 +1,47 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:vis_battery",
+  "pattern": [
+    "SSS",
+    "SRS",
+    "SSS"
+  ],
+  "key": {
+    "S": {
+      "item": "thaumaturge:slab_arcane_stone"
+    },
+    "R": {
+      "item": "thaumaturge:vis_resonator"
+    }
+  },
+  "vis": 50,
+  "crystals": [
+    {
+      "amount": 2,
+      "aspect": "thaumaturge:aer"
+    },
+    {
+      "amount": 2,
+      "aspect": "thaumaturge:terra"
+    },
+    {
+      "amount": 2,
+      "aspect": "thaumaturge:aqua"
+    },
+    {
+      "amount": 2,
+      "aspect": "thaumaturge:ignis"
+    },
+    {
+      "amount": 2,
+      "aspect": "thaumaturge:ordo"
+    },
+    {
+      "amount": 2,
+      "aspect": "thaumaturge:perditio"
+    }
+  ],
+  "result": {
+    "item": "thaumaturge:vis_battery"
+  }
+}

@@ -81,6 +81,9 @@ public final class ClientModelChecks {
         if (node != null && node.isGui3d()) {
             failures.add("node inventory model renders a block instead of its icon");
         }
+        checkNodeDevice(baked, "node_stabilizer", false, failures);
+        checkNodeDevice(baked, "node_stabilizer_advanced", false, failures);
+        checkNodeDevice(baked, "node_transducer", true, failures);
         var brainJar = baked.get(new ModelResourceLocation(TTIds.rl("jar_brain"), "inventory"));
         if (brainJar == null || !brainJar.isCustomRenderer()) {
             failures.add("brain jar inventory model does not render its 3D contents");
@@ -172,6 +175,29 @@ public final class ClientModelChecks {
         if (chest == null || !chest.isCustomRenderer() || !chestTexture.contents().name().equals(TTIds.rl("entity/chest/hungry"))) {
             failures.add("hungry chest renderer or chest atlas sprite is missing");
         }
+    }
+
+    private static void checkNodeDevice(Map<ResourceLocation, BakedModel> baked, String id, boolean ceiling, List<String> failures) {
+        var state = TTBulkContent.BLOCKS.get(id).get().defaultBlockState();
+        var model = baked.get(BlockModelShaper.stateToModelLocation(state));
+        if (model == null) {
+            failures.add(id + " has no placed model");
+            return;
+        }
+        var quads = model.getQuads(state, null, RandomSource.create(0));
+        if (quads.size() != 89 || quads.stream().anyMatch(quad -> !quad.isShade())) {
+            failures.add(id + " must have its base and four world-lit arms");
+        }
+        boolean baseAtAnchor = quads.stream().anyMatch(quad -> {
+            int[] vertices = quad.getVertices();
+            int stride = vertices.length / 4;
+            for (int i = 0; i < vertices.length; i += stride) {
+                float y = Float.intBitsToFloat(vertices[i + 1]);
+                if (Math.abs(y - (ceiling ? 1.0F : 0.0F)) > 0.001F) return false;
+            }
+            return true;
+        });
+        if (!baseAtAnchor) failures.add(id + " base must be flush with its mounting face");
     }
 
     private static boolean pillarTipPointsIn(BakedModel model, net.minecraft.world.level.block.state.BlockState state, BlockPos corner) {

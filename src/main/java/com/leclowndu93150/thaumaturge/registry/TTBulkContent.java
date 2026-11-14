@@ -129,7 +129,8 @@ public final class TTBulkContent {
 
         registerBlock("jar_brain", com.leclowndu93150.thaumaturge.content.essentia.jar.BrainJarBlock::new, com.leclowndu93150.thaumaturge.content.essentia.jar.BrainJarItem::new);
         registerBlock("jar_creative");
-        registerBlock("jar_node");
+        registerBlock("jar_node", com.leclowndu93150.thaumaturge.content.aura.node.JarNodeBlock::new,
+                (block, props) -> new BlockItem(block, props.stacksTo(1)));
         registerBlock("jar_void");
         // lamp_arcane registered in TTBlocks (Wave 4)
 
@@ -254,7 +255,7 @@ public final class TTBulkContent {
         registerBlock("tube_oneway");
         registerBlock("tube_restrict");
         registerBlock("tube_valve");
-        registerBlock("vis_battery");
+        registerBlock("vis_battery", com.leclowndu93150.thaumaturge.content.device.VisBatteryBlock::new);
         registerBlock("vis_generator");
         registerBlock("vis_relay", com.leclowndu93150.thaumaturge.content.aura.relay.VisRelay::new);
         registerBlock("vishroom", () -> new BushBlock(BlockBehaviour.Properties.copy(Blocks.FERN)));

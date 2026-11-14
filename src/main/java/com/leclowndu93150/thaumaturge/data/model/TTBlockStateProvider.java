@@ -25,9 +25,6 @@ public final class TTBlockStateProvider extends BlockStateProvider {
             "pillar_arcane", new MeshSpec("models/mesh/pillar.ttmesh", "block/pillar_normal", true),
             "pillar_ancient", new MeshSpec("models/mesh/pillar.ttmesh", "block/pillar_ancient", true),
             "pillar_eldritch", new MeshSpec("models/mesh/pillar.ttmesh", "block/pillar_eldritch", true),
-            "node_stabilizer", new MeshSpec("models/mesh/node_stabilizer.ttmesh", "block/node_stabilizer", false),
-            "node_stabilizer_advanced", new MeshSpec("models/mesh/node_stabilizer.ttmesh", "block/node_stabilizer", false),
-            "node_transducer", new MeshSpec("models/mesh/node_stabilizer.ttmesh", "block/node_converter", false),
             "eldritch_crab_spawner", new MeshSpec("models/mesh/eldritch_crab_spawner.ttmesh", "block/eldritch_crab_spawner", true)
     );
 

@@ -8,7 +8,7 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 public final class NodeStabilizer extends Block {
-    private static final VoxelShape SHAPE = box(0, 0, 0, 16, 8, 16);
+    private static final VoxelShape SHAPE = box(0, 0, 0, 16, 10, 16);
     private final int tier;
 
     public NodeStabilizer(int tier) {

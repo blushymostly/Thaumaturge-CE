@@ -9,6 +9,7 @@ import com.leclowndu93150.thaumaturge.api.nodes.NodeModifier;
 import com.leclowndu93150.thaumaturge.api.nodes.NodeType;
 import com.leclowndu93150.thaumaturge.client.render.TTFlatRenderTypes;
 import com.leclowndu93150.thaumaturge.content.aura.node.BlockEntityNode;
+import com.leclowndu93150.thaumaturge.content.aura.node.JarNodeBlock;
 import com.leclowndu93150.thaumaturge.content.item.ThaumometerItem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -32,7 +33,7 @@ import org.joml.Matrix4f;
 /**
  * Forge BER for aura nodes — CE {@code NodeRenderer} subset with pulsed aspect layers,
  * animated atlas frames and distinct core styles.
- * Drain lines / jarred-node paths remain out until those systems land on Forge.
+ * Jarred nodes use a smaller effect centered inside the glass.
  */
 public final class NodeRenderer implements BlockEntityRenderer<BlockEntityNode> {
     private static final ResourceLocation AURA_TEXTURE = TTIds.rl("textures/misc/auranodes.png");
@@ -75,7 +76,11 @@ public final class NodeRenderer implements BlockEntityRenderer<BlockEntityNode> 
         if (player == null) {
             return;
         }
+        NodeDrainRenderer.render(node, partialTick, poseStack, buffer);
         float viewRange = viewRange(player);
+        boolean jarred = node instanceof JarNodeBlock.Entity;
+        if (jarred && node.capacity().isEmpty()) return;
+        if (jarred) viewRange = GOGGLES_VIEW;
         Vec3 center = Vec3.atCenterOf(node.getBlockPos());
         double distance = player.position().distanceTo(center);
         if (distance > (viewRange > 0 ? viewRange : GOGGLES_VIEW)) {
@@ -88,7 +93,8 @@ public final class NodeRenderer implements BlockEntityRenderer<BlockEntityNode> 
         int column = Math.floorMod((int) Math.floor(ticks * FRAME_RATE + node.getBlockPos().getX()), ATLAS_CELLS);
 
         poseStack.pushPose();
-        poseStack.translate(0.5F, 0.5F, 0.5F);
+        poseStack.translate(0.5F, jarred ? 0.4F : 0.5F, 0.5F);
+        if (jarred) poseStack.scale(0.43F, 0.43F, 0.43F);
         poseStack.mulPose(minecraft.getEntityRenderDispatcher().cameraOrientation());
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
 

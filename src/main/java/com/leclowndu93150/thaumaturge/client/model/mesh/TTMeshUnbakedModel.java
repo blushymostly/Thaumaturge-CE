@@ -21,7 +21,8 @@ public final class TTMeshUnbakedModel {
             boolean flipV = GsonHelper.getAsBoolean(json, "flip_v", false);
             boolean cornerSpace = GsonHelper.getAsBoolean(json, "corner_space", false);
             boolean worldLight = GsonHelper.getAsBoolean(json, "world_light", false);
-            return new TTMeshGeometry(model, flipV, cornerSpace, worldLight);
+            String nodeDevice = GsonHelper.getAsString(json, "node_device", "");
+            return new TTMeshGeometry(model, flipV, cornerSpace, worldLight, nodeDevice);
         }
     }
 }

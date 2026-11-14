@@ -20,8 +20,10 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
 public final class WandRenderer extends BlockEntityWithoutLevelRenderer {
+    private static final float FOCUS_SCALE = 0.5F;
     private static final ResourceLocation WOOD = texture("wand_rod_wood");
     private static final ResourceLocation GREATWOOD = texture("wand_rod_greatwood");
+    private static final ResourceLocation SILVERWOOD = texture("wand_rod_silverwood");
     private static final ResourceLocation IRON = texture("wand_cap_iron");
     private static final ResourceLocation FOCUS = texture("wand");
     private final ModelPart rod;
@@ -45,14 +47,29 @@ public final class WandRenderer extends BlockEntityWithoutLevelRenderer {
     public void renderByItem(ItemStack stack, ItemDisplayContext context, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
         pose.pushPose();
         pose.translate(0.5, 0.5, 0.5);
-        pose.mulPose(Axis.XP.rotationDegrees(180));
+        if (WandTipTracker.isThirdPerson(context)) {
+            pose.mulPose(Axis.XP.rotationDegrees(135));
+            pose.scale(0.625F, 0.625F, 0.625F);
+            pose.translate(0, -15 / 16F, 0);
+            WandTipTracker.capture(stack, context, pose);
+        } else {
+            pose.mulPose(Axis.XP.rotationDegrees(180));
+        }
         renderParts(stack, pose, buffers, light, overlay);
         pose.popPose();
     }
 
+    static float tipY(ItemStack stack) {
+        return WandItem.focusColor(stack) == 0 ? -1 / 16F : -6 / 16F * FOCUS_SCALE;
+    }
+
     public void renderParts(ItemStack stack, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
         rod.render(pose, ItemRenderer.getFoilBufferDirect(buffers,
-                RenderType.entityCutout(WandItem.isGreatwood(stack) ? GREATWOOD : WOOD), false, stack.hasFoil()), light, overlay);
+                RenderType.entityCutout(switch (WandItem.rod(stack)) {
+                    case "silverwood" -> SILVERWOOD;
+                    case "greatwood" -> GREATWOOD;
+                    default -> WOOD;
+                }), false, stack.hasFoil()), light, overlay);
 
         pose.pushPose();
         pose.scale(1.2F, 1, 1.2F);
@@ -65,7 +82,7 @@ public final class WandRenderer extends BlockEntityWithoutLevelRenderer {
         int tint = WandItem.focusColor(stack);
         if (tint != 0) {
             pose.pushPose();
-            pose.scale(0.5F, 0.5F, 0.5F);
+            pose.scale(FOCUS_SCALE, FOCUS_SCALE, FOCUS_SCALE);
             focus.render(pose, buffers.getBuffer(RenderType.entityTranslucent(FOCUS)), LightTexture.FULL_BRIGHT, overlay,
                     (tint >> 16 & 255) / 255F, (tint >> 8 & 255) / 255F, (tint & 255) / 255F, 0.8F);
             pose.popPose();

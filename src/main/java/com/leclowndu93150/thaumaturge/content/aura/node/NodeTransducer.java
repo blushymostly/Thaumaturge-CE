@@ -10,15 +10,19 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 public final class NodeTransducer extends BaseEntityBlock {
     private static final int CHARGE_TARGET = 1000;
     private static final int REVERT_THRESHOLD = 50;
+    private static final VoxelShape SHAPE = box(0, 6, 0, 16, 16, 16);
 
     public NodeTransducer() {
         super(Properties.of().strength(3).noOcclusion());
@@ -32,6 +36,11 @@ public final class NodeTransducer extends BaseEntityBlock {
     @Override
     public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
+    }
+
+    @Override
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return SHAPE;
     }
 
     @Override
@@ -55,7 +64,7 @@ public final class NodeTransducer extends BaseEntityBlock {
             if (!(level instanceof ServerLevel server)) return;
             int previous = device.charge;
             BlockPos nodePos = pos.below();
-            if (!(level.getBlockEntity(nodePos) instanceof BlockEntityNode node)) {
+            if (!(level.getBlockEntity(nodePos) instanceof BlockEntityNode node) || node instanceof JarNodeBlock.Entity) {
                 device.charge = 0;
             } else if (stabilizerTier(level, nodePos.below()) == 0) {
                 if (node.isEnergized()) {

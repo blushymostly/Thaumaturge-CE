@@ -51,6 +51,11 @@ public final class TTBlockEntities {
     public static final RegistryObject<BlockEntityType<BlockEntityNitor>> NITOR = BLOCK_ENTITIES.register("nitor",
             () -> BlockEntityType.Builder.of(BlockEntityNitor::new, TTBlocks.NITORS.values().stream().map(RegistryObject::get).toArray(Block[]::new)).build(null));
 
+    public static final RegistryObject<BlockEntityType<com.leclowndu93150.thaumaturge.content.aura.node.JarNodeBlock.Entity>> JAR_NODE =
+            BLOCK_ENTITIES.register("jar_node", () -> BlockEntityType.Builder.of(
+                    com.leclowndu93150.thaumaturge.content.aura.node.JarNodeBlock.Entity::new,
+                    TTBulkContent.BLOCKS.get("jar_node").get()).build(null));
+
     public static final RegistryObject<BlockEntityType<BlockEntityNode>> NODE = BLOCK_ENTITIES.register("node",
             () -> BlockEntityType.Builder.of(BlockEntityNode::new, TTBlocks.NODE.get(), TTBlocks.SILVERWOOD_NODE_LOG.get(), TTBulkContent.BLOCKS.get("obsidian_totem_charged").get()).build(null));
     public static final RegistryObject<BlockEntityType<BlockEntityDioptra>> DIOPTRA = BLOCK_ENTITIES.register("dioptra",

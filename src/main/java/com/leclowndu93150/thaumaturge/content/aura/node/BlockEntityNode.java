@@ -8,6 +8,8 @@ import com.leclowndu93150.thaumaturge.api.aura.AuraHelper;
 import com.leclowndu93150.thaumaturge.api.nodes.NodeModifier;
 import com.leclowndu93150.thaumaturge.api.nodes.NodeType;
 import com.leclowndu93150.thaumaturge.content.blockentity.AbstractSyncedBlockEntity;
+import com.leclowndu93150.thaumaturge.content.decor.BlockObsidianTotem;
+import com.leclowndu93150.thaumaturge.content.world.tree.BlockSilverwoodNodeLog;
 import com.leclowndu93150.thaumaturge.content.item.EssentiaCrystalFactory;
 import com.leclowndu93150.thaumaturge.content.particle.SparkleParticleOptions;
 import com.leclowndu93150.thaumaturge.content.research.pool.AspectPools;
@@ -19,6 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -38,6 +41,8 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
     private static final float RAW_PER_POINT = 3.0F;
     private static final float REFILL_SUCCESS_THRESHOLD = 2.99F;
     private static final int DEGRADE_AFTER_FAILURES = 10;
+    private static final int DECAY_INTERVAL = 1200;
+    private static final int DRAIN_LINGER = 12;
 
     private NodeType type = NodeType.NORMAL;
     @Nullable
@@ -52,9 +57,27 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
     private int tickCounter;
     private int starvation;
     private int taintPurifyTicks;
+    private @Nullable DrainEffect drainEffect;
+
+    public record DrainEffect(UUID player, int color, long expiresAt) {}
+
+    public @Nullable DrainEffect drainEffect() {
+        return drainEffect != null && level != null && level.getGameTime() < drainEffect.expiresAt() ? drainEffect : null;
+    }
+
+    public void recordDrain(Player player, int color) {
+        if (level instanceof ServerLevel server) {
+            drainEffect = new DrainEffect(player.getUUID(), color, server.getGameTime() + DRAIN_LINGER);
+            syncToClient();
+        }
+    }
 
     public BlockEntityNode(BlockPos pos, BlockState state) {
-        super(TTBlockEntities.NODE.get(), pos, state);
+        this(TTBlockEntities.NODE.get(), pos, state);
+    }
+
+    protected BlockEntityNode(net.minecraft.world.level.block.entity.BlockEntityType<?> type, BlockPos pos, BlockState state) {
+        super(type, pos, state);
     }
 
     public NodeType kind() {
@@ -105,7 +128,10 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
         } else {
             aspectsBase = originalCapacity;
             originalCapacity = null;
-            held = AspectList.EMPTY;
+            held = AspectList.ofEntries(held.entries().stream()
+                    .filter(entry -> aspectsBase.amountOf(entry.aspectId()) > 0)
+                    .map(entry -> entry.withAmount(Math.min(entry.amount(), aspectsBase.amountOf(entry.aspectId()))))
+                    .toList());
         }
         setChangedAndSync();
     }
@@ -160,6 +186,7 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
 
     public void applyNodeData(NodeData data) {
         originalCapacity = null;
+        drainEffect = null;
         relayAllowance.clear();
         relayCredit.clear();
         type = data.type();
@@ -235,16 +262,21 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
         if (!(tickLevel instanceof ServerLevel serverLevel)) {
             return;
         }
-        tickCounter++;
         if (isEnergized()) {
             tickEnergized(serverLevel, pos);
             return;
         }
+        tickCounter++;
+        if (this instanceof JarNodeBlock.Entity) {
+            tickUpkeep(serverLevel, pos, 2);
+            return;
+        }
+        int tier = NodeTransducer.stabilizerTier(tickLevel, pos.below());
+        if (tickUpkeep(serverLevel, pos, tier == 2 ? 20 : tier == 1 ? 2 : 1)) return;
         if (type == NodeType.TAINTED && tickTaintProtection(serverLevel, pos)) return;
         if (type == NodeType.HUNGRY) {
             NodeTypeEffects.attract(this, serverLevel, pos);
         }
-        int tier = NodeTransducer.stabilizerTier(tickLevel, pos.below());
         if (tier > 0 && tickCounter % 100 == 0) {
             if (type == NodeType.UNSTABLE && serverLevel.random.nextBoolean() && serverLevel.random.nextInt(tier == 2 ? 5000 : 10000) == 0) {
                 type = NodeType.NORMAL;
@@ -255,14 +287,33 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
                 setChangedAndSync();
             }
         }
-        if ((tier == 0 || type != NodeType.UNSTABLE) && tickCounter % 50 == 0 && NodeTypeEffects.tick(this, serverLevel, pos, tickCounter)) {
-            return;
+        if ((tier == 0 || type != NodeType.UNSTABLE) && tickCounter % 50 == 0) {
+            NodeTypeEffects.tick(this, serverLevel, pos, tickCounter);
         }
-        int interval = NodeRules.baseRefillInterval(modifier) * (tier == 2 ? 20 : tier == 1 ? 2 : 1);
-        if (interval <= 0 || tickCounter % interval != 0) {
-            return;
+    }
+
+    private boolean tickUpkeep(ServerLevel level, BlockPos pos, int factor) {
+        int interval = NodeRules.baseRefillInterval(modifier) * factor;
+        if (interval > 0 && tickCounter % interval == 0) refill(level, pos);
+        if (tickCounter % DECAY_INTERVAL != 0) return false;
+        for (AspectInstance entry : aspectsBase.entries()) {
+            if (held.amountOf(entry.aspectId()) > 0) continue;
+            boolean lost = entry.amount() == 1 || level.random.nextInt(20) == 0;
+            aspectsBase = aspectsBase.remove(entry.aspectId(), lost ? entry.amount() : 1);
+            if (lost) {
+                if (level.random.nextInt(5) == 0 && modifier != NodeModifier.PALE && modifier != NodeModifier.FADING) {
+                    modifier = NodeRules.degrade(modifier);
+                }
+                if (modifier == NodeModifier.PALE && level.random.nextInt(5) == 0) modifier = NodeModifier.FADING;
+            }
+            if (aspectsBase.isEmpty()) {
+                removeDepleted(level, pos);
+                return true;
+            }
+            setChangedAndSync();
+            break;
         }
-        refill(serverLevel, pos);
+        return false;
     }
 
     private boolean tickTaintProtection(ServerLevel level, BlockPos pos) {
@@ -321,16 +372,28 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
             setChangedAndSync();
         }
         if (aspectsBase.isEmpty()) {
-            level.removeBlock(pos, false);
+            removeDepleted(level, pos);
             return true;
         }
         return false;
     }
 
+    private void removeDepleted(ServerLevel level, BlockPos pos) {
+        BlockState state = getBlockState();
+        if (state.getBlock() instanceof BlockSilverwoodNodeLog) {
+            level.setBlockAndUpdate(pos, BlockSilverwoodNodeLog.depletedState(state));
+        } else if (state.is(TTBulkContent.BLOCKS.get("obsidian_totem_charged").get())) {
+            BlockState totem = TTBulkContent.BLOCKS.get("obsidian_totem").get().defaultBlockState();
+            level.setBlockAndUpdate(pos, BlockObsidianTotem.shapedState(totem, level, pos));
+        } else {
+            level.removeBlock(pos, false);
+        }
+    }
+
     private void refill(ServerLevel level, BlockPos pos) {
         List<ResourceLocation> eligible = new ArrayList<>();
-        for (AspectInstance entry : aspectsBase.entries()) {
-            if (held.amountOf(entry.aspectId()) < entry.amount()) {
+        for (AspectInstance entry : held.entries()) {
+            if (entry.amount() < aspectsBase.amountOf(entry.aspectId())) {
                 eligible.add(entry.aspectId());
             }
         }
@@ -393,6 +456,24 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
     @Override
     protected void readClientData(CompoundTag tag) {
         readNodeFromTag(tag);
+        drainEffect = tag.hasUUID("DrainPlayer")
+                ? new DrainEffect(tag.getUUID("DrainPlayer"), tag.getInt("DrainColor"), tag.getLong("DrainUntil")) : null;
+    }
+
+    @Override
+    public void handleUpdateTag(CompoundTag tag) {
+        readClientData(tag);
+    }
+
+    @Override
+    protected void writeClientData(CompoundTag tag) {
+        super.writeClientData(tag);
+        DrainEffect effect = drainEffect();
+        if (effect != null) {
+            tag.putUUID("DrainPlayer", effect.player());
+            tag.putInt("DrainColor", effect.color());
+            tag.putLong("DrainUntil", effect.expiresAt());
+        }
     }
 
     private void readNodeFromTag(CompoundTag tag) {
