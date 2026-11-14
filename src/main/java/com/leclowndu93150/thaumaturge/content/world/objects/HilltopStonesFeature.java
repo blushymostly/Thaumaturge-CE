@@ -2,19 +2,16 @@ package com.leclowndu93150.thaumaturge.content.world.objects;
 
 import com.leclowndu93150.thaumaturge.content.aura.node.NodeGenerator;
 import com.leclowndu93150.thaumaturge.registry.TTBlockTags;
-import com.leclowndu93150.thaumaturge.registry.TTBlocks;
-import com.leclowndu93150.thaumaturge.registry.TTEntities;
+import com.leclowndu93150.thaumaturge.registry.TTBulkContent;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.RandomizableContainer;
+import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.VineBlock;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.SpawnerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
@@ -52,7 +49,7 @@ public final class HilltopStonesFeature extends Feature<NoneFeatureConfiguration
             }
         }
         BlockState fill = findFill(level, origin);
-        boolean vines = !level.getBiome(origin).value().coldEnoughToSnow(origin, level.getSeaLevel());
+        boolean vines = !level.getBiome(origin).value().coldEnoughToSnow(origin);
         placeFloor(level, random, origin, fill);
         for (int[] offset : PILLAR_OFFSETS) {
             buildPillar(level, random, origin.offset(offset[0], 0, offset[1]), vines);
@@ -92,12 +89,12 @@ public final class HilltopStonesFeature extends Feature<NoneFeatureConfiguration
     }
 
     private static boolean isGroundCover(BlockState state) {
-        return state.is(Blocks.SNOW) || state.is(Blocks.SHORT_GRASS) || state.is(BlockTags.SMALL_FLOWERS) || state.is(TTBlockTags.MAGICAL_PLANTS);
+        return state.is(Blocks.SNOW) || state.is(Blocks.GRASS) || state.is(BlockTags.SMALL_FLOWERS) || state.is(TTBlockTags.MAGICAL_PLANTS);
     }
 
     private static BlockState findFill(WorldGenLevel level, BlockPos origin) {
         BlockPos.MutableBlockPos cursor = origin.mutable();
-        for (int y = origin.getY() - 1; y >= level.getMinY(); y--) {
+        for (int y = origin.getY() - 1; y >= level.getMinBuildHeight(); y--) {
             cursor.setY(y);
             BlockState state = level.getBlockState(cursor);
             if (isBaseGround(state)) {
@@ -117,11 +114,11 @@ public final class HilltopStonesFeature extends Feature<NoneFeatureConfiguration
                     continue;
                 }
                 BlockPos floor = origin.offset(dx, 0, dz);
-                BlockState tile = random.nextBoolean() ? TTBlocks.OBSIDIAN_TILE.get().defaultBlockState() : Blocks.OBSIDIAN.defaultBlockState();
+                BlockState tile = random.nextBoolean() ? TTBulkContent.BLOCKS.get("obsidian_tile").get().defaultBlockState() : Blocks.OBSIDIAN.defaultBlockState();
                 level.setBlock(floor, tile, PLACE_FLAGS);
                 for (int depth = 1; depth <= FILL_DEPTH; depth++) {
                     BlockPos under = floor.below(depth);
-                    if (under.getY() < level.getMinY()) {
+                    if (under.getY() < level.getMinBuildHeight()) {
                         break;
                     }
                     BlockState existing = level.getBlockState(under);
@@ -134,7 +131,7 @@ public final class HilltopStonesFeature extends Feature<NoneFeatureConfiguration
     }
 
     private static void buildPillar(WorldGenLevel level, RandomSource random, BlockPos floor, boolean vines) {
-        BlockState totem = TTBlocks.OBSIDIAN_TOTEM.get().defaultBlockState();
+        BlockState totem = TTBulkContent.BLOCKS.get("obsidian_totem").get().defaultBlockState();
         int built = 0;
         while (built < PILLAR_CAP) {
             level.setBlock(floor.above(built + 1), totem, PLACE_FLAGS);
@@ -168,14 +165,9 @@ public final class HilltopStonesFeature extends Feature<NoneFeatureConfiguration
     }
 
     private static void buildCentre(WorldGenLevel level, RandomSource random, BlockPos origin) {
-        level.setBlock(origin, Blocks.SPAWNER.defaultBlockState(), PLACE_FLAGS);
-        BlockEntity spawner = level.getBlockEntity(origin);
-        if (spawner instanceof SpawnerBlockEntity spawnerEntity) {
-            spawnerEntity.setEntityId(TTEntities.WISP.get(), random);
-        }
-        level.setBlock(origin.above(), TTBlocks.OBSIDIAN_TILE.get().defaultBlockState(), PLACE_FLAGS);
+        level.setBlock(origin.above(), TTBulkContent.BLOCKS.get("obsidian_tile").get().defaultBlockState(), PLACE_FLAGS);
         BlockPos chestPos = origin.above(2);
         level.setBlock(chestPos, Blocks.CHEST.defaultBlockState(), PLACE_FLAGS);
-        RandomizableContainer.setBlockEntityLootTable(level, random, chestPos, BuiltInLootTables.SIMPLE_DUNGEON);
+        RandomizableContainerBlockEntity.setLootTable(level, random, chestPos, BuiltInLootTables.SIMPLE_DUNGEON);
     }
 }

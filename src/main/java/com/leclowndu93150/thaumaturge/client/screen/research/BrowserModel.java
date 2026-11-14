@@ -1,66 +1,67 @@
 package com.leclowndu93150.thaumaturge.client.screen.research;
 
 import com.leclowndu93150.thaumaturge.TTIds;
-import com.leclowndu93150.thaumaturge.api.capability.IPlayerKnowledge;
-import com.leclowndu93150.thaumaturge.api.capability.KnowledgeAccess;
-import com.leclowndu93150.thaumaturge.api.research.IResearchCategory;
-import com.leclowndu93150.thaumaturge.api.research.IResearchEntry;
-import com.leclowndu93150.thaumaturge.api.research.ResearchEntryMeta;
-import com.leclowndu93150.thaumaturge.api.research.ResearchParent;
-import com.leclowndu93150.thaumaturge.api.research.ResearchUnlockConditions;
+import com.leclowndu93150.thaumaturge.client.ClientKnowledge;
+import com.leclowndu93150.thaumaturge.content.research.PlayerKnowledge;
+import com.leclowndu93150.thaumaturge.content.research.ResearchCategory;
+import com.leclowndu93150.thaumaturge.content.research.ResearchData;
+import com.leclowndu93150.thaumaturge.content.research.ResearchEntry;
+import com.leclowndu93150.thaumaturge.content.research.ResearchParent;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Stream;
-import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 final class BrowserModel {
     private final Player player;
     private final List<CategoryRef> builtIn = new ArrayList<>();
     private final List<CategoryRef> addOn = new ArrayList<>();
-    private final Map<Identifier, EntryNode> entries = new LinkedHashMap<>();
-    private final Map<Identifier, List<EntryNode>> entriesByCategory = new HashMap<>();
-    private final Map<Identifier, Boolean> visibilityCache = new HashMap<>();
+    private final Map<ResourceLocation, EntryNode> entries = new LinkedHashMap<>();
+    private final Map<ResourceLocation, List<EntryNode>> entriesByCategory = new HashMap<>();
+    private final Map<ResourceLocation, Boolean> visibilityCache = new HashMap<>();
 
     BrowserModel(Player player) {
         this.player = player;
-        RegistryAccess access = player.registryAccess();
-        elements(access, IResearchCategory.REGISTRY_KEY).forEach(ref -> {
-            CategoryRef category = new CategoryRef(ref.key().identifier(), ref.value());
-            (TTIds.MODID.equals(category.id().getNamespace()) ? builtIn : addOn).add(category);
-        });
-        builtIn.sort(Comparator.comparingInt(category -> category.data().index()));
-        elements(access, IResearchEntry.REGISTRY_KEY).forEach(ref -> {
-            Optional<ResourceKey<IResearchCategory>> categoryKey = ref.value().category().unwrapKey();
-            if (categoryKey.isPresent()) {
-                EntryNode node = new EntryNode(ref.key().identifier(), ref, categoryKey.get().identifier());
-                entries.put(node.id(), node);
-                entriesByCategory.computeIfAbsent(node.categoryId(), id -> new ArrayList<>()).add(node);
+        for (ResourceLocation id : ResearchData.categories()) {
+            ResearchCategory data = ResearchData.category(id);
+            if (data == null) {
+                continue;
             }
-        });
+            CategoryRef category = new CategoryRef(id, data);
+            (TTIds.MODID.equals(id.getNamespace()) ? builtIn : addOn).add(category);
+        }
+        builtIn.sort(Comparator.comparingInt(c -> c.data().index()));
+        addOn.sort(Comparator.comparing(c -> c.id().toString()));
+        for (ResourceLocation id : allEntryIds()) {
+            ResearchEntry entry = ResearchData.entry(id);
+            if (entry == null) {
+                continue;
+            }
+            EntryNode node = new EntryNode(id, entry, entry.category());
+            entries.put(id, node);
+            entriesByCategory.computeIfAbsent(entry.category(), ignored -> new ArrayList<>()).add(node);
+        }
     }
 
-    private static <T> Stream<Holder.Reference<T>> elements(RegistryAccess access, ResourceKey<Registry<T>> key) {
-        return access.lookup(key).map(lookup -> lookup.listElements()).orElseGet(Stream::empty);
+    private static List<ResourceLocation> allEntryIds() {
+        List<ResourceLocation> ids = new ArrayList<>();
+        for (ResourceLocation categoryId : ResearchData.categories()) {
+            ids.addAll(ResearchData.entriesInCategory(categoryId));
+        }
+        return ids;
     }
 
     Player player() {
         return player;
     }
 
-    IPlayerKnowledge knowledge() {
-        return KnowledgeAccess.of(player);
+    PlayerKnowledge knowledge() {
+        return ClientKnowledge.get();
     }
 
     List<CategoryRef> builtIn() {
@@ -71,21 +72,21 @@ final class BrowserModel {
         return addOn;
     }
 
-    Collection<EntryNode> allEntries() {
-        return entries.values();
+    List<EntryNode> allEntries() {
+        return List.copyOf(entries.values());
     }
 
     @Nullable
-    EntryNode entry(Identifier id) {
+    EntryNode entry(ResourceLocation id) {
         return entries.get(id);
     }
 
-    List<EntryNode> entriesOf(Identifier categoryId) {
+    List<EntryNode> entriesOf(ResourceLocation categoryId) {
         return entriesByCategory.getOrDefault(categoryId, List.of());
     }
 
     @Nullable
-    CategoryRef category(@Nullable Identifier id) {
+    CategoryRef category(@Nullable ResourceLocation id) {
         if (id == null) {
             return null;
         }
@@ -103,8 +104,8 @@ final class BrowserModel {
     }
 
     boolean shown(CategoryRef category) {
-        IPlayerKnowledge knowledge = knowledge();
-        return category.data().requiredResearch().map(knowledge::isResearchComplete).orElse(true);
+        PlayerKnowledge knowledge = knowledge();
+        return category.data().requiredResearch().map(knowledge::isComplete).orElse(true);
     }
 
     List<CategoryRef> shownBuiltIn() {
@@ -120,13 +121,16 @@ final class BrowserModel {
     }
 
     boolean canUnlock(EntryNode node) {
-        IPlayerKnowledge knowledge = knowledge();
+        PlayerKnowledge knowledge = knowledge();
+        if (knowledge.isKnown(node.id())) {
+            return true;
+        }
         for (ResearchParent parent : node.value().parents()) {
             if (!parent.isSatisfiedBy(knowledge)) {
                 return false;
             }
         }
-        return knowledge.isResearchKnown(node.id()) || ResearchUnlockConditions.passes(player, knowledge, node.id());
+        return true;
     }
 
     boolean visible(EntryNode node) {
@@ -141,11 +145,11 @@ final class BrowserModel {
     }
 
     private boolean evaluateVisible(EntryNode node) {
-        if (knowledge().isResearchKnown(node.id())) {
+        if (knowledge().isKnown(node.id())) {
             return true;
         }
-        IResearchEntry entry = node.value();
-        if (entry.hasMeta(ResearchEntryMeta.HIDDEN) && (entry.parents().isEmpty() || !canUnlock(node))) {
+        ResearchEntry entry = node.value();
+        if (entry.hasMeta("hidden") && (entry.parents().isEmpty() || !canUnlock(node))) {
             return false;
         }
         for (ResearchParent parent : entry.parents()) {
@@ -157,12 +161,7 @@ final class BrowserModel {
         return true;
     }
 
-    record CategoryRef(Identifier id, IResearchCategory data) {
-    }
+    record CategoryRef(ResourceLocation id, ResearchCategory data) {}
 
-    record EntryNode(Identifier id, Holder.Reference<IResearchEntry> holder, Identifier categoryId) {
-        IResearchEntry value() {
-            return holder.value();
-        }
-    }
+    record EntryNode(ResourceLocation id, ResearchEntry value, ResourceLocation categoryId) {}
 }

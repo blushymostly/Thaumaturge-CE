@@ -1,0 +1,16 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:unlock_artifice",
+  "pattern": ["APA", "IGI", "AAA"],
+  "key": {
+    "A": { "item": "thaumaturge:arcane_stone" },
+    "P": { "item": "thaumaturge:vis_resonator" },
+    "G": { "item": "thaumaturge:thaumometer" },
+    "I": { "item": "thaumaturge:plate_iron" }
+  },
+  "result": { "item": "thaumaturge:dioptra", "count": 1 },
+  "vis": [
+    { "aspect": "thaumaturge:aer", "amount": 1 },
+    { "aspect": "thaumaturge:aqua", "amount": 1 }
+  ]
+}

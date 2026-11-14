@@ -1,0 +1,9 @@
+{
+  "type": "thaumaturge:crucible",
+  "catalyst": { "item": "minecraft:bucket" },
+  "aspects": [
+    { "aspect": "thaumaturge:ignis", "amount": 15 },
+    { "aspect": "thaumaturge:terra", "amount": 5 }
+  ],
+  "result": { "item": "minecraft:lava_bucket", "count": 1 }
+}

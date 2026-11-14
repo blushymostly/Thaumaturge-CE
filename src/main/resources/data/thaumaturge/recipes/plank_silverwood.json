@@ -1,0 +1,5 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [{ "item": "thaumaturge:log_silverwood" }],
+  "result": { "item": "thaumaturge:plank_silverwood", "count": 4 }
+}

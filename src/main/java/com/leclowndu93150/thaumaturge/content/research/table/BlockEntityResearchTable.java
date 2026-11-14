@@ -3,12 +3,10 @@ package com.leclowndu93150.thaumaturge.content.research.table;
 import com.leclowndu93150.thaumaturge.TTIds;
 import com.leclowndu93150.thaumaturge.api.aspect.AspectInstance;
 import com.leclowndu93150.thaumaturge.api.aspect.AspectList;
-import com.leclowndu93150.thaumaturge.api.aspect.IAspect;
-import com.leclowndu93150.thaumaturge.api.capability.KnowledgeAccess;
-import com.leclowndu93150.thaumaturge.api.research.IResearchEntry;
 import com.leclowndu93150.thaumaturge.api.research.IResearchTableAid;
 import com.leclowndu93150.thaumaturge.content.aspect.AspectCombinations;
-import com.leclowndu93150.thaumaturge.content.blockentity.AbstractSyncedBlockEntity;
+import com.leclowndu93150.thaumaturge.content.research.ResearchData;
+import com.leclowndu93150.thaumaturge.content.research.ResearchEntry;
 import com.leclowndu93150.thaumaturge.content.research.note.HexGrid;
 import com.leclowndu93150.thaumaturge.content.research.note.NoteGenerator;
 import com.leclowndu93150.thaumaturge.content.research.note.NoteRules;
@@ -16,21 +14,25 @@ import com.leclowndu93150.thaumaturge.content.research.note.ResearchNoteData;
 import com.leclowndu93150.thaumaturge.content.research.note.ResearchNotes;
 import com.leclowndu93150.thaumaturge.content.research.pool.AspectPools;
 import com.leclowndu93150.thaumaturge.registry.TTBlockEntities;
-import com.leclowndu93150.thaumaturge.registry.TTDataComponents;
 import com.leclowndu93150.thaumaturge.registry.TTItemTags;
 import com.leclowndu93150.thaumaturge.registry.TTSounds;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.Container;
+import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.Containers;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -39,20 +41,17 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
-import net.neoforged.neoforge.transfer.item.ItemResource;
-import net.neoforged.neoforge.transfer.item.ItemStacksResourceHandler;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
-public final class BlockEntityResearchTable extends AbstractSyncedBlockEntity implements MenuProvider {
+public final class BlockEntityResearchTable extends BlockEntity implements MenuProvider {
     public static final int SLOT_SCRIBE_TOOLS = 0;
     public static final int SLOT_NOTE = 1;
     public static final int SLOT_COUNT = 2;
-    public static final Identifier RESEARCH_EXPERTISE = TTIds.rl("research_expertise");
-    public static final Identifier RESEARCH_MASTERY = TTIds.rl("research_mastery");
-    public static final Identifier RESEARCH_DUPLICATION = TTIds.rl("research_duplication");
+    public static final ResourceLocation RESEARCH_EXPERTISE = TTIds.rl("research_expertise");
+    public static final ResourceLocation RESEARCH_MASTERY = TTIds.rl("research_mastery");
+    public static final ResourceLocation RESEARCH_DUPLICATION = TTIds.rl("research_duplication");
 
     private static final int BONUS_INTERVAL_TICKS = 600;
     private static final int BONUS_AMOUNT = 1;
@@ -84,7 +83,7 @@ public final class BlockEntityResearchTable extends AbstractSyncedBlockEntity im
         super(TTBlockEntities.RESEARCH_TABLE.get(), pos, state);
     }
 
-    public ItemStacksResourceHandler items() {
+    public Container items() {
         return items;
     }
 
@@ -118,20 +117,18 @@ public final class BlockEntityResearchTable extends AbstractSyncedBlockEntity im
         if (level == null || level.isClientSide()) {
             return;
         }
-        HolderLookup.Provider registries = level.registryAccess();
         ResearchNoteData data = noteData();
-        IResearchEntry entry = data != null && isUnsolvedBlank(data) ? entryOf(registries, data.entry()) : null;
+        ResearchEntry entry = data != null && isUnsolvedBlank(data) ? ResearchData.entry(data.entry()) : null;
         if (entry == null) {
             return;
         }
-        AspectList anchors = ResearchNotes.anchors(registries, entry);
-        storeGenerated(NoteGenerator.generate(data.entry(), data.index(), anchors, entry.complexity(), level.getRandom()));
+        storeGenerated(NoteGenerator.generate(data.entry(), data.index(), ResearchNotes.anchors(entry), entry.complexity(), level.getRandom()));
     }
 
     private void storeGenerated(ResearchNoteData generated) {
         ItemStack note = stackIn(SLOT_NOTE);
-        note.set(TTDataComponents.RESEARCH_NOTE.get(), generated);
-        commit(SLOT_NOTE, note, Math.max(1, note.getCount()));
+        ResearchNotes.write(note, generated);
+        commit(SLOT_NOTE, note);
     }
 
     public @Nullable ResearchNoteData noteData() {
@@ -157,7 +154,7 @@ public final class BlockEntityResearchTable extends AbstractSyncedBlockEntity im
         return finished;
     }
 
-    public void placeAspect(ServerPlayer player, HexGrid.Hex hex, @Nullable Holder<IAspect> aspect) {
+    public void placeAspect(ServerPlayer player, HexGrid.Hex hex, @Nullable ResourceLocation aspect) {
         ResearchNoteData data = editableNote();
         ResearchNoteData.Cell cell = data == null ? null : data.cellAt(hex);
         if (cell == null) {
@@ -169,9 +166,9 @@ public final class BlockEntityResearchTable extends AbstractSyncedBlockEntity im
         }
     }
 
-    public void combineAspects(ServerPlayer player, Holder<IAspect> first, Holder<IAspect> second, boolean firstFromBonus, boolean secondFromBonus) {
-        Holder<IAspect> result = level == null ? null : AspectCombinations.result(level.registryAccess(), first, second);
-        if (result == null) {
+    public void combineAspects(ServerPlayer player, ResourceLocation first, ResourceLocation second, boolean firstFromBonus, boolean secondFromBonus) {
+        ResourceLocation result = level == null ? null : AspectCombinations.result(first, second);
+        if (result == null || !AspectPools.isDiscovered(player, first) || !AspectPools.isDiscovered(player, second)) {
             return;
         }
         int firstCost = first.equals(second) && firstFromBonus == secondFromBonus ? IDENTICAL_COMBINE_COST : COMBINE_COST;
@@ -196,7 +193,7 @@ public final class BlockEntityResearchTable extends AbstractSyncedBlockEntity im
             return;
         }
         Inventory inventory = player.getInventory();
-        AspectList cost = duplicationCost(player, data);
+        AspectList cost = duplicationCost(data);
         int paperSlot = paperSlot(inventory);
         boolean payable = cost != null && paperSlot >= 0 && ResearchNotes.consumeInk(player, true) && AspectPools.canAfford(player, cost);
         if (!payable || !ResearchNotes.consumeInk(player, false)) {
@@ -205,21 +202,22 @@ public final class BlockEntityResearchTable extends AbstractSyncedBlockEntity im
         inventory.getItem(paperSlot).shrink(1);
         AspectPools.spendAll(player, cost);
         writeNote(data.withCopies(data.copies() + 1));
-        ItemStack copy = stackIn(SLOT_NOTE).copyWithCount(1);
+        ItemStack copy = stackIn(SLOT_NOTE).copy();
+        copy.setCount(1);
         if (!inventory.add(copy)) {
             player.drop(copy, false);
         }
         playAtTable(TTSounds.WRITE.get(), DUPLICATE_VOLUME, NEUTRAL_PITCH);
     }
 
-    public @Nullable AspectList duplicationCost(Player player, ResearchNoteData data) {
-        IResearchEntry entry = entryOf(player.registryAccess(), data.entry());
+    public @Nullable AspectList duplicationCost(ResearchNoteData data) {
+        ResearchEntry entry = ResearchData.entry(data.entry());
         if (entry == null) {
             return null;
         }
         AspectList cost = AspectList.EMPTY;
         for (AspectInstance instance : entry.noteAspects().entries()) {
-            cost = cost.add(instance.aspect(), instance.amount() + data.copies());
+            cost = cost.add(new AspectInstance(instance.aspectId(), instance.amount() + data.copies()));
         }
         return cost;
     }
@@ -229,9 +227,8 @@ public final class BlockEntityResearchTable extends AbstractSyncedBlockEntity im
             return false;
         }
         ItemStack tools = stackIn(SLOT_SCRIBE_TOOLS);
-        int worn = tools.getDamageValue() + 1;
-        tools.setDamageValue(worn);
-        commit(SLOT_SCRIBE_TOOLS, tools, tools.getCount());
+        tools.setDamageValue(tools.getDamageValue() + 1);
+        commit(SLOT_SCRIBE_TOOLS, tools);
         return true;
     }
 
@@ -243,37 +240,47 @@ public final class BlockEntityResearchTable extends AbstractSyncedBlockEntity im
         return tools.isDamageableItem() && !tools.isEmpty() ? tools.getMaxDamage() - tools.getDamageValue() : 0;
     }
 
-    @Override
-    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
-        super.preRemoveSideEffects(pos, state);
+    /** Drops stored items; call before the block entity is removed. */
+    public void spillContents() {
         if (level instanceof ServerLevel server) {
-            for (int slot = SLOT_SCRIBE_TOOLS; slot < SLOT_COUNT; slot++) {
-                spill(server, pos, stackIn(slot));
-            }
-        }
-    }
-
-    private static void spill(Level world, BlockPos at, ItemStack stack) {
-        if (!stack.isEmpty()) {
-            Containers.dropItemStack(world, at.getX(), at.getY(), at.getZ(), stack);
+            Containers.dropContents(server, worldPosition, items.stacks);
+            items.clearContent();
         }
     }
 
     @Override
-    protected void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
-        bonus = input.read(BONUS_KEY, AspectList.CODEC).orElse(AspectList.EMPTY);
-        items.deserialize(input);
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        bonus = tag.contains(BONUS_KEY) ? AspectList.CODEC.parse(NbtOps.INSTANCE, tag.get(BONUS_KEY)).result().orElse(AspectList.EMPTY) : AspectList.EMPTY;
+        items.clearContent();
+        ContainerHelper.loadAllItems(tag, items.stacks);
     }
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
-        items.serialize(output);
-        output.store(BONUS_KEY, AspectList.CODEC, bonus);
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        ContainerHelper.saveAllItems(tag, items.stacks);
+        AspectList.CODEC.encodeStart(NbtOps.INSTANCE, bonus).result().ifPresent(encoded -> tag.put(BONUS_KEY, encoded));
     }
 
-    private @Nullable ResearchNoteData inscribe(ResearchNoteData.Cell cell, Holder<IAspect> aspect, ResearchNoteData data, ServerPlayer player) {
+    @Override
+    public CompoundTag getUpdateTag() {
+        return saveWithoutMetadata();
+    }
+
+    @Override
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    private void setChangedAndSync() {
+        setChanged();
+        if (level != null && !level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    private @Nullable ResearchNoteData inscribe(ResearchNoteData.Cell cell, ResourceLocation aspect, ResearchNoteData data, ServerPlayer player) {
         boolean open = cell.type() == ResearchNoteData.TYPE_BLANK && AspectPools.isDiscovered(player, aspect);
         RandomSource random = player.getRandom();
         Boolean free = open ? payForStroke(player, aspect, random) : null;
@@ -287,7 +294,7 @@ public final class BlockEntityResearchTable extends AbstractSyncedBlockEntity im
         return strokeDone(placed, TTSounds.WRITE.get(), WRITE_VOLUME, NEUTRAL_PITCH);
     }
 
-    private @Nullable Boolean payForStroke(ServerPlayer player, Holder<IAspect> aspect, RandomSource random) {
+    private @Nullable Boolean payForStroke(ServerPlayer player, ResourceLocation aspect, RandomSource random) {
         if (completed(player, RESEARCH_MASTERY) && random.nextFloat() < MASTERY_FREE_CHANCE) {
             return Boolean.TRUE;
         }
@@ -310,7 +317,7 @@ public final class BlockEntityResearchTable extends AbstractSyncedBlockEntity im
             return null;
         }
         RandomSource random = player.getRandom();
-        Holder<IAspect> held = cell.aspectOrNull();
+        ResourceLocation held = cell.aspectOrNull();
         if (held != null && random.nextFloat() < refundChance(player)) {
             AspectPools.refund(player, held, PLACE_COST);
         }
@@ -331,15 +338,15 @@ public final class BlockEntityResearchTable extends AbstractSyncedBlockEntity im
         return completed(player, RESEARCH_EXPERTISE) ? EXPERTISE_REFUND_CHANCE : 0.0F;
     }
 
-    private static boolean completed(Player player, Identifier research) {
-        return KnowledgeAccess.of(player).isResearchComplete(research);
+    private static boolean completed(Player player, ResourceLocation research) {
+        return AspectPools.of(player).isComplete(research);
     }
 
-    private int available(Player player, Holder<IAspect> aspect, boolean fromBonus) {
+    private int available(Player player, ResourceLocation aspect, boolean fromBonus) {
         return fromBonus ? bonus.amountOf(aspect) : AspectPools.amount(player, aspect);
     }
 
-    private boolean consume(ServerPlayer player, Holder<IAspect> aspect, boolean fromBonus, RandomSource random) {
+    private boolean consume(ServerPlayer player, ResourceLocation aspect, boolean fromBonus, RandomSource random) {
         if (fromBonus) {
             if (bonus.amountOf(aspect) <= 0) {
                 return false;
@@ -369,18 +376,21 @@ public final class BlockEntityResearchTable extends AbstractSyncedBlockEntity im
 
     private void writeNote(ResearchNoteData data) {
         ItemStack note = stackIn(SLOT_NOTE);
-        note.set(TTDataComponents.RESEARCH_NOTE.get(), data);
-        note.set(TTDataComponents.NOTE_COMPLETE.get(), data.complete() ? Boolean.TRUE : note.get(TTDataComponents.NOTE_COMPLETE.get()));
-        commit(SLOT_NOTE, note, note.getCount());
+        ResearchNotes.write(note, data);
+        commit(SLOT_NOTE, note);
         setChangedAndSync();
     }
 
-    private void commit(int slot, ItemStack stack, int amount) {
-        items.set(slot, ItemResource.of(stack), amount);
+    private void commit(int slot, ItemStack stack) {
+        items.setItem(slot, stack);
+    }
+
+    public ItemStack stackInSlot(int slot) {
+        return items.getItem(slot);
     }
 
     private ItemStack stackIn(int slot) {
-        return items.getResource(slot).toStack(items.getAmountAsInt(slot));
+        return items.getItem(slot).copy();
     }
 
     private void playAtTable(SoundEvent sound, float volume, float pitch) {
@@ -396,26 +406,72 @@ public final class BlockEntityResearchTable extends AbstractSyncedBlockEntity im
         return -1;
     }
 
-    private static @Nullable IResearchEntry entryOf(HolderLookup.Provider registries, Identifier id) {
-        return registries.lookupOrThrow(IResearchEntry.REGISTRY_KEY).get(ResourceKey.create(IResearchEntry.REGISTRY_KEY, id)).map(Holder::value).orElse(null);
-    }
+    private final class ResearchInventory implements Container {
+        private final NonNullList<ItemStack> stacks = NonNullList.withSize(SLOT_COUNT, ItemStack.EMPTY);
 
-    private final class ResearchInventory extends ItemStacksResourceHandler {
-        ResearchInventory() {
-            super(SLOT_COUNT);
+        @Override
+        public int getContainerSize() {
+            return SLOT_COUNT;
         }
 
         @Override
-        public boolean isValid(int index, ItemResource resource) {
-            ItemStack stack = resource.toStack(1);
-            return index == SLOT_SCRIBE_TOOLS ? stack.is(TTItemTags.SCRIBING_TOOLS) : ResearchNotes.dataOf(stack) != null;
+        public boolean isEmpty() {
+            return stacks.stream().allMatch(ItemStack::isEmpty);
         }
 
         @Override
-        protected void onContentsChanged(int index, ItemStack previousContents) {
-            setChangedAndSync();
-            if (index == SLOT_NOTE) {
-                ensureNotePuzzle();
+        public ItemStack getItem(int slot) {
+            return stacks.get(slot);
+        }
+
+        @Override
+        public ItemStack removeItem(int slot, int amount) {
+            ItemStack out = ContainerHelper.removeItem(stacks, slot, amount);
+            if (!out.isEmpty()) {
+                setChanged();
+            }
+            return out;
+        }
+
+        @Override
+        public ItemStack removeItemNoUpdate(int slot) {
+            return ContainerHelper.takeItem(stacks, slot);
+        }
+
+        @Override
+        public void setItem(int slot, ItemStack stack) {
+            stacks.set(slot, stack);
+            if (stack.getCount() > getMaxStackSize()) {
+                stack.setCount(getMaxStackSize());
+            }
+            setChanged();
+        }
+
+        @Override
+        public void setChanged() {
+            BlockEntityResearchTable.this.setChangedAndSync();
+            ensureNotePuzzle();
+        }
+
+        @Override
+        public boolean stillValid(Player player) {
+            return Container.stillValidBlockEntity(BlockEntityResearchTable.this, player);
+        }
+
+        @Override
+        public boolean canPlaceItem(int slot, ItemStack stack) {
+            return slot == SLOT_SCRIBE_TOOLS ? stack.is(TTItemTags.SCRIBING_TOOLS) : ResearchNotes.dataOf(stack) != null;
+        }
+
+        @Override
+        public int getMaxStackSize() {
+            return 1;
+        }
+
+        @Override
+        public void clearContent() {
+            for (int i = 0; i < SLOT_COUNT; i++) {
+                stacks.set(i, ItemStack.EMPTY);
             }
         }
     }

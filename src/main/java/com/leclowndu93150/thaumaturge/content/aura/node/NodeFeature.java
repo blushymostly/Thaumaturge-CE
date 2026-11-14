@@ -22,7 +22,7 @@ public final class NodeFeature extends Feature<NodeFeatureConfig> {
         BlockPos raised = start.above(context.random().nextInt(MAXIMUM_RISE));
         BlockState raisedState = level.getBlockState(raised);
         BlockPos target = raisedState.isAir() || raisedState.canBeReplaced() ? raised : start;
-        if (target.getY() > level.getMaxY()) {
+        if (target.getY() >= level.getMaxBuildHeight()) {
             return false;
         }
         return NodeGenerator.createRandomNodeAt(level, target, context.random(), config.silverwood(), config.eerie(), config.small(), config.specialRarity(), config.baseAura());

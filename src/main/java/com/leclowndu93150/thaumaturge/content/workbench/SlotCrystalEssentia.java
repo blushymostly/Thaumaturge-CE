@@ -1,32 +1,32 @@
 package com.leclowndu93150.thaumaturge.content.workbench;
 
-import com.leclowndu93150.thaumaturge.api.aspect.IAspect;
-import com.leclowndu93150.thaumaturge.content.taint.item.ItemEssentiaCrystal;
-import net.minecraft.core.Holder;
-import net.minecraft.resources.ResourceKey;
+import com.leclowndu93150.thaumaturge.api.aspect.AspectInstance;
+import com.leclowndu93150.thaumaturge.content.item.VisCrystalItem;
+import com.leclowndu93150.thaumaturge.registry.TTItemData;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Container;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
-public final class SlotCrystalEssentia extends Slot {
-    private final ResourceKey<IAspect> required;
+final class SlotCrystalEssentia extends Slot {
+    private final ResourceLocation requiredAspect;
 
-    public SlotCrystalEssentia(Container inventory, int index, int xPos, int yPos, ResourceKey<IAspect> aspectKey) {
-        super(inventory, index, xPos, yPos);
-        required = aspectKey;
-    }
-
-    public static boolean isValidCrystal(ItemStack stack, ResourceKey<IAspect> required) {
-        Holder<IAspect> aspect = stack.getItem() instanceof ItemEssentiaCrystal ? ItemEssentiaCrystal.aspectOf(stack) : null;
-        return aspect != null && aspect.is(required);
-    }
-
-    public ResourceKey<IAspect> getRequired() {
-        return required;
+    SlotCrystalEssentia(Container container, int index, int x, int y, ResourceLocation requiredAspect) {
+        super(container, index, x, y);
+        this.requiredAspect = requiredAspect;
     }
 
     @Override
     public boolean mayPlace(ItemStack stack) {
-        return isValidCrystal(stack, required);
+        if (!(stack.getItem() instanceof VisCrystalItem)) {
+            return false;
+        }
+        AspectInstance aspect = TTItemData.getCrystalAspect(stack);
+        return aspect != null && requiredAspect.equals(aspect.aspectId());
+    }
+
+    @Override
+    public int getMaxStackSize() {
+        return 64;
     }
 }

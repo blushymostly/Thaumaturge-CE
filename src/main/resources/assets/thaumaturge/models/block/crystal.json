@@ -1,0 +1,8 @@
+{
+  "loader": "thaumaturge:crystal",
+  "textures": {
+    "crystal": "thaumaturge:block/crystal",
+    "particle": "thaumaturge:block/crystal"
+  },
+  "render_type": "cutout"
+}

@@ -2,98 +2,42 @@ package com.leclowndu93150.thaumaturge.registry;
 
 import com.leclowndu93150.thaumaturge.TTIds;
 import com.leclowndu93150.thaumaturge.api.recipe.DustTrigger;
-import com.leclowndu93150.thaumaturge.content.infusion.InfusionEnchantmentRecipe;
+import com.leclowndu93150.thaumaturge.content.crucible.CrucibleRecipe;
 import com.leclowndu93150.thaumaturge.content.infusion.InfusionRecipe;
-import com.leclowndu93150.thaumaturge.content.infusion.InfusionRecipeDisplay;
-import com.leclowndu93150.thaumaturge.content.infusion.InfusionRunicAugmentRecipe;
-import com.leclowndu93150.thaumaturge.content.recipe.crucible.CrucibleRecipe;
-import com.leclowndu93150.thaumaturge.content.recipe.crucible.CrucibleRecipeDisplay;
-import com.leclowndu93150.thaumaturge.content.recipe.dust.MultiblockRecipeDisplay;
-import com.leclowndu93150.thaumaturge.content.recipe.workbench.ArcaneCraftingRecipe;
-import com.leclowndu93150.thaumaturge.content.recipe.workbench.ArcaneCraftingRecipeDisplay;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-import net.minecraft.core.registries.Registries;
+import com.leclowndu93150.thaumaturge.content.recipe.dust.DustTriggerSimpleRecipe;
+import com.leclowndu93150.thaumaturge.content.recipe.dust.DustTriggerTagRecipe;
+import com.leclowndu93150.thaumaturge.content.workbench.ArcaneCraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraft.world.item.crafting.display.RecipeDisplay;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.event.OnDatapackSyncEvent;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
 
 public final class TTRecipeTypes {
-    public static final DeferredRegister<RecipeType<?>> RECIPE_TYPES = DeferredRegister.create(Registries.RECIPE_TYPE, TTIds.MODID);
+    public static final DeferredRegister<RecipeType<?>> TYPES = DeferredRegister.create(ForgeRegistries.RECIPE_TYPES, TTIds.MODID);
+    public static final DeferredRegister<RecipeSerializer<?>> SERIALIZERS = DeferredRegister.create(ForgeRegistries.RECIPE_SERIALIZERS, TTIds.MODID);
 
-    public static final DeferredHolder<RecipeType<?>, RecipeType<DustTrigger>> DUST_TRIGGER = RECIPE_TYPES.register("dust_trigger", () -> new RecipeType<DustTrigger>() {
-        @Override
-        public String toString() {
-            return "thaumaturge:dust_trigger";
-        }
-    });
+    public static final RegistryObject<RecipeType<ArcaneCraftingRecipe>> ARCANE_CRAFTING = TYPES.register("arcane_crafting", () -> RecipeType.simple(TTIds.rl("arcane_crafting")));
+    public static final RegistryObject<RecipeType<CrucibleRecipe>> CRUCIBLE = TYPES.register("crucible", () -> RecipeType.simple(TTIds.rl("crucible")));
+    public static final RegistryObject<RecipeType<InfusionRecipe>> INFUSION = TYPES.register("infusion", () -> RecipeType.simple(TTIds.rl("infusion")));
+    public static final RegistryObject<RecipeType<DustTrigger>> DUST_TRIGGER = TYPES.register("dust_trigger", () -> RecipeType.simple(TTIds.rl("dust_trigger")));
 
-    public static final DeferredHolder<RecipeType<?>, RecipeType<InfusionRecipe>> INFUSION = RECIPE_TYPES.register("infusion", () -> new RecipeType<InfusionRecipe>() {
-        @Override
-        public String toString() {
-            return "thaumaturge:infusion";
-        }
-    });
+    public static final RegistryObject<RecipeSerializer<ArcaneCraftingRecipe>> ARCANE_CRAFTING_SERIALIZER = SERIALIZERS.register("arcane_crafting", ArcaneCraftingRecipe.Serializer::new);
+    public static final RegistryObject<RecipeSerializer<CrucibleRecipe>> CRUCIBLE_SERIALIZER = SERIALIZERS.register("crucible", CrucibleRecipe.Serializer::new);
+    public static final RegistryObject<RecipeSerializer<InfusionRecipe>> INFUSION_SERIALIZER = SERIALIZERS.register("infusion", InfusionRecipe.Serializer::new);
+    public static final RegistryObject<RecipeSerializer<DustTriggerSimpleRecipe>> DUST_TRIGGER_SIMPLE_SERIALIZER =
+            SERIALIZERS.register("dust_trigger_simple", DustTriggerSimpleRecipe.Serializer::new);
+    public static final RegistryObject<RecipeSerializer<DustTriggerTagRecipe>> DUST_TRIGGER_TAG_SERIALIZER =
+            SERIALIZERS.register("dust_trigger_tag", DustTriggerTagRecipe.Serializer::new);
 
-    public static final DeferredHolder<RecipeType<?>, RecipeType<InfusionEnchantmentRecipe>> INFUSION_ENCHANTMENT = RECIPE_TYPES.register("infusion_enchantment",
-            () -> new RecipeType<InfusionEnchantmentRecipe>() {
-                @Override
-                public String toString() {
-                    return "thaumaturge:infusion_enchantment";
-                }
-            });
-
-    public static final DeferredHolder<RecipeType<?>, RecipeType<InfusionRunicAugmentRecipe>> RUNIC_AUGMENT = RECIPE_TYPES.register("runic_augment",
-            () -> new RecipeType<InfusionRunicAugmentRecipe>() {
-                @Override
-                public String toString() {
-                    return "thaumaturge:runic_augment";
-                }
-            });
-
-    public static final DeferredHolder<RecipeType<?>, RecipeType<CrucibleRecipe>> CRUCIBLE = RECIPE_TYPES.register("crucible", () -> new RecipeType<CrucibleRecipe>() {
-        @Override
-        public String toString() {
-            return "thaumaturge:crucible";
-        }
-    });
-
-    public static final DeferredHolder<RecipeType<?>, RecipeType<ArcaneCraftingRecipe>> ARCANE = RECIPE_TYPES.register("arcane_workbench", () -> new RecipeType<ArcaneCraftingRecipe>() {
-        @Override
-        public String toString() {
-            return "thaumaturge:arcane_workbench";
-        }
-    });
+    public static final RegistryObject<RecipeSerializer<com.leclowndu93150.thaumaturge.content.recipe.dust.DustStructureRecipe>> DUST_STRUCTURE_SERIALIZER =
+            SERIALIZERS.register("dust_structure", com.leclowndu93150.thaumaturge.content.recipe.dust.DustStructureRecipe.Serializer::new);
 
     private TTRecipeTypes() {}
 
-    public static final DeferredRegister<RecipeDisplay.Type<?>> RECIPE_DISPLAYS = DeferredRegister.create(Registries.RECIPE_DISPLAY, TTIds.MODID);
-
-    public static final DeferredHolder<RecipeDisplay.Type<?>, RecipeDisplay.Type<ArcaneCraftingRecipeDisplay>> ARCANE_DISPLAY = RECIPE_DISPLAYS.register("arcane_crafting",
-            () -> new RecipeDisplay.Type<>(ArcaneCraftingRecipeDisplay.MAP_CODEC, ArcaneCraftingRecipeDisplay.STREAM_CODEC));
-
-    public static final DeferredHolder<RecipeDisplay.Type<?>, RecipeDisplay.Type<CrucibleRecipeDisplay>> CRUCIBLE_DISPLAY = RECIPE_DISPLAYS.register("crucible",
-            () -> new RecipeDisplay.Type<>(CrucibleRecipeDisplay.MAP_CODEC, CrucibleRecipeDisplay.STREAM_CODEC));
-
-    public static final DeferredHolder<RecipeDisplay.Type<?>, RecipeDisplay.Type<InfusionRecipeDisplay>> INFUSION_DISPLAY = RECIPE_DISPLAYS.register("infusion",
-            () -> new RecipeDisplay.Type<>(InfusionRecipeDisplay.MAP_CODEC, InfusionRecipeDisplay.STREAM_CODEC));
-
-    public static final DeferredHolder<RecipeDisplay.Type<?>, RecipeDisplay.Type<MultiblockRecipeDisplay>> MULTIBLOCK_DISPLAY = RECIPE_DISPLAYS.register("multiblock",
-            () -> new RecipeDisplay.Type<>(MultiblockRecipeDisplay.MAP_CODEC, MultiblockRecipeDisplay.STREAM_CODEC));
-
-    public static void register(IEventBus modBus) {
-        RECIPE_TYPES.register(modBus);
-        RECIPE_DISPLAYS.register(modBus);
-    }
-
-    public static void registerSynchronizedRecipes(OnDatapackSyncEvent event) {
-        List<RecipeType<?>> types = new ArrayList<>(RECIPE_TYPES.getEntries().stream().map(DeferredHolder::get).collect(Collectors.toUnmodifiableList()));
-        types.add(RecipeType.SMELTING);
-        event.sendRecipes(types);
+    public static void register(IEventBus bus) {
+        TYPES.register(bus);
+        SERIALIZERS.register(bus);
     }
 }

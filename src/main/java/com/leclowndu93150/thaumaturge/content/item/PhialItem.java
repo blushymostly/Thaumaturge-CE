@@ -1,165 +1,108 @@
 package com.leclowndu93150.thaumaturge.content.item;
 
-import com.leclowndu93150.thaumaturge.api.aspect.AspectComponents;
 import com.leclowndu93150.thaumaturge.api.aspect.AspectInstance;
 import com.leclowndu93150.thaumaturge.api.aspect.AspectList;
-import com.leclowndu93150.thaumaturge.api.aspect.IAspect;
-import com.leclowndu93150.thaumaturge.api.essentia.IEssentiaTransport;
-import com.leclowndu93150.thaumaturge.content.essentia.item.ComponentEssentia;
-import com.leclowndu93150.thaumaturge.content.essentia.jar.AbstractBlockEntityJar;
-import com.leclowndu93150.thaumaturge.content.essentia.smeltery.BlockEntityAlembic;
-import com.leclowndu93150.thaumaturge.registry.TTItems;
+import com.leclowndu93150.thaumaturge.api.aspect.TTAspects;
+import com.leclowndu93150.thaumaturge.api.essentia.EssentiaAccess;
+import com.leclowndu93150.thaumaturge.api.essentia.IEssentiaHandler;
+import com.leclowndu93150.thaumaturge.content.aspect.AspectNames;
+import com.leclowndu93150.thaumaturge.content.essentia.jar.EssentiaJarBlockEntity;
+import com.leclowndu93150.thaumaturge.content.essentia.smeltery.AlembicBlockEntity;
+import com.leclowndu93150.thaumaturge.registry.TTItemData;
 import com.leclowndu93150.thaumaturge.registry.TTSounds;
-import java.util.List;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 public final class PhialItem extends Item {
-    public static final int BASE_AMOUNT = 10;
+    public static final int AMOUNT = 10;
 
-    private static final Direction CONTAINER_FACE = Direction.UP;
-    private static final String EMPTY_SUFFIX = ".empty";
-    private static final String FILLED_SUFFIX = ".filled";
-    private static final float SOUND_VOLUME = 0.25F;
-    private static final float SOUND_PITCH = 1.0F;
-
-    public PhialItem(Item.Properties properties) {
+    public PhialItem(Properties properties) {
         super(properties);
     }
 
-    public static ItemStack makeFilled(Holder<IAspect> aspect) {
-        return makeFilled(aspect, BASE_AMOUNT);
-    }
-
-    public static ItemStack makeFilled(Holder<IAspect> aspect, int amount) {
-        ItemStack phial = TTItems.PHIAL.get().getDefaultInstance();
-        ComponentEssentia.phial(phial).setAspects(AspectList.of(new AspectInstance(aspect, amount)));
-        return phial;
+    public static int tintColor(ItemStack stack, int layer) {
+        AspectList contents = TTItemData.getAspects(stack);
+        if (layer != 1 || contents.isEmpty()) {
+            return 0xFFFFFF;
+        }
+        var aspect = TTAspects.get(contents.entries().get(0).aspectId());
+        return aspect == null ? 0xFFFFFF : aspect.color();
     }
 
     @Override
     public Component getName(ItemStack stack) {
-        List<AspectInstance> contents = ComponentEssentia.phial(stack).getAspects().entries();
+        AspectList contents = TTItemData.getAspects(stack);
         if (contents.isEmpty()) {
-            return Component.translatable(getDescriptionId() + EMPTY_SUFFIX);
+            return super.getName(stack);
         }
-        return Component.translatable(getDescriptionId() + FILLED_SUFFIX, AspectComponents.name(contents.getFirst().aspect()));
+        ResourceLocation aspect = contents.entries().get(0).aspectId();
+        return Component.translatable(getDescriptionId() + ".filled", AspectNames.name(aspect));
+    }
+
+    @Override
+    public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
+        return useOn(context);
     }
 
     @Override
     public InteractionResult useOn(UseOnContext context) {
         Player player = context.getPlayer();
-        Level level = context.getLevel();
-        BlockPos pos = context.getClickedPos();
-        if (player == null || !(level.getBlockEntity(pos) instanceof IEssentiaTransport container)) {
+        if (player == null) {
             return InteractionResult.PASS;
         }
-        boolean jar = container instanceof AbstractBlockEntityJar;
-        if (!jar && !(container instanceof BlockEntityAlembic)) {
+        BlockEntity target = context.getLevel().getBlockEntity(context.getClickedPos());
+        boolean jar = target instanceof EssentiaJarBlockEntity;
+        if (!jar && !(target instanceof AlembicBlockEntity)) {
+            return InteractionResult.PASS;
+        }
+        IEssentiaHandler handler = EssentiaAccess.handler(context.getLevel(), context.getClickedPos(), Direction.UP);
+        if (handler == null) {
             return InteractionResult.PASS;
         }
         ItemStack held = context.getItemInHand();
-        AspectList stored = ComponentEssentia.phial(held).getAspects();
-        Interaction interaction = new Interaction(level, pos, player, context.getHand(), held);
-        if (stored.isEmpty()) {
-            return interaction.draw(container);
-        }
-        return jar ? interaction.store(container, stored.entries().getFirst()) : InteractionResult.PASS;
-    }
-
-    private enum Flow {
-        WITHDRAW, DEPOSIT
-    }
-
-    private record Transfer(IEssentiaTransport container, Holder<IAspect> aspect, int amount, Flow flow) {
-        int apply(boolean simulate) {
-            return flow == Flow.DEPOSIT ? container.addEssentia(aspect, amount, CONTAINER_FACE, simulate) : container.takeEssentia(aspect, amount, CONTAINER_FACE, simulate);
+        AspectList contents = TTItemData.getAspects(held);
+        boolean filling = contents.isEmpty();
+        ResourceLocation aspect = filling ? EssentiaAccess.firstAvailable(handler, null) : contents.entries().get(0).aspectId();
+        int amount = filling ? AMOUNT : contents.amountOf(aspect);
+        if (aspect == null || (!filling && (!jar || contents.size() != 1 || amount != AMOUNT))) {
+            return InteractionResult.PASS;
         }
 
-        void revert(int moved) {
-            if (moved <= 0) {
-                return;
-            }
-            if (flow == Flow.DEPOSIT) {
-                container.takeEssentia(aspect, moved, CONTAINER_FACE);
+        int possible = filling ? handler.extract(aspect, amount, true) : handler.insert(aspect, amount, true);
+        if (possible != amount) {
+            return InteractionResult.PASS;
+        }
+        if (!context.getLevel().isClientSide) {
+            if (filling) {
+                handler.extract(aspect, amount, false);
             } else {
-                container.addEssentia(aspect, moved, CONTAINER_FACE);
+                handler.insert(aspect, amount, false);
+            }
+            context.getLevel().playSound(null, context.getClickedPos(), TTSounds.JAR.get(), SoundSource.BLOCKS, 0.25F, 1.0F);
+            boolean creative = player.getAbilities().instabuild;
+            if (filling || !creative) {
+                ItemStack result = new ItemStack(this);
+                if (filling) {
+                    TTItemData.setAspects(result, AspectList.EMPTY.add(new AspectInstance(aspect, amount)));
+                }
+                if (!creative) {
+                    held.shrink(1);
+                }
+                if (held.isEmpty()) {
+                    player.setItemInHand(context.getHand(), result);
+                } else if (!player.getInventory().add(result)) {
+                    player.drop(result, false);
+                }
             }
         }
-
-        void settle(Player player, InteractionHand hand, ItemStack held) {
-            boolean withdraw = flow == Flow.WITHDRAW;
-            if (!withdraw && player.hasInfiniteMaterials()) {
-                return;
-            }
-            spendOne(player, hand, held);
-            give(player, withdraw ? makeFilled(aspect) : new ItemStack(TTItems.PHIAL.get()));
-        }
-    }
-
-    private record Interaction(Level level, BlockPos pos, Player player, InteractionHand hand, ItemStack held) {
-        InteractionResult draw(IEssentiaTransport container) {
-            Holder<IAspect> aspect = container.getEssentiaType(CONTAINER_FACE);
-            if (aspect == null || container.getEssentiaAmount(CONTAINER_FACE) < BASE_AMOUNT) {
-                return InteractionResult.PASS;
-            }
-            return run(new Transfer(container, aspect, BASE_AMOUNT, Flow.WITHDRAW));
-        }
-
-        InteractionResult store(IEssentiaTransport container, AspectInstance contents) {
-            if (container.spaceFor(contents.aspect(), CONTAINER_FACE) < contents.amount()) {
-                return InteractionResult.PASS;
-            }
-            return run(new Transfer(container, contents.aspect(), contents.amount(), Flow.DEPOSIT));
-        }
-
-        private InteractionResult preview(Transfer transfer) {
-            boolean possible = transfer.apply(true) == transfer.amount();
-            if (possible) {
-                player.swing(hand);
-            }
-            return possible ? InteractionResult.SUCCESS : InteractionResult.PASS;
-        }
-
-        private InteractionResult run(Transfer transfer) {
-            if (level.isClientSide()) {
-                return preview(transfer);
-            }
-            int moved = transfer.apply(false);
-            boolean complete = moved == transfer.amount();
-            if (complete) {
-                transfer.settle(player, hand, held);
-                level.playSound(null, pos, TTSounds.JAR.get(), SoundSource.BLOCKS, SOUND_VOLUME, SOUND_PITCH);
-            } else {
-                transfer.revert(moved);
-            }
-            return complete ? InteractionResult.SUCCESS : InteractionResult.PASS;
-        }
-    }
-
-    private static void spendOne(Player player, InteractionHand hand, ItemStack held) {
-        if (player.hasInfiniteMaterials()) {
-            return;
-        }
-        held.shrink(1);
-        if (held.isEmpty()) {
-            player.setItemInHand(hand, ItemStack.EMPTY);
-        }
-    }
-
-    private static void give(Player player, ItemStack stack) {
-        if (!player.getInventory().add(stack)) {
-            player.drop(stack, false);
-        }
+        return InteractionResult.sidedSuccess(context.getLevel().isClientSide);
     }
 }

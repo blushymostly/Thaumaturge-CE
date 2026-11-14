@@ -1,0 +1,23 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:infusion_eldritch",
+  "pattern": [
+    "SSS",
+    " B ",
+    "SSS"
+  ],
+  "key": {
+    "S": {
+      "item": "thaumaturge:slab_eldritch"
+    },
+    "B": {
+      "item": "thaumaturge:stone_eldritch_tile"
+    }
+  },
+  "vis": 150,
+  "crystals": [],
+  "result": {
+    "item": "thaumaturge:pedestal_eldritch",
+    "count": 1
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "type": "thaumaturge:crystal_cluster",
+  "config": {
+    "crystals": [
+      { "aspect": "thaumaturge:aer", "block": "thaumaturge:crystal_aer" },
+      { "aspect": "thaumaturge:ignis", "block": "thaumaturge:crystal_ignis" },
+      { "aspect": "thaumaturge:aqua", "block": "thaumaturge:crystal_aqua" },
+      { "aspect": "thaumaturge:terra", "block": "thaumaturge:crystal_terra" },
+      { "aspect": "thaumaturge:ordo", "block": "thaumaturge:crystal_ordo" },
+      { "aspect": "thaumaturge:perditio", "block": "thaumaturge:crystal_perditio" }
+    ],
+    "attempts": 8,
+    "max_total": 64,
+    "biome_aspect_chance": 2,
+    "at_origin": false
+  }
+}

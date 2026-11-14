@@ -17,7 +17,9 @@
       ],
       "craft": [
         {
-          "items": "#c:ingots/brass",
+          "items": [
+            "thaumaturge:ingot_brass"
+          ],
           "amount": 1
         }
       ],
@@ -39,7 +41,9 @@
       ],
       "craft": [
         {
-          "items": "#c:ingots/thaumium",
+          "items": [
+            "thaumaturge:ingot_thaumium"
+          ],
           "amount": 1
         }
       ],

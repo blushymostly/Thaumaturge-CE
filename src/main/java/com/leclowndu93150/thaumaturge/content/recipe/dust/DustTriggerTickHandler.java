@@ -1,8 +1,6 @@
 package com.leclowndu93150.thaumaturge.content.recipe.dust;
 
 import com.leclowndu93150.thaumaturge.TTIds;
-import com.leclowndu93150.thaumaturge.content.effect.Effects;
-import com.leclowndu93150.thaumaturge.content.entity.EntitySpecialItem;
 import com.leclowndu93150.thaumaturge.registry.TTAttachments;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,17 +8,20 @@ import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.level.ChunkEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.level.ChunkEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
-@EventBusSubscriber(modid = TTIds.MODID)
+/** Counts down and lands queued dust swaps; re-arms queues stored in chunks on load. */
+@Mod.EventBusSubscriber(modid = TTIds.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class DustTriggerTickHandler {
     private DustTriggerTickHandler() {}
 
@@ -29,10 +30,7 @@ public final class DustTriggerTickHandler {
         if (!(event.getLevel() instanceof ServerLevel level) || !(event.getChunk() instanceof LevelChunk chunk)) {
             return;
         }
-        if (!chunk.hasData(TTAttachments.DUST_TRIGGER_QUEUE.get())) {
-            return;
-        }
-        DustTriggerSwapQueue queue = chunk.getData(TTAttachments.DUST_TRIGGER_QUEUE.get());
+        DustTriggerSwapQueue queue = TTAttachments.dustQueue(chunk);
         if (queue.isEmpty()) {
             return;
         }
@@ -43,11 +41,19 @@ public final class DustTriggerTickHandler {
     }
 
     @SubscribeEvent
-    public static void onServerTick(ServerTickEvent.Post event) {
+    public static void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
         MinecraftServer server = event.getServer();
         for (ServerLevel level : server.getAllLevels()) {
             tickLevel(level);
         }
+    }
+
+    @SubscribeEvent
+    public static void onServerStopped(ServerStoppedEvent event) {
+        DustTriggerSwapQueue.resetSession();
     }
 
     private static void tickLevel(ServerLevel level) {
@@ -56,11 +62,11 @@ public final class DustTriggerTickHandler {
             return;
         }
         for (ChunkPos cp : active) {
-            if (!level.hasChunk(cp.x(), cp.z())) {
+            if (!level.hasChunk(cp.x, cp.z)) {
                 continue;
             }
-            LevelChunk chunk = level.getChunk(cp.x(), cp.z());
-            DustTriggerSwapQueue queue = chunk.getData(TTAttachments.DUST_TRIGGER_QUEUE.get());
+            LevelChunk chunk = level.getChunk(cp.x, cp.z);
+            DustTriggerSwapQueue queue = TTAttachments.dustQueue(chunk);
             if (queue.isEmpty()) {
                 DustTriggerSwapQueue.markChunkClear(level, cp);
                 continue;
@@ -71,18 +77,23 @@ public final class DustTriggerTickHandler {
 
     private static void tickChunk(ServerLevel level, LevelChunk chunk, DustTriggerSwapQueue queue) {
         List<PendingSwap> entries = queue.entries();
-        List<PendingSwap> next = new ArrayList<>(entries.size());
-        for (PendingSwap entry : entries) {
+        List<PendingSwap> snapshot = new ArrayList<>(entries);
+        List<PendingSwap> next = new ArrayList<>(snapshot.size());
+        List<PendingSwap> done = new ArrayList<>();
+        for (PendingSwap entry : snapshot) {
             int remaining = entry.ticksRemaining() - 1;
             if (remaining <= 0) {
-                complete(level, entry);
-                continue;
+                done.add(entry);
+            } else {
+                next.add(entry.withTicks(remaining));
             }
-            next.add(entry.withTicks(remaining));
         }
         entries.clear();
         entries.addAll(next);
-        chunk.markUnsaved();
+        chunk.setUnsaved(true);
+        for (PendingSwap entry : done) {
+            complete(level, entry);
+        }
         if (queue.isEmpty()) {
             DustTriggerSwapQueue.markChunkClear(level, chunk.getPos());
         }
@@ -101,14 +112,13 @@ public final class DustTriggerTickHandler {
         } else {
             level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
             if (resultStack != null && !resultStack.isEmpty()) {
-                ItemStack copy = resultStack.copy();
-                EntitySpecialItem drop = new EntitySpecialItem(level, pos.getX() + 0.5, pos.getY() + 0.1, pos.getZ() + 0.5, copy);
+                ItemEntity drop = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.1, pos.getZ() + 0.5, resultStack.copy());
                 drop.setDeltaMovement(0.0, 0.0, 0.0);
                 drop.setDefaultPickUpDelay();
                 level.addFreshEntity(drop);
             }
         }
-        Effects.bamf(level, pos).withSound().fancy().send();
+        DustTriggerFx.emitSwapBamf(level, pos);
         DustTriggerSwapQueue.clearBlocked(level, pos);
     }
 }

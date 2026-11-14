@@ -1,9 +1,11 @@
 {
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "flip_v": true,
   "loader": "thaumaturge:mesh",
-  "parent": "block/block",
   "model": "thaumaturge:models/mesh/node_stabilizer.ttmesh",
   "textures": {
-    "texture": "thaumaturge:block/node_converter",
-    "particle": "#texture"
+    "particle": "thaumaturge:block/node_converter",
+    "texture": "thaumaturge:block/node_converter"
   }
 }

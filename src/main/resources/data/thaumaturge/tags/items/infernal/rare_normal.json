@@ -1,0 +1,25 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "#forge:ores/silver",
+      "required": false
+    },
+    {
+      "id": "#forge:ores/gold",
+      "required": false
+    },
+    {
+      "id": "#forge:raw_materials/gold",
+      "required": false
+    },
+    "thaumaturge:cluster_iron",
+    "thaumaturge:cluster_gold",
+    "thaumaturge:cluster_copper",
+    "thaumaturge:cluster_quartz",
+    "thaumaturge:cluster_cinnabar",
+    "thaumaturge:cluster_tin",
+    "thaumaturge:cluster_silver",
+    "thaumaturge:cluster_lead"
+  ]
+}

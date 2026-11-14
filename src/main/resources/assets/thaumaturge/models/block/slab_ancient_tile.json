@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/slab",
+  "textures": {
+    "side": "thaumaturge:block/ancient_tile",
+    "bottom": "thaumaturge:block/ancient_tile",
+    "top": "thaumaturge:block/ancient_tile"
+  }
+}

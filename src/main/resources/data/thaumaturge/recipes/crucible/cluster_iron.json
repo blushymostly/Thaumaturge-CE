@@ -1,0 +1,21 @@
+{
+  "type": "thaumaturge:crucible",
+  "research": "thaumaturge:metal_purification@2",
+  "catalyst": {
+    "tag": "forge:raw_materials/iron"
+  },
+  "aspects": [
+    {
+      "aspect": "thaumaturge:metallum",
+      "amount": 5
+    },
+    {
+      "aspect": "thaumaturge:ordo",
+      "amount": 5
+    }
+  ],
+  "result": {
+    "item": "thaumaturge:cluster_iron",
+    "count": 1
+  }
+}

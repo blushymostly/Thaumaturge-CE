@@ -1,18 +1,14 @@
 package com.leclowndu93150.thaumaturge.client.render.research;
 
 import com.leclowndu93150.thaumaturge.client.screen.TTScreenTextures;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.gui.GuiGraphics;
 
 public final class ConnectorRenderer {
     public static final int CELL_SIZE = 24;
-    public static final int COLOR_PARENT_KNOWN = 0xFF999999;
-    public static final int COLOR_PARENT_UNKNOWN = 0xFF333333;
-    public static final int COLOR_SIBLING_KNOWN = 0xFF4C4C66;
-    public static final int COLOR_SIBLING_UNKNOWN = 0xFF2F2F3F;
 
     private static final int PIECE_INSET = 4;
     private static final int ARROW_INSET = 8;
@@ -23,15 +19,26 @@ public final class ConnectorRenderer {
     private static final int STRAIGHT_V = 228;
     private static final int BIG_CORNER_V = 180;
     private static final int ARROW_V = 112;
+    private static final int TEX = TTScreenTextures.TEX_SIZE;
 
     private static final ThreadLocal<List<Piece>> PENDING = ThreadLocal.withInitial(ArrayList::new);
     private static final Comparator<Piece> BY_Z = Comparator.comparingDouble(Piece::z);
 
     private enum Sprite {
-        STRAIGHT_VERTICAL(0, STRAIGHT_V, CELL_SIZE), STRAIGHT_HORIZONTAL(24, STRAIGHT_V, CELL_SIZE), CORNER_BOTTOM_LEFT(48, STRAIGHT_V, CELL_SIZE), CORNER_BOTTOM_RIGHT(72, STRAIGHT_V,
-                CELL_SIZE), CORNER_TOP_LEFT(96, STRAIGHT_V, CELL_SIZE), CORNER_TOP_RIGHT(120, STRAIGHT_V, CELL_SIZE), BIG_CORNER_BOTTOM_LEFT(0, BIG_CORNER_V, BIG_SIZE), BIG_CORNER_BOTTOM_RIGHT(48,
-                        BIG_CORNER_V, BIG_SIZE), BIG_CORNER_TOP_LEFT(96, BIG_CORNER_V, BIG_SIZE), BIG_CORNER_TOP_RIGHT(144, BIG_CORNER_V,
-                                BIG_SIZE), ARROW_DOWN(64, ARROW_V, ARROW_SIZE), ARROW_UP(96, ARROW_V, ARROW_SIZE), ARROW_RIGHT(128, ARROW_V, ARROW_SIZE), ARROW_LEFT(160, ARROW_V, ARROW_SIZE);
+        STRAIGHT_VERTICAL(0, STRAIGHT_V, CELL_SIZE),
+        STRAIGHT_HORIZONTAL(24, STRAIGHT_V, CELL_SIZE),
+        CORNER_BOTTOM_LEFT(48, STRAIGHT_V, CELL_SIZE),
+        CORNER_BOTTOM_RIGHT(72, STRAIGHT_V, CELL_SIZE),
+        CORNER_TOP_LEFT(96, STRAIGHT_V, CELL_SIZE),
+        CORNER_TOP_RIGHT(120, STRAIGHT_V, CELL_SIZE),
+        BIG_CORNER_BOTTOM_LEFT(0, BIG_CORNER_V, BIG_SIZE),
+        BIG_CORNER_BOTTOM_RIGHT(48, BIG_CORNER_V, BIG_SIZE),
+        BIG_CORNER_TOP_LEFT(96, BIG_CORNER_V, BIG_SIZE),
+        BIG_CORNER_TOP_RIGHT(144, BIG_CORNER_V, BIG_SIZE),
+        ARROW_DOWN(64, ARROW_V, ARROW_SIZE),
+        ARROW_UP(96, ARROW_V, ARROW_SIZE),
+        ARROW_RIGHT(128, ARROW_V, ARROW_SIZE),
+        ARROW_LEFT(160, ARROW_V, ARROW_SIZE);
 
         private final int u;
         private final int v;
@@ -44,12 +51,11 @@ public final class ConnectorRenderer {
         }
     }
 
-    private record Piece(float z, int x, int y, Sprite sprite, int color) {
-    }
+    private record Piece(float z, int x, int y, Sprite sprite, int color) {}
 
     private ConnectorRenderer() {}
 
-    public static void draw(GuiGraphicsExtractor graphics, int sourceCol, int sourceRow, int parentCol, int parentRow, int originX, int originY, int color, float zModifier, boolean arrow, boolean flip) {
+    public static void draw(int sourceCol, int sourceRow, int parentCol, int parentRow, int originX, int originY, int color, float zModifier, boolean arrow, boolean flip) {
         int anchorCol = flip ? parentCol : sourceCol;
         int anchorRow = flip ? parentRow : sourceRow;
         int farCol = flip ? sourceCol : parentCol;
@@ -82,18 +88,27 @@ public final class ConnectorRenderer {
         }
     }
 
-    public static void flush(GuiGraphicsExtractor graphics) {
+    public static void flush(GuiGraphics graphics) {
         List<Piece> pending = PENDING.get();
         try {
             pending.sort(BY_Z);
             for (Piece piece : pending) {
                 Sprite sprite = piece.sprite;
-                graphics.blit(RenderPipelines.GUI_TEXTURED, TTScreenTextures.RESEARCH_BROWSER, piece.x, piece.y, (float) sprite.u, (float) sprite.v, sprite.size, sprite.size, sprite.size, sprite.size,
-                        TTScreenTextures.TEX_SIZE, TTScreenTextures.TEX_SIZE, piece.color);
+                blitTint(graphics, piece.x, piece.y, sprite.u, sprite.v, sprite.size, sprite.size, piece.color);
             }
         } finally {
             pending.clear();
         }
+    }
+
+    private static void blitTint(GuiGraphics graphics, int x, int y, int u, int v, int w, int h, int color) {
+        float a = (color >> 24 & 255) / 255.0F;
+        float r = (color >> 16 & 255) / 255.0F;
+        float g = (color >> 8 & 255) / 255.0F;
+        float b = (color & 255) / 255.0F;
+        RenderSystem.setShaderColor(r, g, b, a <= 0 ? 1.0F : a);
+        graphics.blit(TTScreenTextures.RESEARCH_BROWSER, x, y, u, v, w, h, TEX, TEX);
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
     }
 
     private static void queueArrow(Layout layout, boolean flip, int anchorCol, int anchorRow, int farCol, int farRow) {

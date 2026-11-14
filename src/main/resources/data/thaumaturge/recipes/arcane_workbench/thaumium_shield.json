@@ -1,0 +1,14 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:thaumium_shield",
+  "pattern": ["GGG", "TTT", " G "],
+  "key": {
+    "G": { "item": "thaumaturge:plank_greatwood" },
+    "T": { "item": "thaumaturge:plate_thaumium" }
+  },
+  "result": { "item": "thaumaturge:thaumium_shield", "count": 1 },
+  "vis": [
+    { "aspect": "thaumaturge:terra", "amount": 2 },
+    { "aspect": "thaumaturge:ordo", "amount": 1 }
+  ]
+}

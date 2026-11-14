@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "thaumaturge:block/slab_arcane_brick"
+    },
+    "type=double": {
+      "model": "thaumaturge:block/arcane_stone_brick"
+    },
+    "type=top": {
+      "model": "thaumaturge:block/slab_arcane_brick_top"
+    }
+  }
+}

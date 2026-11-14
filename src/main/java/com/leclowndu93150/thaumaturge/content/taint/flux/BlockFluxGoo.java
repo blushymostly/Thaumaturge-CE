@@ -1,113 +1,61 @@
 package com.leclowndu93150.thaumaturge.content.taint.flux;
 
-import com.leclowndu93150.thaumaturge.content.particle.BubbleParticleOptions;
-import com.mojang.serialization.MapCodec;
+import com.leclowndu93150.thaumaturge.registry.TTMobEffects;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import com.leclowndu93150.thaumaturge.registry.TTFluids;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.ARGB;
-import net.minecraft.util.RandomSource;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.LiquidBlock;
-import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.FlowingFluid;
-import net.minecraft.world.level.material.FluidState;
-import org.jspecify.annotations.Nullable;
 
 public final class BlockFluxGoo extends LiquidBlock implements PhysicalFluxBlock {
-    public static final MapCodec<LiquidBlock> CODEC = simpleCodec(properties -> new BlockFluxGoo(FluxGooRefs.sourceFluid(), properties));
-
-    private static final int REPLACEABLE_AMOUNT = 2;
-    private static final float AURA_FLOOR_PER_QUANTUM = 0.5F;
-    private static final float TAINT_WEIGHT_PER_QUANTUM = 1.0F;
-    private static final int OUTBREAK_COST = 0;
-    private static final int FUME_ROLL_RANGE = 44;
-    private static final double FUME_HEIGHT_PER_STEP = 0.125;
-    private static final float FUME_RED = 1.0F;
-    private static final float FUME_GREEN = 0.0F;
-    private static final float FUME_BLUE = 0.5F;
-    private static final float FUME_COLOR_ALPHA = 1.0F;
-    private static final float FUME_ALPHA = 0.25F;
-    private static final float FUME_MIN_SCALE = 0.2F;
-    private static final float FUME_SCALE_SPREAD = 0.3F;
-    private static final int FUME_MIN_AGE = 2;
-    private static final int FUME_AGE_SPREAD = 3;
-    private static final float FUME_BUOYANCY = -0.01F;
-
-    public BlockFluxGoo(FlowingFluid fluid, BlockBehaviour.Properties properties) {
-        super(fluid, properties);
+    public BlockFluxGoo(Properties properties) {
+        super(TTFluids.GOO_SOURCE, properties);
     }
 
-    @Override
-    public MapCodec<LiquidBlock> codec() {
-        return CODEC;
-    }
-
-    @Override
-    protected boolean canBeReplaced(BlockState state, BlockPlaceContext context) {
-        return fluxAmount(state) <= REPLACEABLE_AMOUNT;
-    }
-
-    @Override
-    public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
-        int steps = fluxAmount(state) - 1;
-        if (random.nextInt(FUME_ROLL_RANGE) > steps) {
-            return;
-        }
-        int color = ARGB.colorFromFloat(FUME_COLOR_ALPHA, FUME_RED, FUME_GREEN, FUME_BLUE);
-        float scale = FUME_MIN_SCALE + random.nextFloat() * FUME_SCALE_SPREAD;
-        int age = FUME_MIN_AGE + random.nextInt(FUME_AGE_SPREAD);
-        level.addParticle(new BubbleParticleOptions(color, FUME_ALPHA, scale, age, FUME_BUOYANCY, false), pos.getX() + random.nextDouble(), pos.getY() + FUME_HEIGHT_PER_STEP * steps,
-                pos.getZ() + random.nextDouble(), 0.0, 0.0, 0.0);
-    }
-
-    @Override
-    public int fluxAmount(BlockState state) {
-        return Math.clamp(state.getFluidState().getAmount(), 1, PhysicalFlux.MAX_QUANTA);
-    }
+    @Override public int fluxAmount(BlockState state) { return state.getFluidState().getAmount(); }
 
     @Override
     public BlockState withFluxAmount(int amount) {
-        return FluxGooFluid.gooBlockState(amount);
+        return defaultBlockState().setValue(LEVEL, PhysicalFlux.MAX_QUANTA - Mth.clamp(amount, 1, PhysicalFlux.MAX_QUANTA));
     }
 
     @Override
     public void scheduleFluxTick(ServerLevel level, BlockPos pos) {
-        FluidState fluidState = level.getFluidState(pos);
-        if (!fluidState.isEmpty()) {
-            level.scheduleTick(pos, fluidState.getType(), fluidState.getType().getTickDelay(level));
+        var fluid = level.getFluidState(pos).getType();
+        level.scheduleTick(pos, fluid, fluid.getTickDelay(level));
+    }
+
+    @Override public float auraFloorPerQuantum() { return 0.5F; }
+    @Override public float taintWeightPerQuantum() { return 1.0F; }
+    @Override public int outbreakCost() { return 0; }
+    @Override public ItemStack pickupBlock(LevelAccessor level, BlockPos pos, BlockState state) { return ItemStack.EMPTY; }
+
+    @Override
+    public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
+        int amount = fluxAmount(state);
+        if (entity.blockPosition().equals(pos)) {
+            double drag = 1.0 - 0.5 * amount / PhysicalFlux.MAX_QUANTA;
+            entity.setDeltaMovement(entity.getDeltaMovement().multiply(drag, 1, drag));
+        }
+        if (!level.isClientSide && entity instanceof LivingEntity living) {
+            var current = living.getEffect(TTMobEffects.VIS_EXHAUST.get());
+            int amplifier = (amount - 1) / 3;
+            if (current == null || current.getAmplifier() < amplifier || current.getDuration() < 580) {
+                living.addEffect(new MobEffectInstance(TTMobEffects.VIS_EXHAUST.get(), 600, amplifier, true, true, false));
+            }
         }
     }
 
     @Override
-    public float auraFloorPerQuantum() {
-        return AURA_FLOOR_PER_QUANTUM;
-    }
-
-    @Override
-    public float taintWeightPerQuantum() {
-        return TAINT_WEIGHT_PER_QUANTUM;
-    }
-
-    @Override
-    public int outbreakCost() {
-        return OUTBREAK_COST;
-    }
-
-    @Override
-    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean movedByPiston) {
-        super.onPlace(state, level, pos, oldState, movedByPiston);
-        if (level instanceof ServerLevel serverLevel) {
-            PhysicalFluxAuraFloor.observe(serverLevel, pos);
-        }
-    }
-
-    @Override
-    public ItemStack pickupBlock(@Nullable LivingEntity user, LevelAccessor level, BlockPos pos, BlockState state) {
-        return ItemStack.EMPTY;
+    public void onPlace(BlockState state, Level level, BlockPos pos, BlockState old, boolean moving) {
+        super.onPlace(state, level, pos, old, moving);
+        if (level instanceof ServerLevel server) PhysicalFluxIndex.observe(server, pos);
     }
 }

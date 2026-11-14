@@ -1,0 +1,9 @@
+{
+  "type": "forge:add_features",
+  "biomes": "#minecraft:is_overworld",
+  "features": [
+    "thaumaturge:ore_quartz",
+    "thaumaturge:ore_amber"
+  ],
+  "step": "underground_ores"
+}

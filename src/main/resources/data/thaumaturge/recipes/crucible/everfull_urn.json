@@ -1,0 +1,24 @@
+{
+  "type": "thaumaturge:crucible",
+  "research": "thaumaturge:everfull_urn",
+  "catalyst": {
+    "item": "minecraft:decorated_pot"
+  },
+  "aspects": [
+    {
+      "aspect": "thaumaturge:aqua",
+      "amount": 30
+    },
+    {
+      "aspect": "thaumaturge:fabrico",
+      "amount": 10
+    },
+    {
+      "aspect": "thaumaturge:terra",
+      "amount": 10
+    }
+  ],
+  "result": {
+    "item": "thaumaturge:everfull_urn"
+  }
+}

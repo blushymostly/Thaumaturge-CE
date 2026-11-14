@@ -2,42 +2,52 @@ package com.leclowndu93150.thaumaturge.client.tooltip;
 
 import com.leclowndu93150.thaumaturge.TTIds;
 import com.leclowndu93150.thaumaturge.api.aspect.AspectChipsTooltip;
-import com.leclowndu93150.thaumaturge.api.aspect.AspectIndexAccess;
+import com.leclowndu93150.thaumaturge.api.aspect.AspectIndex;
 import com.leclowndu93150.thaumaturge.api.aspect.AspectList;
-import com.leclowndu93150.thaumaturge.config.ThaumaturgeClientConfig;
+import com.leclowndu93150.thaumaturge.content.item.VisCrystalItem;
+import com.leclowndu93150.thaumaturge.registry.TTItemData;
 import com.mojang.datafixers.util.Either;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RenderTooltipEvent;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RenderTooltipEvent;
+import net.minecraftforge.event.TagsUpdatedEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
-@EventBusSubscriber(modid = TTIds.MODID, value = Dist.CLIENT)
+/** Appends the aspect chip row to item tooltips (always for vis crystals; Shift for other items). */
+@Mod.EventBusSubscriber(modid = TTIds.MODID, value = Dist.CLIENT)
 public final class AspectTooltipEvents {
     private AspectTooltipEvents() {}
 
     @SubscribeEvent
     public static void onGatherTooltipComponents(RenderTooltipEvent.GatherComponents event) {
-        if (event.getItemStack().isEmpty()) {
+        ItemStack stack = event.getItemStack();
+        if (stack.isEmpty()) {
             return;
         }
-        if (!shouldShowAspects()) {
+        boolean crystal = stack.getItem() instanceof VisCrystalItem && TTItemData.getCrystalAspect(stack) != null;
+        if (!crystal && !Screen.hasShiftDown()) {
             return;
         }
-        AspectList aspects = AspectIndexAccess.index().of(event.getItemStack());
+        AspectList aspects = AspectIndex.of(stack);
         if (aspects.isEmpty()) {
             return;
         }
         event.getTooltipElements().add(Either.right(new AspectChipsTooltip(aspects)));
     }
 
-    private static boolean isContainerScreenOpen() {
-        return Minecraft.getInstance().screen instanceof AbstractContainerScreen<?>;
+    @SubscribeEvent
+    public static void onRecipesUpdated(net.minecraftforge.client.event.RecipesUpdatedEvent event) {
+        var level = net.minecraft.client.Minecraft.getInstance().level;
+        if (level != null) {
+            AspectIndex.invalidate();
+            AspectIndex.rebuildDerived(event.getRecipeManager(), level.registryAccess(), net.minecraftforge.fml.LogicalSide.CLIENT);
+        }
     }
 
-    private static boolean shouldShowAspects() {
-        boolean shift = Minecraft.getInstance().hasShiftDown();
-        return shift != ThaumaturgeClientConfig.showAspectsByDefault();
+    @SubscribeEvent
+    public static void onTagsUpdated(TagsUpdatedEvent event) {
+        AspectIndex.invalidate();
     }
 }

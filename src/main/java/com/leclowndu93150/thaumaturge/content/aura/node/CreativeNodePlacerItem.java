@@ -1,22 +1,20 @@
 package com.leclowndu93150.thaumaturge.content.aura.node;
 
-import com.leclowndu93150.thaumaturge.registry.TTBlockEntities;
-import com.leclowndu93150.thaumaturge.registry.TTBlocks;
-import java.util.function.Consumer;
+import com.leclowndu93150.thaumaturge.registry.TTItemData;
+import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
-import net.minecraft.world.item.component.TypedEntityData;
 import net.minecraft.world.item.context.UseOnContext;
-import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 
+/** Creative-only item: places a random node, or the node whose data it carries (from pick-block). */
 public final class CreativeNodePlacerItem extends Item {
     public CreativeNodePlacerItem(Properties properties) {
         super(properties);
@@ -31,23 +29,20 @@ public final class CreativeNodePlacerItem extends Item {
         if (!level.getBlockState(pos).canBeReplaced()) {
             return InteractionResult.FAIL;
         }
-        TypedEntityData<BlockEntityType<?>> nodeData = context.getItemInHand().get(DataComponents.BLOCK_ENTITY_DATA);
-        if (nodeData != null) {
-            if (nodeData.type() != TTBlockEntities.NODE.get() || !level.setBlock(pos, TTBlocks.NODE.get().defaultBlockState(), 3) || !(level.getBlockEntity(pos) instanceof BlockEntityNode node)) {
-                return InteractionResult.FAIL;
-            }
-            nodeData.loadInto(node, level.registryAccess());
-            node.applyComponentsFromItemStack(context.getItemInHand());
-            node.setChanged();
-            level.sendBlockUpdated(pos, node.getBlockState(), node.getBlockState(), 3);
-            return InteractionResult.SUCCESS_SERVER;
-        }
-        boolean placed = NodeGenerator.createRandomNodeAt(level, pos, level.getRandom(), false, false, false, NodeGenerator.DEFAULT_SPECIAL_RARITY, NodeGenerator.DEFAULT_BASE_AURA);
-        return placed ? InteractionResult.SUCCESS_SERVER : InteractionResult.FAIL;
+        NodeData data = TTItemData.getNodeData(context.getItemInHand());
+        boolean placed = data != null
+                ? NodeGenerator.createNodeAt(level, pos, data)
+                : NodeGenerator.createRandomNodeAt(level, pos, level.getRandom(), false, false, false, NodeGenerator.DEFAULT_SPECIAL_RARITY, NodeGenerator.DEFAULT_BASE_AURA);
+        return placed ? InteractionResult.CONSUME : InteractionResult.FAIL;
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display, Consumer<Component> builder, TooltipFlag flag) {
-        builder.accept(Component.translatable("tooltip.thaumaturge.creative_only").withStyle(ChatFormatting.DARK_PURPLE));
+    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+        tooltip.add(Component.translatable("tooltip.thaumaturge.creative_only").withStyle(ChatFormatting.DARK_PURPLE));
+        NodeData data = TTItemData.getNodeData(stack);
+        if (data != null) {
+            tooltip.add(Component.literal(data.type().getSerializedName() + (data.modifier().isPresent() ? " / " + data.modifier().get().getSerializedName() : ""))
+                    .withStyle(ChatFormatting.GRAY));
+        }
     }
 }

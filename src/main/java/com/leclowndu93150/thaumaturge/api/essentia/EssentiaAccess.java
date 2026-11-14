@@ -1,110 +1,78 @@
 package com.leclowndu93150.thaumaturge.api.essentia;
 
-import com.leclowndu93150.thaumaturge.api.aspect.IAspect;
-import java.util.function.Supplier;
+import com.leclowndu93150.thaumaturge.api.aspect.AspectInstance;
+import com.leclowndu93150.thaumaturge.api.aspect.AspectList;
+import com.leclowndu93150.thaumaturge.registry.TTCapabilities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.component.DataComponentType;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import org.jspecify.annotations.Nullable;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import org.jetbrains.annotations.Nullable;
 
-/**
- * Convenience lookups for the sided essentia transport capability, and access to the aspect
- * filter that labels set on jars and other items.
- *
- * <p>The transport lookups wrap {@link EssentiaCapabilities#TRANSPORT} so that tooltip, JEI, and
- * integration code can ask "does this block expose essentia transport on this face" without
- * repeating the capability query. The {@code face} argument is the side of the queried block that
- * the caller is approaching from, matching the sided-capability convention.
- *
- * <p>The filter methods are bound at mod init by Thaumaturge via {@link #bind}; addons must not
- * call {@code bind}.
- *
- * @since 1.0.0
- */
+/** Forge port of CE26 {@code EssentiaAccess}: capability lookups plus a simulation-aware single transfer. */
 public final class EssentiaAccess {
-    private static Supplier<DataComponentType<ResourceKey<IAspect>>> filterComponent;
-
     private EssentiaAccess() {}
 
-    /**
-     * Returns the essentia transport exposed by the block at {@code pos} on the given face.
-     *
-     * @param level the level
-     * @param pos   the block position
-     * @param face  the side of the block being approached
-     * @return the transport, or {@code null} when the block exposes none on that face
-     */
-    public static @Nullable IEssentiaTransport transport(Level level, BlockPos pos, Direction face) {
-        return level.getCapability(EssentiaCapabilities.TRANSPORT, pos, face);
-    }
-
-    /**
-     * Whether the block at {@code pos} exposes essentia transport on the given face.
-     *
-     * @param level the level
-     * @param pos   the block position
-     * @param face  the side of the block being approached
-     * @return {@code true} when a transport capability is present on that face
-     */
-    public static boolean isEssentiaTransport(Level level, BlockPos pos, Direction face) {
-        return transport(level, pos, face) != null;
-    }
-
-    /**
-     * The aspect a stack is labelled for, such as a labelled jar. A filter only records intent: it
-     * does not make an item an essentia container or allow transfers.
-     *
-     * @param stack the stack
-     * @return the filter aspect, or null when the stack has none
-     * @throws IllegalStateException when called before the implementation has bound the facade
-     * @since 1.0.0
-     */
-    public static @Nullable ResourceKey<IAspect> aspectFilter(ItemStack stack) {
-        return stack.get(filterComponent());
-    }
-
-    /**
-     * Returns a copy of a stack with its aspect filter set or removed. The given stack is not
-     * changed.
-     *
-     * @param stack  the stack
-     * @param aspect the filter aspect, or null to remove the filter
-     * @return the changed copy
-     * @throws IllegalStateException when called before the implementation has bound the facade
-     * @since 1.0.0
-     */
-    public static ItemStack withAspectFilter(ItemStack stack, @Nullable ResourceKey<IAspect> aspect) {
-        ItemStack copy = stack.copy();
-        if (aspect == null) {
-            copy.remove(filterComponent());
-        } else {
-            copy.set(filterComponent(), aspect);
+    /** Essentia handler on the given face of the block at {@code pos}; never loads chunks. */
+    @Nullable
+    public static IEssentiaHandler handler(Level level, BlockPos pos, @Nullable Direction face) {
+        if (!level.hasChunkAt(pos)) {
+            return null;
         }
-        return copy;
+        return handler((BlockGetter) level, pos, face);
+    }
+
+    @Nullable
+    public static IEssentiaHandler handler(BlockGetter getter, BlockPos pos, @Nullable Direction face) {
+        BlockEntity be = getter.getBlockEntity(pos);
+        return be == null ? null : be.getCapability(TTCapabilities.ESSENTIA, face).resolve().orElse(null);
+    }
+
+    /** Essentia a client or server block entity currently holds, or {@link AspectList#EMPTY}. */
+    public static AspectList contentsOf(BlockGetter getter, BlockPos pos) {
+        IEssentiaHandler handler = handler(getter, pos, null);
+        return handler == null ? AspectList.EMPTY : handler.getEssentia();
+    }
+
+    /** First aspect held by a handler that is acceptable to {@code wanted} (null = any), or null. */
+    @Nullable
+    public static ResourceLocation firstAvailable(IEssentiaHandler handler, @Nullable ResourceLocation wanted) {
+        for (AspectInstance entry : handler.getEssentia().entries()) {
+            if (wanted == null || wanted.equals(entry.aspectId())) {
+                return entry.aspectId();
+            }
+        }
+        return null;
     }
 
     /**
-     * Binds the aspect filter component. Called once at mod init by Thaumaturge; addons must not
-     * call this.
+     * Moves up to {@code max} of {@code aspect} from {@code src} to {@code dst}, honouring sidedness.
      *
-     * @param component the component holding an item's aspect filter
-     * @throws IllegalStateException when already bound
-     * @since 1.0.0
+     * @return amount moved (or that would move when {@code simulate})
      */
-    public static void bind(Supplier<DataComponentType<ResourceKey<IAspect>>> component) {
-        if (filterComponent != null) {
-            throw new IllegalStateException("EssentiaAccess already bound");
+    public static int transfer(IEssentiaHandler src, @Nullable Direction srcFace, IEssentiaHandler dst, @Nullable Direction dstFace,
+            ResourceLocation aspect, int max, boolean simulate) {
+        if (max <= 0 || !src.canOutputTo(srcFace) || !dst.canInputFrom(dstFace)) {
+            return 0;
         }
-        filterComponent = component;
-    }
-
-    private static DataComponentType<ResourceKey<IAspect>> filterComponent() {
-        if (filterComponent == null) {
-            throw new IllegalStateException("EssentiaAccess accessed before binding");
+        int available = src.extract(aspect, max, true);
+        if (available <= 0) {
+            return 0;
         }
-        return filterComponent.get();
+        int acceptable = dst.insert(aspect, available, true);
+        if (acceptable <= 0) {
+            return 0;
+        }
+        if (simulate) {
+            return acceptable;
+        }
+        int taken = src.extract(aspect, acceptable, false);
+        int accepted = dst.insert(aspect, taken, false);
+        if (accepted < taken) {
+            src.insert(aspect, taken - accepted, false);
+        }
+        return accepted;
     }
 }

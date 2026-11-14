@@ -1,18 +1,24 @@
 package com.leclowndu93150.thaumaturge.content.device;
 
 import com.leclowndu93150.thaumaturge.api.aura.AuraHelper;
-import com.leclowndu93150.thaumaturge.content.blockentity.AbstractSyncedBlockEntity;
 import com.leclowndu93150.thaumaturge.registry.TTBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
+import org.jetbrains.annotations.Nullable;
 
-public final class BlockEntityDioptra extends AbstractSyncedBlockEntity {
+/** Samples a 13×13 chunk neighbourhood of vis (enabled) or flux (disabled) into a compact grid. */
+public class BlockEntityDioptra extends BlockEntity {
     public static final int GRID_SIZE = 13;
     public static final int GRID_LENGTH = GRID_SIZE * GRID_SIZE;
 
@@ -38,6 +44,11 @@ public final class BlockEntityDioptra extends AbstractSyncedBlockEntity {
         return grid;
     }
 
+    @Override
+    public AABB getRenderBoundingBox() {
+        return new AABB(worldPosition).expandTowards(0, 1, 0);
+    }
+
     public static void serverTick(Level level, BlockPos pos, BlockState state, BlockEntityDioptra dioptra) {
         if (++dioptra.ticks % SAMPLE_INTERVAL == 0) {
             dioptra.refresh(level, state);
@@ -51,7 +62,8 @@ public final class BlockEntityDioptra extends AbstractSyncedBlockEntity {
         boolean changed = false;
         for (int row = 0; row < GRID_SIZE; row++) {
             for (int column = 0; column < GRID_SIZE; column++) {
-                samplePos.set(SectionPos.sectionToBlockCoord(centerX + column - CHUNK_OFFSET), 0, SectionPos.sectionToBlockCoord(centerZ + row - CHUNK_OFFSET));
+                samplePos.set(SectionPos.sectionToBlockCoord(centerX + column - CHUNK_OFFSET), worldPosition.getY(),
+                        SectionPos.sectionToBlockCoord(centerZ + row - CHUNK_OFFSET));
                 float value = showVis ? AuraHelper.getVis(level, samplePos) : AuraHelper.getFlux(level, samplePos);
                 byte sample = toSample(value);
                 int index = row * GRID_SIZE + column;
@@ -63,7 +75,8 @@ public final class BlockEntityDioptra extends AbstractSyncedBlockEntity {
         }
         if (changed) {
             setChanged();
-            level.sendBlockUpdated(worldPosition, state, state, Block.UPDATE_ALL);
+            level.sendBlockUpdated(worldPosition, state, state, Block.UPDATE_CLIENTS);
+            level.updateNeighbourForOutputSignal(worldPosition, state.getBlock());
         }
     }
 
@@ -75,9 +88,21 @@ public final class BlockEntityDioptra extends AbstractSyncedBlockEntity {
     }
 
     @Override
-    protected void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
-        input.getIntArray(GRID_KEY).ifPresent(this::loadGrid);
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        int[] values = new int[GRID_LENGTH];
+        for (int index = 0; index < GRID_LENGTH; index++) {
+            values[index] = grid[index] & 0xFF;
+        }
+        tag.putIntArray(GRID_KEY, values);
+    }
+
+    @Override
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        if (tag.contains(GRID_KEY)) {
+            loadGrid(tag.getIntArray(GRID_KEY));
+        }
     }
 
     private void loadGrid(int[] values) {
@@ -85,17 +110,28 @@ public final class BlockEntityDioptra extends AbstractSyncedBlockEntity {
             return;
         }
         for (int index = 0; index < GRID_LENGTH; index++) {
-            grid[index] = (byte) values[index];
+            grid[index] = (byte) Math.max(0, Math.min((int) GRID_MAX, values[index]));
         }
     }
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
-        int[] values = new int[GRID_LENGTH];
-        for (int index = 0; index < GRID_LENGTH; index++) {
-            values[index] = grid[index];
+    public CompoundTag getUpdateTag() {
+        CompoundTag tag = super.getUpdateTag();
+        saveAdditional(tag);
+        return tag;
+    }
+
+    @Nullable
+    @Override
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt) {
+        CompoundTag tag = pkt.getTag();
+        if (tag != null) {
+            load(tag);
         }
-        output.putIntArray(GRID_KEY, values);
     }
 }

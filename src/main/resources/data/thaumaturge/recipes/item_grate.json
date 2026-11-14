@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["#", "H"],
+  "key": {
+    "#": { "item": "minecraft:iron_bars" },
+    "H": { "item": "minecraft:hopper" }
+  },
+  "result": { "item": "thaumaturge:item_grate", "count": 1 }
+}

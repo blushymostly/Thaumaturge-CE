@@ -1,0 +1,34 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:essentia_smelter@1",
+  "pattern": [
+    "PRP",
+    "CFC",
+    "CCC"
+  ],
+  "key": {
+    "P": {
+      "item": "thaumaturge:plate_brass"
+    },
+    "R": {
+      "item": "thaumaturge:crucible"
+    },
+    "C": {
+      "tag": "minecraft:stone_tool_materials"
+    },
+    "F": {
+      "item": "minecraft:furnace"
+    }
+  },
+  "result": {
+    "item": "thaumaturge:smelter_basic",
+    "count": 1
+  },
+  "vis": 50,
+  "crystals": [
+    {
+      "aspect": "thaumaturge:ignis",
+      "amount": 1
+    }
+  ]
+}

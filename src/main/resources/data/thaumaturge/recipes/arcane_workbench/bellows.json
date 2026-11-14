@@ -1,0 +1,30 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:bellows",
+  "pattern": [
+    "PP ",
+    "LLI",
+    "PP "
+  ],
+  "key": {
+    "P": {
+      "tag": "minecraft:planks"
+    },
+    "L": {
+      "tag": "forge:leather"
+    },
+    "I": {
+      "tag": "forge:ingots/iron"
+    }
+  },
+  "vis": 25,
+  "crystals": [
+    {
+      "aspect": "thaumaturge:aer",
+      "amount": 1
+    }
+  ],
+  "result": {
+    "item": "thaumaturge:bellows"
+  }
+}

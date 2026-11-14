@@ -1,0 +1,48 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:infusion@1",
+  "pattern": [
+    "S S",
+    " N ",
+    "S S"
+  ],
+  "key": {
+    "S": {
+      "item": "thaumaturge:arcane_stone_brick"
+    },
+    "N": {
+      "tag": "thaumaturge:nitors"
+    }
+  },
+  "vis": 150,
+  "crystals": [
+    {
+      "aspect": "thaumaturge:aer",
+      "amount": 1
+    },
+    {
+      "aspect": "thaumaturge:ignis",
+      "amount": 1
+    },
+    {
+      "aspect": "thaumaturge:aqua",
+      "amount": 1
+    },
+    {
+      "aspect": "thaumaturge:terra",
+      "amount": 1
+    },
+    {
+      "aspect": "thaumaturge:ordo",
+      "amount": 1
+    },
+    {
+      "aspect": "thaumaturge:perditio",
+      "amount": 1
+    }
+  ],
+  "result": {
+    "item": "thaumaturge:infusion_matrix",
+    "count": 1
+  }
+}

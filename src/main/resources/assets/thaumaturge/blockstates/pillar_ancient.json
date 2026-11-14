@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "thaumaturge:block/pillar_ancient"
+    },
+    "facing=east": {
+      "model": "thaumaturge:block/pillar_ancient",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "thaumaturge:block/pillar_ancient",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "thaumaturge:block/pillar_ancient",
+      "y": 270
+    }
+  }
+}

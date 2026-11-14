@@ -1,22 +1,22 @@
 package com.leclowndu93150.thaumaturge.content.research.decon;
 
-import com.leclowndu93150.thaumaturge.api.aspect.AspectIndexAccess;
+import com.leclowndu93150.thaumaturge.api.aspect.AspectIndex;
 import com.leclowndu93150.thaumaturge.api.aspect.AspectInstance;
 import com.leclowndu93150.thaumaturge.api.aspect.AspectList;
-import com.leclowndu93150.thaumaturge.api.aspect.IAspect;
 import com.leclowndu93150.thaumaturge.content.blockentity.AbstractSyncedBlockEntity;
-import com.leclowndu93150.thaumaturge.content.legacy.LegacyIds;
 import com.leclowndu93150.thaumaturge.content.research.pool.AspectPools;
 import com.leclowndu93150.thaumaturge.registry.TTBlockEntities;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
+import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.Container;
+import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.Containers;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -25,11 +25,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
-import net.neoforged.neoforge.transfer.item.ItemResource;
-import net.neoforged.neoforge.transfer.item.ItemStacksResourceHandler;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 public final class BlockEntityDeconstructionTable extends AbstractSyncedBlockEntity implements MenuProvider {
     public static final int SLOT_INPUT = 0;
@@ -45,20 +41,20 @@ public final class BlockEntityDeconstructionTable extends AbstractSyncedBlockEnt
     private static final String TITLE_KEY = "gui.thaumaturge.deconstruction_table.title";
 
     private final DeconstructionInventory items = new DeconstructionInventory();
-    private @Nullable Identifier resultAspect;
+    private @Nullable ResourceLocation resultAspect;
     private int breakTime = BREAK_TIME_TICKS;
-    private ItemResource validatedResource = ItemResource.EMPTY;
+    private ItemStack validatedStack = ItemStack.EMPTY;
     private boolean validatedHasAspects;
 
     public BlockEntityDeconstructionTable(BlockPos pos, BlockState state) {
         super(TTBlockEntities.DECONSTRUCTION_TABLE.get(), pos, state);
     }
 
-    public ItemStacksResourceHandler items() {
+    public Container items() {
         return items;
     }
 
-    public @Nullable Identifier resultAspect() {
+    public @Nullable ResourceLocation resultAspect() {
         return resultAspect;
     }
 
@@ -94,89 +90,129 @@ public final class BlockEntityDeconstructionTable extends AbstractSyncedBlockEnt
         if (resultAspect == null) {
             return;
         }
-        Holder<IAspect> aspect = player.registryAccess().lookupOrThrow(IAspect.REGISTRY_KEY).get(ResourceKey.create(IAspect.REGISTRY_KEY, resultAspect)).orElse(null);
-        if (aspect == null) {
-            return;
-        }
-        AspectPools.grant(player, aspect, 1);
+        AspectPools.grant(player, resultAspect, 1);
         resultAspect = null;
         setChangedAndSync();
     }
 
-    @Override
-    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
-        super.preRemoveSideEffects(pos, state);
+    public void spillContents() {
         if (level == null || level.isClientSide()) {
             return;
         }
-        ItemStack stack = items.getResource(SLOT_INPUT).toStack(items.getAmountAsInt(SLOT_INPUT));
-        if (!stack.isEmpty()) {
-            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), stack);
-        }
+        Containers.dropContents(level, worldPosition, items);
     }
 
     @Override
-    protected void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
-        items.deserialize(input);
-        resultAspect = input.read(RESULT_KEY, LegacyIds.IDENTIFIER_CODEC).orElse(null);
-        breakTime = input.getIntOr(BREAK_TIME_KEY, BREAK_TIME_TICKS);
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        items.clearContent();
+        ContainerHelper.loadAllItems(tag, items.items);
+        resultAspect = tag.contains(RESULT_KEY) ? ResourceLocation.tryParse(tag.getString(RESULT_KEY)) : null;
+        breakTime = tag.contains(BREAK_TIME_KEY) ? tag.getInt(BREAK_TIME_KEY) : BREAK_TIME_TICKS;
     }
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
-        items.serialize(output);
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        ContainerHelper.saveAllItems(tag, items.items);
         if (resultAspect != null) {
-            output.store(RESULT_KEY, Identifier.CODEC, resultAspect);
+            tag.putString(RESULT_KEY, resultAspect.toString());
         }
-        output.putInt(BREAK_TIME_KEY, breakTime);
+        tag.putInt(BREAK_TIME_KEY, breakTime);
     }
 
     private boolean canBreak() {
-        ItemResource resource = items.getResource(SLOT_INPUT);
-        if (resource.isEmpty() || resultAspect != null) {
+        ItemStack stack = items.getItem(SLOT_INPUT);
+        if (stack.isEmpty() || resultAspect != null) {
             return false;
         }
-        return hasAspects(resource);
+        return hasAspects(stack);
     }
 
-    private boolean hasAspects(ItemResource resource) {
-        if (!resource.equals(validatedResource)) {
-            validatedResource = resource;
-            validatedHasAspects = !resource.isEmpty() && !AspectIndexAccess.of(resource.toStack(1)).isEmpty();
+    private boolean hasAspects(ItemStack stack) {
+        ItemStack probe = stack.isEmpty() ? ItemStack.EMPTY : stack.copyWithCount(1);
+        if (!ItemStack.isSameItemSameTags(probe, validatedStack)) {
+            validatedStack = probe;
+            validatedHasAspects = !probe.isEmpty() && !AspectIndex.of(probe).isEmpty();
         }
         return validatedHasAspects;
     }
 
     private void breakInput(Level level, BlockPos pos) {
         RandomSource random = level.getRandom();
-        ItemResource resource = items.getResource(SLOT_INPUT);
-        AspectList primals = AspectPrimals.reduce(AspectIndexAccess.of(resource.toStack(1)));
-        int total = primals.totalAmount();
+        ItemStack stack = items.getItem(SLOT_INPUT);
+        AspectList primals = AspectPrimals.reduce(AspectIndex.of(stack.copyWithCount(1)));
+        int total = AspectPrimals.totalAmount(primals);
         if (!primals.isEmpty() && (total >= RESULT_ROLL_RANGE || random.nextInt(RESULT_ROLL_RANGE) < total)) {
             AspectInstance chosen = primals.entries().get(random.nextInt(primals.size()));
-            resultAspect = chosen.aspect().unwrapKey().orElseThrow().identifier();
+            resultAspect = chosen.aspectId();
         }
-        int remaining = items.getAmountAsInt(SLOT_INPUT) - 1;
-        items.set(SLOT_INPUT, remaining > 0 ? resource : ItemResource.EMPTY, Math.max(remaining, 0));
+        stack.shrink(1);
+        items.setChanged();
         level.playSound(null, pos, SoundEvents.WOOD_HIT, SoundSource.BLOCKS, BREAK_SOUND_VOLUME, PITCH_BASE + random.nextFloat() * PITCH_SPREAD);
         setChangedAndSync();
     }
 
-    private final class DeconstructionInventory extends ItemStacksResourceHandler {
-        DeconstructionInventory() {
-            super(SLOT_COUNT);
+    private final class DeconstructionInventory implements Container {
+        private final NonNullList<ItemStack> items = NonNullList.withSize(SLOT_COUNT, ItemStack.EMPTY);
+
+        @Override
+        public int getContainerSize() {
+            return SLOT_COUNT;
         }
 
         @Override
-        public boolean isValid(int index, ItemResource resource) {
-            return hasAspects(resource);
+        public boolean isEmpty() {
+            return items.get(SLOT_INPUT).isEmpty();
         }
 
         @Override
-        protected void onContentsChanged(int index, ItemStack previousContents) {
-            setChangedAndSync();
+        public ItemStack getItem(int slot) {
+            return items.get(slot);
+        }
+
+        @Override
+        public ItemStack removeItem(int slot, int amount) {
+            ItemStack result = ContainerHelper.removeItem(items, slot, amount);
+            if (!result.isEmpty()) {
+                setChanged();
+            }
+            return result;
+        }
+
+        @Override
+        public ItemStack removeItemNoUpdate(int slot) {
+            return ContainerHelper.takeItem(items, slot);
+        }
+
+        @Override
+        public void setItem(int slot, ItemStack stack) {
+            items.set(slot, stack);
+            if (stack.getCount() > getMaxStackSize()) {
+                stack.setCount(getMaxStackSize());
+            }
+            setChanged();
+        }
+
+        @Override
+        public void setChanged() {
+            BlockEntityDeconstructionTable.this.setChangedAndSync();
+        }
+
+        @Override
+        public boolean stillValid(Player player) {
+            return level != null && level.getBlockEntity(worldPosition) == BlockEntityDeconstructionTable.this
+                    && player.distanceToSqr(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5) <= 64.0;
+        }
+
+        @Override
+        public boolean canPlaceItem(int slot, ItemStack stack) {
+            return hasAspects(stack);
+        }
+
+        @Override
+        public void clearContent() {
+            items.clear();
         }
     }
 }

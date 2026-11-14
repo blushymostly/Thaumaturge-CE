@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:blasting",
+  "category": "misc",
+  "group": "iron_ingot",
+  "ingredient": {
+    "item": "thaumaturge:cluster_iron"
+  },
+  "result": {
+    "item": "minecraft:iron_ingot",
+    "count": 2
+  },
+  "experience": 1,
+  "cookingtime": 100
+}

@@ -1,0 +1,23 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:infusion",
+  "pattern": [
+    "SSS",
+    " B ",
+    "SSS"
+  ],
+  "key": {
+    "S": {
+      "item": "thaumaturge:slab_arcane_stone"
+    },
+    "B": {
+      "item": "thaumaturge:arcane_stone"
+    }
+  },
+  "vis": 10,
+  "crystals": [],
+  "result": {
+    "item": "thaumaturge:pedestal_arcane",
+    "count": 1
+  }
+}

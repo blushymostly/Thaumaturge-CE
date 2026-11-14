@@ -1,0 +1,14 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:unlock_auromancy",
+  "pattern": ["IQ"],
+  "key": {
+    "I": { "tag": "forge:ingots/iron" },
+    "Q": { "tag": "forge:gems/quartz" }
+  },
+  "result": { "item": "thaumaturge:vis_resonator", "count": 1 },
+  "vis": [
+    { "aspect": "thaumaturge:aer", "amount": 1 },
+    { "aspect": "thaumaturge:aqua", "amount": 1 }
+  ]
+}

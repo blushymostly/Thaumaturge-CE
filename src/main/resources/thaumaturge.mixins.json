@@ -1,48 +1,17 @@
 {
   "required": true,
   "minVersion": "0.8",
+  "refmap": "thaumaturge.refmap.json",
   "package": "com.leclowndu93150.thaumaturge.mixin",
-  "plugin": "com.leclowndu93150.thaumaturge.TTMixinPlugin",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "data.recipes.RecipeProviderAccessor",
-    "server.network.ServerGamePacketListenerImplAccessor",
     "world.entity.ExperienceOrbAccessor",
-    "world.entity.LivingEntityInvoker",
-    "world.entity.MobAccessor",
-    "world.entity.ai.BrainMixin",
-    "world.entity.item.ItemEntityAccessor",
-    "world.entity.monster.SlimeAccessor",
-    "world.item.alchemy.PotionBrewingAccessor",
-    "world.item.alchemy.PotionBrewingMixAccessor",
-    "world.item.crafting.SmithingTrimRecipeMixin",
     "world.level.block.FireBlockMixin",
     "world.level.block.entity.AbstractFurnaceBlockEntityAccessor",
-    "world.level.block.piston.PistonBaseBlockMixin"
+    "compat.expatternprovider.InfinityCellCreativeTabMixin"
   ],
-  "client": [
-    "client.gui.GuiGraphicsExtractorAccessor",
-    "client.gui.GuiGraphicsExtractorMixin",
-    "client.multiplayer.ClientLevelMixin",
-    "client.lighting.BlockLightEngineMixin",
-    "client.renderer.GameRendererInvoker",
-    "client.renderer.ItemInHandRendererInvoker",
-    "client.renderer.rendertype.RenderSetupMixin",
-    "client.renderer.entity.LivingEntityRenderStateMixin",
-    "client.renderer.entity.LivingEntityRendererMixin",
-    "client.renderer.entity.layers.EquipmentLayerRendererMixin",
-    "client.renderer.entity.layers.HumanoidArmorLayerAccessor",
-    "client.renderer.item.ItemStackRenderStateAccessor",
-    "iris.pathways.HandRendererMixin",
-    "jei.gui.ingredients.IngredientFilterAccessor",
-    "jei.gui.ingredients.IngredientFilterApiAccessor",
-    "jei.gui.search.ElementSearchAccessor",
-    "neoforge.client.model.item.TrimmedArmorModelMixin"
-  ],
+  "client": [],
   "injectors": {
     "defaultRequire": 1
-  },
-  "overwrites": {
-    "requireAnnotations": true
   }
 }

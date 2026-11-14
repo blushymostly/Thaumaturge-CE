@@ -1,7 +1,8 @@
 package com.leclowndu93150.thaumaturge.client.screen.research.detail.bookmark;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
+/** Deterministic per-entry bookmark offset/lean (CE BookmarkJitter). */
 public final class BookmarkJitter {
     private static final int VALUES = 3;
     private static final long GOLDEN_GAMMA = 0x9E3779B97F4A7C15L;
@@ -20,11 +21,11 @@ public final class BookmarkJitter {
         this.key = key;
     }
 
-    public static BookmarkJitter forEntry(Identifier entryId, int displayedStage) {
+    public static BookmarkJitter forEntry(ResourceLocation entryId, int displayedStage) {
         return new BookmarkJitter(bookmarkKey(entryId, displayedStage));
     }
 
-    public static long bookmarkKey(Identifier entryId, int displayedStage) {
+    public static long bookmarkKey(ResourceLocation entryId, int displayedStage) {
         return mix(entryId.hashCode()) + displayedStage * GOLDEN_GAMMA;
     }
 

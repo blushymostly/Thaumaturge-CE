@@ -14,7 +14,6 @@ public final class BlockEntityNitor extends BlockEntity {
     private static final double FLAME_JITTER = 0.025;
     private static final double FLAME_SIDE_SPEED = 0.0025;
     private static final double FLAME_RISE_SPEED = 0.06;
-    private static final int FLAME_DELAY = 0;
     private static final double CORE_HEIGHT = 0.49;
     private static final int CORE_INTERVAL = 10;
 
@@ -33,10 +32,11 @@ public final class BlockEntityNitor extends BlockEntity {
         double x = pos.getX();
         double y = pos.getY();
         double z = pos.getZ();
-        ClientEffects.nitorFlames(level, x + CENTER + random.nextGaussian() * FLAME_JITTER, y + FLAME_HEIGHT + random.nextGaussian() * FLAME_JITTER, z + CENTER + random.nextGaussian() * FLAME_JITTER,
-                random.nextGaussian() * FLAME_SIDE_SPEED, random.nextDouble() * FLAME_RISE_SPEED, random.nextGaussian() * FLAME_SIDE_SPEED, color, FLAME_DELAY);
+        ClientEffects.nitorFlames(level, x + CENTER + random.nextGaussian() * FLAME_JITTER, y + FLAME_HEIGHT + random.nextGaussian() * FLAME_JITTER,
+                z + CENTER + random.nextGaussian() * FLAME_JITTER, random.nextGaussian() * FLAME_SIDE_SPEED, random.nextDouble() * FLAME_RISE_SPEED,
+                random.nextGaussian() * FLAME_SIDE_SPEED, color);
         if (entity.age % CORE_INTERVAL == 0) {
-            ClientEffects.nitorCore(level, x + CENTER, y + CORE_HEIGHT, z + CENTER, 0.0, 0.0, 0.0, color);
+            ClientEffects.nitorCore(level, x + CENTER, y + CORE_HEIGHT, z + CENTER, color);
         }
         entity.age++;
     }

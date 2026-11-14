@@ -1,169 +1,89 @@
 package com.leclowndu93150.thaumaturge.client.render.blockentity;
 
+import com.leclowndu93150.thaumaturge.TTIds;
 import com.leclowndu93150.thaumaturge.api.items.GogglesAccess;
-import com.leclowndu93150.thaumaturge.client.effect.LateWorldRenderQueue;
-import com.leclowndu93150.thaumaturge.client.effect.rendertype.VisRelayBeamRenderTypes;
-import com.leclowndu93150.thaumaturge.client.render.aspect.ParticleTextures;
-import com.leclowndu93150.thaumaturge.client.render.aspect.StripUv;
-import com.leclowndu93150.thaumaturge.content.aura.relay.BlockEntityVisRelay;
-import com.leclowndu93150.thaumaturge.content.aura.relay.BlockVisRelay;
+import com.leclowndu93150.thaumaturge.client.render.TTFlatRenderTypes;
+import com.leclowndu93150.thaumaturge.content.aura.node.BlockEntityNode;
+import com.leclowndu93150.thaumaturge.content.aura.relay.VisRelay;
+import com.leclowndu93150.thaumaturge.content.aura.relay.VisRelayBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
-import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Matrix4f;
-import org.joml.Vector3fc;
-import org.jspecify.annotations.Nullable;
 
-public final class VisRelayRenderer implements BlockEntityRenderer<BlockEntityVisRelay, VisRelayRenderState> {
-    private static final float COLOR_CHANNEL_MAX = 255.0F;
-    private static final int RED_SHIFT = 16;
-    private static final int GREEN_SHIFT = 8;
-    private static final int CHANNEL_MASK = 0xFF;
-    private static final float WASH_PER_TICK = 0.025F;
-    private static final float PULSE_OPACITY = 0.8F;
-    private static final float OPACITY_FALL_PER_TICK = 0.025F;
-    private static final float OPACITY_FLOOR = 0.3F;
-    private static final float SCROLL_SPEED = 0.2F;
-    private static final float SCROLL_WRAP_SPEED = 0.1F;
-    private static final float BEAM_ALPHA_SCALE = 0.1F;
-    private static final float FLARE_ALPHA_SCALE = 0.2F;
-    private static final float FLARE_HALF_SIZE_SCALE = 0.66F;
-    private static final float FLARE_INSET = 0.0001F;
-    private static final float BEAM_HALF_WIDTH = 0.105F;
-    private static final float SECOND_RIBBON_OFFSET = 1.0F / 3.0F;
-    private static final double VERTICAL_AXIS_LIMIT = 0.99;
-    private static final int BEAM_LIGHT = 200;
+public final class VisRelayRenderer implements BlockEntityRenderer<VisRelayBlockEntity> {
+    private static final RenderType BEAM = TTFlatRenderTypes.entityAdditiveWorld(TTIds.rl("textures/misc/beam1.png"));
+    private static final double HALF_WIDTH = 0.105;
 
     public VisRelayRenderer(BlockEntityRendererProvider.Context context) {}
 
     @Override
-    public boolean shouldRenderOffScreen() {
+    public boolean shouldRenderOffScreen(VisRelayBlockEntity relay) {
         return true;
     }
 
     @Override
-    public AABB getRenderBoundingBox(BlockEntityVisRelay relay) {
-        AABB own = new AABB(relay.getBlockPos());
-        BlockPos parent = relay.parentPos();
-        return parent == null ? own : own.minmax(new AABB(parent));
-    }
+    public void render(VisRelayBlockEntity relay, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
+        var level = relay.getLevel();
+        var parent = relay.parent();
+        if (level == null || parent == null || !level.hasChunkAt(parent)) return;
+        var parentEntity = level.getBlockEntity(parent);
+        if (!(parentEntity instanceof VisRelayBlockEntity upstream && upstream.parent() != null)
+                && !(parentEntity instanceof BlockEntityNode node && node.isEnergized())) return;
+        Vec3 origin = crystal(relay.getBlockPos(), relay.getBlockState());
+        Vec3 target = crystal(parent, parentEntity.getBlockState()).subtract(origin);
+        if (target.lengthSqr() < 1.0e-7) return;
 
-    @Override
-    public VisRelayRenderState createRenderState() {
-        return new VisRelayRenderState();
-    }
-
-    @Override
-    public void extractRenderState(BlockEntityVisRelay relay, VisRelayRenderState state, float partialTicks, Vec3 cameraPosition, ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress) {
-        BlockEntityRenderer.super.extractRenderState(relay, state, partialTicks, cameraPosition, breakProgress);
-        state.beamTarget = null;
-        LocalPlayer player = Minecraft.getInstance().player;
-        Level level = relay.getLevel();
-        BlockPos parent = relay.parentPos();
-        if (player == null || level == null || parent == null || !relay.isLinked()) {
-            return;
-        }
-        Vec3 origin = BlockVisRelay.crystalPosition(relay.getBlockPos(), relay.getBlockState());
-        BlockState parentState = level.getBlockState(parent);
-        Vec3 target = parentState.getBlock() instanceof BlockVisRelay ? BlockVisRelay.crystalPosition(parent, parentState) : Vec3.atCenterOf(parent);
-        state.beamOrigin = origin;
-        state.beamTarget = target.subtract(origin);
-        long gameTime = level.getGameTime();
-        float elapsed = gameTime - relay.pulseStart() + partialTicks;
-        float wash = WASH_PER_TICK * Math.max(0.0F, elapsed);
+        long time = level.getGameTime();
+        float elapsed = Math.max(0, time - relay.pulseStart() + partialTick);
+        float glow = Mth.clamp(0.8F - (elapsed - 10) * 0.025F, 0.3F, 0.8F);
+        float alpha = glow * (GogglesAccess.wearsRevealingGear(Minecraft.getInstance().player) ? 1 : 0.1F);
+        float wash = elapsed * 0.025F;
         int color = relay.pulseColor();
-        state.red = Math.min(1.0F, (color >> RED_SHIFT & CHANNEL_MASK) / COLOR_CHANNEL_MAX + wash);
-        state.green = Math.min(1.0F, (color >> GREEN_SHIFT & CHANNEL_MASK) / COLOR_CHANNEL_MAX + wash);
-        state.blue = Math.min(1.0F, (color & CHANNEL_MASK) / COLOR_CHANNEL_MAX + wash);
-        state.opacity = elapsed < BlockEntityVisRelay.PULSE_TICKS ? PULSE_OPACITY : Math.max(OPACITY_FLOOR, PULSE_OPACITY - OPACITY_FALL_PER_TICK * (elapsed - BlockEntityVisRelay.PULSE_TICKS));
-        float s = player.tickCount + partialTicks;
-        state.scroll = -SCROLL_SPEED * s - Mth.floor(-SCROLL_WRAP_SPEED * s);
-        state.revealing = GogglesAccess.wearsRevealingGear(player);
-        state.flareFrame = (int) Math.floorMod(gameTime, (long) ParticleTextures.STAR_GLINT_FRAMES);
-    }
-
-    @Override
-    public void submit(VisRelayRenderState state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
-        Vec3 target = state.beamTarget;
-        if (target == null) {
-            return;
-        }
-        Vec3 origin = state.beamOrigin;
-        float scroll = state.scroll;
-        float red = state.red;
-        float green = state.green;
-        float blue = state.blue;
-        float opacity = state.opacity;
-        float beamAlpha = opacity * (state.revealing ? 1.0F : BEAM_ALPHA_SCALE);
-        float flareAlpha = opacity * (state.revealing ? 1.0F : FLARE_ALPHA_SCALE);
-        float flareHalf = FLARE_HALF_SIZE_SCALE * opacity;
-        int frame = state.flareFrame;
-        LateWorldRenderQueue.enqueue(origin, (stack, buffers) -> {
-            Matrix4f pose = stack.last().pose();
-            drawBeam(pose, buffers, target, scroll, red, green, blue, beamAlpha);
-            drawFlare(pose, buffers, frame, flareHalf, red, green, blue, flareAlpha);
-        });
-    }
-
-    private static void drawBeam(Matrix4f pose, MultiBufferSource buffers, Vec3 target, float scroll, float red, float green, float blue, float alpha) {
-        double length = target.length();
-        if (length == 0.0) {
-            return;
-        }
-        Vec3 axis = target.scale(1.0 / length);
-        Vec3 reference = Math.abs(axis.y) >= VERTICAL_AXIS_LIMIT ? new Vec3(1.0, 0.0, 0.0) : new Vec3(0.0, 1.0, 0.0);
-        Vec3 first = axis.cross(reference).normalize();
+        float red = Math.min(1, (color >> 16 & 255) / 255F + wash);
+        float green = Math.min(1, (color >> 8 & 255) / 255F + wash);
+        float blue = Math.min(1, (color & 255) / 255F + wash);
+        float scroll = -0.2F * (Math.floorMod(time, 100) + partialTick);
+        Vec3 axis = target.normalize();
+        Vec3 first = axis.cross(Math.abs(axis.y) >= 0.99 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0)).normalize();
         Vec3 second = axis.cross(first).normalize();
-        VertexConsumer consumer = buffers.getBuffer(VisRelayBeamRenderTypes.BEAM);
-        float span = (float) length;
-        ribbon(consumer, pose, first, target, scroll, span, red, green, blue, alpha);
-        ribbon(consumer, pose, second, target, scroll + SECOND_RIBBON_OFFSET, span, red, green, blue, alpha);
+        Vec3 offset = origin.subtract(Vec3.atLowerCornerOf(relay.getBlockPos()));
+        var consumer = buffers.getBuffer(BEAM);
+
+        pose.pushPose();
+        pose.translate(offset.x, offset.y, offset.z);
+        ribbon(consumer, pose.last(), target, first.scale(HALF_WIDTH), scroll, red, green, blue, alpha, overlay);
+        ribbon(consumer, pose.last(), target, second.scale(HALF_WIDTH), scroll + 1 / 3F, red, green, blue, alpha, overlay);
+        pose.popPose();
     }
 
-    private static void ribbon(VertexConsumer consumer, Matrix4f pose, Vec3 side, Vec3 target, float vStart, float span, float red, float green, float blue, float alpha) {
-        float sx = (float) side.x * BEAM_HALF_WIDTH;
-        float sy = (float) side.y * BEAM_HALF_WIDTH;
-        float sz = (float) side.z * BEAM_HALF_WIDTH;
-        float tx = (float) target.x;
-        float ty = (float) target.y;
-        float tz = (float) target.z;
-        float vOrigin = vStart + span;
-        consumer.addVertex(pose, -sx, -sy, -sz).setUv(1.0F, vOrigin).setColor(red, green, blue, alpha).setLight(BEAM_LIGHT);
-        consumer.addVertex(pose, sx, sy, sz).setUv(0.0F, vOrigin).setColor(red, green, blue, alpha).setLight(BEAM_LIGHT);
-        consumer.addVertex(pose, tx + sx, ty + sy, tz + sz).setUv(0.0F, vStart).setColor(red, green, blue, alpha).setLight(BEAM_LIGHT);
-        consumer.addVertex(pose, tx - sx, ty - sy, tz - sz).setUv(1.0F, vStart).setColor(red, green, blue, alpha).setLight(BEAM_LIGHT);
+    private static Vec3 crystal(BlockPos pos, BlockState state) {
+        Vec3 center = Vec3.atCenterOf(pos);
+        if (!(state.getBlock() instanceof VisRelay)) return center;
+        var facing = state.getValue(VisRelay.FACING);
+        return center.add(facing.getStepX() * 0.05, facing.getStepY() * 0.05, facing.getStepZ() * 0.05);
     }
 
-    private static void drawFlare(Matrix4f pose, MultiBufferSource buffers, int frame, float half, float red, float green, float blue, float alpha) {
-        Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
-        Vector3fc left = camera.leftVector();
-        Vector3fc up = camera.upVector();
-        float lx = left.x() * half;
-        float ly = left.y() * half;
-        float lz = left.z() * half;
-        float ux = up.x() * half;
-        float uy = up.y() * half;
-        float uz = up.z() * half;
-        float uLeft = StripUv.u1(frame, ParticleTextures.STAR_GLINT_FRAMES) - FLARE_INSET;
-        float uRight = StripUv.u0(frame, ParticleTextures.STAR_GLINT_FRAMES) + FLARE_INSET;
-        VertexConsumer consumer = buffers.getBuffer(VisRelayBeamRenderTypes.FLARE);
-        consumer.addVertex(pose, lx - ux, ly - uy, lz - uz).setUv(uLeft, StripUv.V1).setColor(red, green, blue, alpha).setLight(BEAM_LIGHT);
-        consumer.addVertex(pose, -lx - ux, -ly - uy, -lz - uz).setUv(uRight, StripUv.V1).setColor(red, green, blue, alpha).setLight(BEAM_LIGHT);
-        consumer.addVertex(pose, -lx + ux, -ly + uy, -lz + uz).setUv(uRight, StripUv.V0).setColor(red, green, blue, alpha).setLight(BEAM_LIGHT);
-        consumer.addVertex(pose, lx + ux, ly + uy, lz + uz).setUv(uLeft, StripUv.V0).setColor(red, green, blue, alpha).setLight(BEAM_LIGHT);
+    private static void ribbon(VertexConsumer consumer, PoseStack.Pose pose, Vec3 target, Vec3 side,
+            float scroll, float red, float green, float blue, float alpha, int overlay) {
+        float near = scroll + (float) target.length();
+        vertex(consumer, pose, side.reverse(), 1, near, red, green, blue, alpha, overlay);
+        vertex(consumer, pose, side, 0, near, red, green, blue, alpha, overlay);
+        vertex(consumer, pose, target.add(side), 0, scroll, red, green, blue, alpha, overlay);
+        vertex(consumer, pose, target.subtract(side), 1, scroll, red, green, blue, alpha, overlay);
+    }
+
+    private static void vertex(VertexConsumer consumer, PoseStack.Pose pose, Vec3 point, float u, float v,
+            float red, float green, float blue, float alpha, int overlay) {
+        consumer.vertex(pose.pose(), (float) point.x, (float) point.y, (float) point.z).color(red, green, blue, alpha)
+                .uv(u, v).overlayCoords(overlay).uv2(LightTexture.FULL_BRIGHT).normal(pose.normal(), 0, 1, 0).endVertex();
     }
 }

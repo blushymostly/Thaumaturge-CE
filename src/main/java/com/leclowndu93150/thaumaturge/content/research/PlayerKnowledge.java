@@ -1,365 +1,338 @@
 package com.leclowndu93150.thaumaturge.content.research;
 
-import com.leclowndu93150.thaumaturge.api.capability.IPlayerKnowledge;
-import com.leclowndu93150.thaumaturge.api.capability.KnowledgeType;
-import com.leclowndu93150.thaumaturge.api.capability.ResearchFlag;
-import com.leclowndu93150.thaumaturge.api.capability.ResearchStatus;
-import com.leclowndu93150.thaumaturge.api.research.IResearchCategory;
-import com.leclowndu93150.thaumaturge.api.research.IResearchEntry;
-import com.leclowndu93150.thaumaturge.api.research.ResearchEntryMeta;
-import com.leclowndu93150.thaumaturge.api.research.ResearchUnlockConditions;
-import com.leclowndu93150.thaumaturge.content.legacy.LegacyIds;
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.level.ServerPlayer;
-import org.jspecify.annotations.Nullable;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 
-public final class PlayerKnowledge implements IPlayerKnowledge {
-    private static final String RESEARCH_FIELD = "research";
-    private static final String KNOWLEDGE_FIELD = "knowledge";
-    private static final String NO_CATEGORY_SORT_KEY = "";
+/** Player research / scan knowledge — Forge capability payload. */
+public final class PlayerKnowledge {
+    private final Set<ResourceLocation> completed = new HashSet<>();
+    private final Set<ResourceLocation> scanned = new HashSet<>();
+    private final Map<ResourceLocation, Integer> stages = new HashMap<>();
+    private final Map<KnowledgeType, Map<ResourceLocation, Integer>> knowledgePoints = new HashMap<>();
+    private final Map<ResourceLocation, Integer> aspectPool = new HashMap<>();
+    private final Set<ResourceLocation> discoveredAspects = new HashSet<>();
+    private int completedNotes;
+    private boolean dirty;
 
-    public static final MapCodec<PlayerKnowledge> CODEC = RecordCodecBuilder.mapCodec(instance -> instance
-            .group(ResearchRecord.CODEC.listOf().optionalFieldOf(RESEARCH_FIELD).forGetter(knowledge -> Optional.of(knowledge.researchRecords())),
-                    KnowledgeRecord.CODEC.listOf().optionalFieldOf(KNOWLEDGE_FIELD).forGetter(knowledge -> Optional.of(knowledge.knowledgeRecords())))
-            .apply(instance, (research, points) -> fromRecords(research.orElse(List.of()), points.orElse(List.of()))));
-
-    public static final StreamCodec<RegistryFriendlyByteBuf, PlayerKnowledge> STREAM_CODEC = ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
-
-    private boolean pendingSync;
-    private final Object2IntMap<KnowledgeKey> points = new Object2IntOpenHashMap<>();
-    private final Map<Identifier, ResearchDetail> details = new HashMap<>();
-    private final Set<Identifier> researchKeys = new HashSet<>();
-    private final Set<Identifier> researchKeyView = Collections.unmodifiableSet(researchKeys);
-
-    public PlayerKnowledge() {}
-
-    private PlayerKnowledge(PlayerKnowledge source) {
-        absorb(source);
+    /** Aspect pool (research table palette). Primals are always usable; compounds appear once discovered. */
+    public int aspectAmount(ResourceLocation aspect) {
+        return aspectPool.getOrDefault(aspect, 0);
     }
 
-    private static final class ResearchDetail {
-        private boolean staged;
-        private int stage;
-        private boolean finished;
-        private int flags;
-
-        ResearchDetail copy() {
-            ResearchDetail twin = new ResearchDetail();
-            twin.staged = staged;
-            twin.stage = stage;
-            twin.finished = finished;
-            twin.flags = flags;
-            return twin;
-        }
-
-        boolean reopen() {
-            boolean was = finished;
-            finished = false;
-            return was;
-        }
-
-        boolean finish() {
-            boolean was = finished;
-            finished = true;
-            return !was;
-        }
-
-        boolean restage(int value) {
-            boolean differs = !staged || stage != value;
-            assignStage(value);
-            return differs;
-        }
-
-        boolean raiseFlag(int mask) {
-            int updated = flags | mask;
-            boolean differs = updated != flags;
-            flags = updated;
-            return differs;
-        }
-
-        boolean dropFlag(int mask) {
-            int updated = flags & ~mask;
-            boolean differs = updated != flags;
-            flags = updated;
-            return differs;
-        }
-
-        int stageOrZero() {
-            return staged ? stage : 0;
-        }
-
-        Optional<Integer> stageIfSet() {
-            return staged ? Optional.of(stage) : Optional.empty();
-        }
-
-        void assignStage(int value) {
-            staged = true;
-            stage = value;
-        }
+    public void addAspect(ResourceLocation aspect, int delta) {
+        int next = Math.max(0, aspectAmount(aspect) + delta);
+        aspectPool.put(aspect, next);
+        dirty = true;
     }
 
-    private record KnowledgeKey(KnowledgeType type, @Nullable ResourceKey<IResearchCategory> category) {
+    public void setAspect(ResourceLocation aspect, int amount) {
+        aspectPool.put(aspect, Math.max(0, amount));
+        dirty = true;
     }
 
-    private record ResearchRecord(Identifier id, Optional<Integer> stage, Optional<List<ResearchFlag>> flags, boolean complete) {
-        static final Codec<ResearchRecord> CODEC = RecordCodecBuilder.create(instance -> instance
-                .group(LegacyIds.IDENTIFIER_CODEC.fieldOf("id").forGetter(ResearchRecord::id), Codec.INT.optionalFieldOf("stage").forGetter(ResearchRecord::stage),
-                        ResearchFlag.CODEC.listOf().optionalFieldOf("flags").forGetter(ResearchRecord::flags), Codec.BOOL.optionalFieldOf("complete", false).forGetter(ResearchRecord::complete))
-                .apply(instance, ResearchRecord::new));
+    public boolean discoverAspect(ResourceLocation aspect) {
+        boolean changed = discoveredAspects.add(aspect);
+        dirty |= changed;
+        return changed;
     }
 
-    private record KnowledgeRecord(KnowledgeType type, Optional<ResourceKey<IResearchCategory>> category, int amount) {
-        static final Codec<KnowledgeRecord> CODEC = RecordCodecBuilder.create(instance -> instance.group(KnowledgeType.CODEC.fieldOf("type").forGetter(KnowledgeRecord::type),
-                LegacyIds.resourceKeyCodec(IResearchCategory.REGISTRY_KEY).optionalFieldOf("category").forGetter(KnowledgeRecord::category),
-                Codec.INT.fieldOf("amount").forGetter(KnowledgeRecord::amount)).apply(instance, KnowledgeRecord::new));
-
-        String categorySortKey() {
-            return category.map(key -> key.identifier().toString()).orElse(NO_CATEGORY_SORT_KEY);
-        }
+    public boolean isAspectDiscovered(ResourceLocation aspect) {
+        return discoveredAspects.contains(aspect);
     }
 
-    private static int maskOf(ResearchFlag flag) {
-        return 1 << flag.ordinal();
+    /** Ids the player has discovered or holds in the pool (excludes always-known primals unless pooled). */
+    public Set<ResourceLocation> poolAspectIds() {
+        Set<ResourceLocation> ids = new HashSet<>(aspectPool.keySet());
+        ids.addAll(discoveredAspects);
+        return ids;
     }
 
-    private static int maskOf(Collection<ResearchFlag> flags) {
-        int mask = 0;
-        for (ResearchFlag flag : flags) {
-            mask |= maskOf(flag);
-        }
-        return mask;
+    public boolean aspectPoolEmpty() {
+        return aspectPool.isEmpty() && discoveredAspects.isEmpty();
     }
 
-    private static List<ResearchFlag> flagsOf(int mask) {
-        return Arrays.stream(ResearchFlag.values()).filter(flag -> (mask & maskOf(flag)) != 0).toList();
+    public int completedNotes() {
+        return completedNotes;
     }
 
-    private static PlayerKnowledge fromRecords(List<ResearchRecord> research, List<KnowledgeRecord> knowledge) {
-        PlayerKnowledge restored = new PlayerKnowledge();
-        research.forEach(restored::restoreResearch);
-        knowledge.stream().filter(record -> record.amount() > 0).forEach(restored::restorePoints);
-        return restored;
+    public void incrementCompletedNotes() {
+        completedNotes++;
+        dirty = true;
     }
 
-    private void restoreResearch(ResearchRecord record) {
-        Identifier id = record.id();
-        researchKeys.add(id);
-        ResearchDetail detail = detailFor(id);
-        detail.finished |= record.complete();
-        record.stage().ifPresent(detail::assignStage);
-        int restoredMask = maskOf(record.flags().orElse(List.of()));
-        if (restoredMask != 0) {
-            detail.flags = restoredMask;
-        }
+    public Set<ResourceLocation> completed() {
+        return Collections.unmodifiableSet(completed);
     }
 
-    private void restorePoints(KnowledgeRecord record) {
-        points.put(new KnowledgeKey(record.type(), record.category().orElse(null)), record.amount());
+    public Set<ResourceLocation> scanned() {
+        return Collections.unmodifiableSet(scanned);
     }
 
-    private ResearchDetail detailFor(Identifier id) {
-        return details.computeIfAbsent(id, key -> new ResearchDetail());
+    public boolean isComplete(ResourceLocation id) {
+        return completed.contains(id);
     }
 
-    private int maskFor(Identifier id) {
-        return Optional.ofNullable(details.get(id)).map(detail -> detail.flags).orElse(0);
+    public boolean isKnown(ResourceLocation id) {
+        return completed.contains(id) || stages.containsKey(id);
     }
 
-    private List<ResearchRecord> researchRecords() {
-        return researchKeys.stream().sorted().map(this::recordOf).toList();
+    public boolean isScanned(ResourceLocation id) {
+        return scanned.contains(id);
     }
 
-    private ResearchRecord recordOf(Identifier id) {
-        ResearchDetail stored = details.get(id);
-        ResearchDetail detail = stored == null ? new ResearchDetail() : stored;
-        return new ResearchRecord(id, detail.stageIfSet(), Optional.of(flagsOf(detail.flags)), detail.finished);
+    public int stage(ResourceLocation id) {
+        return stages.getOrDefault(id, 0);
     }
 
-    private List<KnowledgeRecord> knowledgeRecords() {
-        Comparator<KnowledgeRecord> order = Comparator.comparingInt((KnowledgeRecord record) -> record.type().ordinal()).thenComparing(KnowledgeRecord::categorySortKey);
-        return points.object2IntEntrySet().stream().filter(entry -> entry.getIntValue() > 0)
-                .map(entry -> new KnowledgeRecord(entry.getKey().type(), Optional.ofNullable(entry.getKey().category()), entry.getIntValue())).sorted(order).toList();
+    /** UI badge flags — stub until server tracks notifications. */
+    public boolean hasResearchFlag(ResourceLocation id, ResearchFlag flag) {
+        return false;
     }
 
-    @Override
-    public void clear() {
-        researchKeys.clear();
-        details.clear();
-        points.clear();
+    public void clearResearchFlag(ResourceLocation id, ResearchFlag flag) {}
+
+    public int knowledge(KnowledgeType type, ResourceLocation category) {
+        return knowledgePoints.getOrDefault(type, Map.of()).getOrDefault(category, 0);
     }
 
-    @Override
-    public void sync(ServerPlayer player) {
-        pendingSync = true;
-    }
-
-    public boolean takeSyncPending() {
-        boolean pending = pendingSync;
-        pendingSync = false;
-        return pending;
-    }
-
-    @Override
-    public boolean isResearchKnown(Identifier research) {
-        return research != null && researchKeys.contains(research);
-    }
-
-    @Override
-    public boolean addResearch(Identifier research) {
-        return research != null && researchKeys.add(research);
-    }
-
-    @Override
-    public boolean removeResearch(Identifier research) {
-        boolean wasKnown = researchKeys.remove(research);
-        if (wasKnown) {
-            details.remove(research);
-        }
-        return wasKnown;
-    }
-
-    @Override
-    public Set<Identifier> researchList() {
-        return researchKeyView;
-    }
-
-    @Override
-    public int researchStage(Identifier research) {
-        if (!isResearchKnown(research)) {
-            return -1;
-        }
-        ResearchDetail detail = details.get(research);
-        return detail == null ? 0 : detail.stageOrZero();
-    }
-
-    @Override
-    public boolean isResearchKnown(Identifier research, int minimumStage) {
-        return isResearchKnown(research) && researchStage(research) >= minimumStage;
-    }
-
-    @Override
-    public boolean setResearchStage(Identifier research, int stage) {
-        return stage > 0 && isResearchKnown(research) && detailFor(research).restage(stage);
-    }
-
-    @Override
-    public ResearchStatus researchStatus(Identifier research) {
-        if (!isResearchKnown(research)) {
-            return ResearchStatus.UNKNOWN;
-        }
-        ResearchDetail detail = details.get(research);
-        boolean done = detail != null && detail.finished;
-        return done ? ResearchStatus.COMPLETE : ResearchStatus.IN_PROGRESS;
-    }
-
-    @Override
-    public boolean isResearchComplete(Identifier research) {
-        return researchStatus(research) == ResearchStatus.COMPLETE;
-    }
-
-    public boolean markComplete(Identifier research) {
-        return isResearchKnown(research) && detailFor(research).finish();
-    }
-
-    public boolean clearComplete(Identifier research) {
-        return details.containsKey(research) && details.get(research).reopen();
-    }
-
-    @Override
-    public boolean hasResearchFlag(Identifier research, ResearchFlag flag) {
-        return (maskFor(research) & maskOf(flag)) != 0;
-    }
-
-    @Override
-    public boolean setResearchFlag(Identifier research, ResearchFlag flag) {
-        return detailFor(research).raiseFlag(maskOf(flag));
-    }
-
-    @Override
-    public boolean clearResearchFlag(Identifier research, ResearchFlag flag) {
-        return details.containsKey(research) && details.get(research).dropFlag(maskOf(flag));
-    }
-
-    @Override
-    public int rawKnowledge(KnowledgeType type, ResourceKey<IResearchCategory> category) {
-        return type == null ? 0 : points.getInt(new KnowledgeKey(type, category));
-    }
-
-    @Override
-    public int knowledge(KnowledgeType type, ResourceKey<IResearchCategory> category) {
-        return type == null ? 0 : rawKnowledge(type, category) / type.progression();
-    }
-
-    @Override
-    public boolean addKnowledge(KnowledgeType type, ResourceKey<IResearchCategory> category, int amount) {
-        if (type == null || amount == 0) {
+    public boolean addKnowledge(KnowledgeType type, ResourceLocation category, int amount) {
+        if (amount <= 0) {
             return false;
         }
-        int previous = rawKnowledge(type, category);
-        KnowledgeKey slot = new KnowledgeKey(type, category);
-        int updated = Math.max(0, previous + amount);
-        if (updated == 0) {
-            points.removeInt(slot);
-        } else {
-            points.put(slot, updated);
+        knowledgePoints.computeIfAbsent(type, ignored -> new HashMap<>()).merge(category, amount, Integer::sum);
+        dirty = true;
+        return true;
+    }
+
+    public boolean startResearch(ResourceLocation id) {
+        if (isKnown(id)) {
+            return false;
         }
-        return updated != previous;
+        stages.put(id, 0);
+        dirty = true;
+        return true;
     }
 
-    public static PlayerKnowledge snapshotOf(PlayerKnowledge source) {
-        return new PlayerKnowledge(source);
+    public boolean markResearchComplete(ResourceLocation id, int finalStage) {
+        boolean changed = completed.add(id);
+        stages.put(id, Math.max(finalStage, stages.getOrDefault(id, 0)));
+        dirty = true;
+        return changed;
     }
 
-    public void mergeResearchFrom(PlayerKnowledge other) {
-        researchKeys.addAll(other.researchKeys);
-        other.details.forEach((id, incoming) -> {
-            if (incoming.finished || incoming.staged) {
-                ResearchDetail mine = detailFor(id);
-                mine.finished |= incoming.finished;
-                if (incoming.staged) {
-                    mine.assignStage(mine.staged ? Math.max(mine.stage, incoming.stage) : incoming.stage);
-                }
+    /** Marks a lightweight completion flag (crafted keys, etc.). */
+    public boolean complete(ResourceLocation id) {
+        return markResearchComplete(id, Math.max(stages.getOrDefault(id, 0), 1));
+    }
+
+    public void forgetResearch(ResourceLocation id) {
+        boolean removed = completed.remove(id);
+        dirty |= stages.remove(id) != null || removed;
+    }
+
+    public boolean scan(ResourceLocation id) {
+        boolean changed = scanned.add(id);
+        dirty |= changed;
+        return changed;
+    }
+
+    public void setStage(ResourceLocation id, int stage) {
+        stages.put(id, stage);
+        dirty = true;
+    }
+
+    public boolean consumeDirty() {
+        boolean was = dirty;
+        dirty = false;
+        return was;
+    }
+
+    public CompoundTag save() {
+        CompoundTag tag = new CompoundTag();
+        tag.put("Completed", stringList(completed));
+        tag.put("Scanned", stringList(scanned));
+        CompoundTag stageTag = new CompoundTag();
+        stages.forEach((id, stage) -> stageTag.putInt(id.toString(), stage));
+        tag.put("Stages", stageTag);
+        tag.put("Knowledge", saveKnowledge());
+        CompoundTag poolTag = new CompoundTag();
+        aspectPool.forEach((id, amount) -> poolTag.putInt(id.toString(), amount));
+        tag.put("AspectPool", poolTag);
+        tag.put("DiscoveredAspects", stringList(discoveredAspects));
+        tag.putInt("CompletedNotes", completedNotes);
+        return tag;
+    }
+
+    public void load(CompoundTag tag) {
+        completed.clear();
+        scanned.clear();
+        stages.clear();
+        knowledgePoints.clear();
+        readStrings(tag.getList("Completed", Tag.TAG_STRING), completed);
+        readStrings(tag.getList("Scanned", Tag.TAG_STRING), scanned);
+        CompoundTag stageTag = tag.getCompound("Stages");
+        for (String key : stageTag.getAllKeys()) {
+            ResourceLocation id = ResourceLocation.tryParse(key);
+            if (id != null) {
+                stages.put(id, stageTag.getInt(key));
             }
+        }
+        loadKnowledge(tag.getCompound("Knowledge"));
+        aspectPool.clear();
+        discoveredAspects.clear();
+        CompoundTag poolTag = tag.getCompound("AspectPool");
+        for (String key : poolTag.getAllKeys()) {
+            ResourceLocation id = ResourceLocation.tryParse(key);
+            if (id != null) {
+                aspectPool.put(id, poolTag.getInt(key));
+            }
+        }
+        readStrings(tag.getList("DiscoveredAspects", Tag.TAG_STRING), discoveredAspects);
+        completedNotes = tag.getInt("CompletedNotes");
+        dirty = false;
+    }
+
+    public void write(FriendlyByteBuf buf) {
+        writeSet(buf, completed);
+        writeSet(buf, scanned);
+        buf.writeVarInt(stages.size());
+        stages.forEach((id, stage) -> {
+            buf.writeResourceLocation(id);
+            buf.writeVarInt(stage);
         });
+        buf.writeVarInt(knowledgePoints.size());
+        knowledgePoints.forEach((type, map) -> {
+            buf.writeEnum(type);
+            buf.writeVarInt(map.size());
+            map.forEach((category, amount) -> {
+                buf.writeResourceLocation(category);
+                buf.writeVarInt(amount);
+            });
+        });
+        buf.writeVarInt(aspectPool.size());
+        aspectPool.forEach((id, amount) -> {
+            buf.writeResourceLocation(id);
+            buf.writeVarInt(amount);
+        });
+        writeSet(buf, discoveredAspects);
+        buf.writeVarInt(completedNotes);
+    }
+
+    public void read(FriendlyByteBuf buf) {
+        completed.clear();
+        scanned.clear();
+        stages.clear();
+        knowledgePoints.clear();
+        readSet(buf, completed);
+        readSet(buf, scanned);
+        int size = buf.readVarInt();
+        for (int i = 0; i < size; i++) {
+            stages.put(buf.readResourceLocation(), buf.readVarInt());
+        }
+        int knowledgeTypes = buf.readVarInt();
+        for (int i = 0; i < knowledgeTypes; i++) {
+            KnowledgeType type = buf.readEnum(KnowledgeType.class);
+            int entries = buf.readVarInt();
+            Map<ResourceLocation, Integer> map = new HashMap<>();
+            for (int j = 0; j < entries; j++) {
+                map.put(buf.readResourceLocation(), buf.readVarInt());
+            }
+            knowledgePoints.put(type, map);
+        }
+        aspectPool.clear();
+        discoveredAspects.clear();
+        int poolSize = buf.readVarInt();
+        for (int i = 0; i < poolSize; i++) {
+            aspectPool.put(buf.readResourceLocation(), buf.readVarInt());
+        }
+        readSet(buf, discoveredAspects);
+        completedNotes = buf.readVarInt();
+        dirty = false;
     }
 
     public void copyFrom(PlayerKnowledge other) {
-        clear();
-        absorb(other);
+        completed.clear();
+        completed.addAll(other.completed);
+        scanned.clear();
+        scanned.addAll(other.scanned);
+        stages.clear();
+        stages.putAll(other.stages);
+        knowledgePoints.clear();
+        other.knowledgePoints.forEach((type, map) -> knowledgePoints.put(type, new HashMap<>(map)));
+        aspectPool.clear();
+        aspectPool.putAll(other.aspectPool);
+        discoveredAspects.clear();
+        discoveredAspects.addAll(other.discoveredAspects);
+        completedNotes = other.completedNotes;
+        dirty = true;
     }
 
-    private void absorb(PlayerKnowledge other) {
-        researchKeys.addAll(other.researchKeys);
-        other.details.forEach((id, detail) -> details.put(id, detail.copy()));
-        points.putAll(other.points);
+    private CompoundTag saveKnowledge() {
+        CompoundTag tag = new CompoundTag();
+        knowledgePoints.forEach((type, map) -> {
+            CompoundTag inner = new CompoundTag();
+            map.forEach((category, amount) -> inner.putInt(category.toString(), amount));
+            tag.put(type.name(), inner);
+        });
+        return tag;
     }
 
-    public void applyAutoUnlock(ServerPlayer player) {
-        player.registryAccess().lookup(IResearchEntry.REGISTRY_KEY).ifPresent(lookup -> lookup.listElements().forEach(holder -> {
-            Identifier id = holder.key().identifier();
-            if (holder.value().hasMeta(ResearchEntryMeta.AUTOUNLOCK) && !researchKeys.contains(id) && ResearchUnlockConditions.passes(player, this, id)) {
-                researchKeys.add(id);
+    private void loadKnowledge(CompoundTag tag) {
+        for (String typeName : tag.getAllKeys()) {
+            try {
+                KnowledgeType type = KnowledgeType.valueOf(typeName);
+                CompoundTag inner = tag.getCompound(typeName);
+                Map<ResourceLocation, Integer> map = new HashMap<>();
+                for (String key : inner.getAllKeys()) {
+                    ResourceLocation category = ResourceLocation.tryParse(key);
+                    if (category != null) {
+                        map.put(category, inner.getInt(key));
+                    }
+                }
+                knowledgePoints.put(type, map);
+            } catch (IllegalArgumentException ignored) {
+                // skip unknown knowledge types
             }
-        }));
+        }
+    }
+
+    private static ListTag stringList(Set<ResourceLocation> ids) {
+        ListTag list = new ListTag();
+        for (ResourceLocation id : ids) {
+            list.add(StringTag.valueOf(id.toString()));
+        }
+        return list;
+    }
+
+    private static void readStrings(ListTag list, Set<ResourceLocation> into) {
+        for (int i = 0; i < list.size(); i++) {
+            ResourceLocation id = ResourceLocation.tryParse(list.getString(i));
+            if (id != null) {
+                into.add(id);
+            }
+        }
+    }
+
+    private static void writeSet(FriendlyByteBuf buf, Set<ResourceLocation> set) {
+        buf.writeVarInt(set.size());
+        for (ResourceLocation id : set) {
+            buf.writeResourceLocation(id);
+        }
+    }
+
+    private static void readSet(FriendlyByteBuf buf, Set<ResourceLocation> into) {
+        int size = buf.readVarInt();
+        for (int i = 0; i < size; i++) {
+            into.add(buf.readResourceLocation());
+        }
     }
 }

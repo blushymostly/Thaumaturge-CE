@@ -1,0 +1,14 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:base_artifice",
+  "pattern": ["QG"],
+  "key": {
+    "Q": { "item": "thaumaturge:quicksilver" },
+    "G": { "tag": "forge:glass_panes" }
+  },
+  "result": { "item": "thaumaturge:mirrored_glass", "count": 1 },
+  "vis": [
+    { "aspect": "thaumaturge:aqua", "amount": 1 },
+    { "aspect": "thaumaturge:ordo", "amount": 1 }
+  ]
+}

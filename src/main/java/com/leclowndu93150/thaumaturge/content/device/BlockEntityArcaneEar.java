@@ -1,10 +1,10 @@
 package com.leclowndu93150.thaumaturge.content.device;
 
-import com.leclowndu93150.thaumaturge.registry.TTAttachments;
 import com.leclowndu93150.thaumaturge.registry.TTBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
@@ -13,8 +13,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 
 public final class BlockEntityArcaneEar extends BlockEntity {
     private static final int NOTE_COUNT = 25;
@@ -50,16 +48,16 @@ public final class BlockEntityArcaneEar extends BlockEntity {
     public void onLoad() {
         super.onLoad();
         if (level != null && !level.isClientSide()) {
-            level.getData(TTAttachments.EAR_INDEX).add(worldPosition.immutable());
+            ArcaneEarIndex.add(level, worldPosition);
         }
     }
 
     @Override
     public void setRemoved() {
-        super.setRemoved();
         if (level != null && !level.isClientSide()) {
-            level.getData(TTAttachments.EAR_INDEX).remove(worldPosition);
+            ArcaneEarIndex.remove(level, worldPosition);
         }
+        super.setRemoved();
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, BlockEntityArcaneEar ear) {
@@ -94,8 +92,8 @@ public final class BlockEntityArcaneEar extends BlockEntity {
         serverLevel.sendParticles(ParticleTypes.NOTE, x, y, z, 0, note / (double) NOTE_MAX, 0.0, 0.0, PARTICLE_SPEED);
     }
 
-    public boolean matches(NoteBlockInstrument instrument, int note) {
-        return instrument == instrument() && note == this.note;
+    public boolean matches(NoteBlockInstrument instrument, int noteId) {
+        return instrument == instrument() && noteId == this.note;
     }
 
     public void trigger() {
@@ -123,22 +121,22 @@ public final class BlockEntityArcaneEar extends BlockEntity {
         level.setBlock(worldPosition, state.setValue(BlockStateProperties.ENABLED, enabled), Block.UPDATE_ALL);
         Block block = state.getBlock();
         Direction facing = state.getValue(BlockStateProperties.FACING);
-        level.updateNeighborsAt(worldPosition, block, null);
-        level.updateNeighborsAt(worldPosition.relative(facing.getOpposite()), block, null);
+        level.updateNeighborsAt(worldPosition, block);
+        level.updateNeighborsAt(worldPosition.relative(facing.getOpposite()), block);
     }
 
     @Override
-    protected void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
-        int stored = input.getByteOr(NOTE_KEY, (byte) 0);
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        tag.putByte(NOTE_KEY, (byte) note);
+        tag.putByte(TONE_KEY, (byte) tone);
+    }
+
+    @Override
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        int stored = tag.getByte(NOTE_KEY);
         note = stored < 0 || stored > NOTE_MAX ? 0 : stored;
-        tone = input.getByteOr(TONE_KEY, (byte) 0);
-    }
-
-    @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
-        output.putByte(NOTE_KEY, (byte) note);
-        output.putByte(TONE_KEY, (byte) tone);
+        tone = tag.getByte(TONE_KEY);
     }
 }

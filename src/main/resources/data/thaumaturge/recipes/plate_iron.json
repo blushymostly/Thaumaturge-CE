@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["NNN"],
+  "key": {
+    "N": { "tag": "forge:ingots/iron" }
+  },
+  "result": { "item": "thaumaturge:plate_iron", "count": 3 }
+}

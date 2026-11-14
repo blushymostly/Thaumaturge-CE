@@ -1,12 +1,17 @@
 package com.leclowndu93150.thaumaturge.compat.jei.drawables;
 
-import mezz.jei.api.gui.drawable.IDrawableStatic;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.resources.Identifier;
+import mezz.jei.api.gui.drawable.IDrawable;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.ResourceLocation;
 
-public class AlphaDrawable implements IDrawableStatic {
-    private final Identifier identifier;
+/**
+ * CE AlphaDrawable for {@code gui_researchbook_overlay.png}.
+ * JEI UV rects are in physical 512-space (hi-res atlas), not logical 256.
+ */
+public final class AlphaDrawable implements IDrawable {
+    private static final int ATLAS = 512;
+
+    private final ResourceLocation texture;
     private final int u;
     private final int v;
     private final int width;
@@ -16,18 +21,16 @@ public class AlphaDrawable implements IDrawableStatic {
     private final int paddingLeft;
     private final int paddingRight;
 
-    public AlphaDrawable(Identifier identifier, int u, int v, int width, int height) {
-        this(identifier, u, v, width, height, 0, 0, 0, 0);
+    public AlphaDrawable(ResourceLocation texture, int u, int v, int width, int height) {
+        this(texture, u, v, width, height, 0, 0, 0, 0);
     }
 
-    public AlphaDrawable(Identifier identifier, int u, int v, int width, int height, int paddingTop, int paddingBottom, int paddingLeft, int paddingRight) {
-        this.identifier = identifier;
-
+    public AlphaDrawable(ResourceLocation texture, int u, int v, int width, int height, int paddingTop, int paddingBottom, int paddingLeft, int paddingRight) {
+        this.texture = texture;
         this.u = u;
         this.v = v;
         this.width = width;
         this.height = height;
-
         this.paddingTop = paddingTop;
         this.paddingBottom = paddingBottom;
         this.paddingLeft = paddingLeft;
@@ -45,23 +48,7 @@ public class AlphaDrawable implements IDrawableStatic {
     }
 
     @Override
-    public void draw(GuiGraphicsExtractor guiGraphics) {
-        draw(guiGraphics, 0, 0);
-    }
-
-    @Override
-    public void draw(GuiGraphicsExtractor guiGraphics, int xOffset, int yOffset) {
-        draw(guiGraphics, xOffset, yOffset, 0, 0, 0, 0);
-    }
-
-    @Override
-    public void draw(GuiGraphicsExtractor guiGraphics, int xOffset, int yOffset, int maskTop, int maskBottom, int maskLeft, int maskRight) {
-        int x = xOffset + this.paddingLeft + maskLeft;
-        int y = yOffset + this.paddingTop + maskTop;
-        int u = this.u + maskLeft;
-        int v = this.v + maskTop;
-        int width = this.width - maskRight - maskLeft;
-        int height = this.height - maskBottom - maskTop;
-        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, identifier, x, y, u, v, width, height, 512, 512);
+    public void draw(GuiGraphics graphics, int xOffset, int yOffset) {
+        graphics.blit(texture, xOffset + paddingLeft, yOffset + paddingTop, (float) u, (float) v, width, height, ATLAS, ATLAS);
     }
 }

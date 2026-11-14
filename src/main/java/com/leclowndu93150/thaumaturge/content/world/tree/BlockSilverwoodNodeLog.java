@@ -1,19 +1,14 @@
 package com.leclowndu93150.thaumaturge.content.world.tree;
 
 import com.leclowndu93150.thaumaturge.content.aura.node.BlockEntityNode;
-import com.leclowndu93150.thaumaturge.content.aura.node.BlockNode;
-import com.leclowndu93150.thaumaturge.content.aura.node.NodeHostBlock;
 import com.leclowndu93150.thaumaturge.registry.TTBlockEntities;
 import com.leclowndu93150.thaumaturge.registry.TTBlocks;
 import com.leclowndu93150.thaumaturge.registry.TTItems;
-import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -21,56 +16,50 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.BlockHitResult;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
-public final class BlockSilverwoodNodeLog extends RotatedPillarBlock implements EntityBlock, NodeHostBlock {
-    public static final MapCodec<BlockSilverwoodNodeLog> CODEC = simpleCodec(BlockSilverwoodNodeLog::new);
-
+/** Silverwood log that hosts an aura node BE (CE {@code BlockSilverwoodNodeLog}). */
+public final class BlockSilverwoodNodeLog extends RotatedPillarBlock implements EntityBlock {
     public BlockSilverwoodNodeLog(BlockBehaviour.Properties properties) {
         super(properties);
     }
 
     @Override
-    public MapCodec<BlockSilverwoodNodeLog> codec() {
-        return CODEC;
-    }
-
-    @Override
-    public BlockState depletedState(BlockState state) {
-        return TTBlocks.LOG_SILVERWOOD.get().defaultBlockState().setValue(AXIS, state.getValue(AXIS));
-    }
-
-    @Override
-    public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new BlockEntityNode(pos, state);
-    }
-
-    @Override
-    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        if (type != TTBlockEntities.NODE.get()) {
-            return null;
-        }
-        if (level.isClientSide()) {
-            return (tickLevel, pos, tickState, node) -> ((BlockEntityNode) node).clientTick(tickLevel, pos);
-        }
-        return (tickLevel, pos, tickState, node) -> ((BlockEntityNode) node).serverTick(tickLevel, pos);
-    }
-
-    @Override
-    protected ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData) {
+    public ItemStack getCloneItemStack(BlockGetter level, BlockPos pos, BlockState state) {
         return new ItemStack(TTItems.LOG_SILVERWOOD.get());
     }
 
     @Override
-    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        InteractionResult pearlResult = BlockNode.tryPrimordialPearl(stack, level, pos, player);
-        return pearlResult != null ? pearlResult : super.useItemOn(stack, state, level, pos, player, hand, hit);
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof BlockEntityNode node) {
+            node.burstAndClear(player);
+        }
+        super.playerWillDestroy(level, pos, state, player);
     }
 
+    @Nullable
     @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        BlockNode.burstNode(level, pos);
-        return super.playerWillDestroy(level, pos, state, player);
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new BlockEntityNode(pos, state);
+    }
+
+    @Nullable
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+        if (type != TTBlockEntities.NODE.get()) {
+            return null;
+        }
+        return level.isClientSide()
+                ? null
+                : (tickLevel, tickPos, tickState, be) -> ((BlockEntityNode) be).serverTick(tickLevel, tickPos);
+    }
+
+    /** After the node is drained / burst, leave a normal silverwood log. */
+    public static BlockState depletedState(BlockState state) {
+        BlockState log = TTBlocks.LOG_SILVERWOOD.get().defaultBlockState();
+        if (state.hasProperty(AXIS) && log.hasProperty(AXIS)) {
+            log = log.setValue(AXIS, state.getValue(AXIS));
+        }
+        return log;
     }
 }

@@ -1,0 +1,9 @@
+{
+  "type": "thaumaturge:crucible",
+  "catalyst": { "tag": "forge:dusts/glowstone" },
+  "aspects": [
+    { "aspect": "thaumaturge:sensus", "amount": 5 },
+    { "aspect": "thaumaturge:lux", "amount": 10 }
+  ],
+  "result": { "item": "minecraft:glowstone_dust", "count": 2 }
+}

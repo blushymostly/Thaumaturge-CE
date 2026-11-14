@@ -1,0 +1,10 @@
+{
+  "type": "thaumaturge:crucible",
+  "research": "thaumaturge:metallurgy@1",
+  "catalyst": { "tag": "forge:ingots/iron" },
+  "aspects": [
+    { "aspect": "thaumaturge:praecantatio", "amount": 5 },
+    { "aspect": "thaumaturge:terra", "amount": 5 }
+  ],
+  "result": { "item": "thaumaturge:ingot_thaumium", "count": 1 }
+}

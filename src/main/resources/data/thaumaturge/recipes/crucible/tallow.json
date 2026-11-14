@@ -1,0 +1,8 @@
+{
+  "type": "thaumaturge:crucible",
+  "catalyst": { "item": "minecraft:rotten_flesh" },
+  "aspects": [
+    { "aspect": "thaumaturge:ignis", "amount": 1 }
+  ],
+  "result": { "item": "thaumaturge:tallow", "count": 1 }
+}

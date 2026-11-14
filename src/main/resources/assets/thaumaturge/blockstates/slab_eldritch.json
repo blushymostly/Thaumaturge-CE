@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "thaumaturge:block/slab_eldritch"
+    },
+    "type=double": {
+      "model": "thaumaturge:block/stone_eldritch_tile"
+    },
+    "type=top": {
+      "model": "thaumaturge:block/slab_eldritch_top"
+    }
+  }
+}

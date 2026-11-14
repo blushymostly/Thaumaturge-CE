@@ -1,28 +1,19 @@
 package com.leclowndu93150.thaumaturge.content.world.tree;
 
-import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.SaplingBlock;
-import net.minecraft.world.level.block.grower.TreeGrower;
+import net.minecraft.world.level.block.grower.AbstractTreeGrower;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 
+/** CE sapling: vanilla growth, but bonemeal only succeeds 25% of the time. */
 public final class BlockSaplingTT extends SaplingBlock {
-    public static final MapCodec<BlockSaplingTT> CODEC = RecordCodecBuilder
-            .mapCodec(i -> i.group(TreeGrower.CODEC.fieldOf("tree").forGetter(b -> b.treeGrower), propertiesCodec()).apply(i, BlockSaplingTT::new));
-
     private static final float BONEMEAL_SUCCESS_CHANCE = 0.25F;
 
-    public BlockSaplingTT(TreeGrower treeGrower, BlockBehaviour.Properties properties) {
+    public BlockSaplingTT(AbstractTreeGrower treeGrower, BlockBehaviour.Properties properties) {
         super(treeGrower, properties);
-    }
-
-    @Override
-    public MapCodec<? extends BlockSaplingTT> codec() {
-        return CODEC;
     }
 
     @Override

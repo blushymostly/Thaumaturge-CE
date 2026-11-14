@@ -1,0 +1,21 @@
+{
+  "type": "thaumaturge:crucible",
+  "research": "thaumaturge:metal_purification@2",
+  "catalyst": {
+    "tag": "forge:nuggets/gold"
+  },
+  "aspects": [
+    {
+      "aspect": "thaumaturge:metallum",
+      "amount": 2
+    },
+    {
+      "aspect": "thaumaturge:desiderium",
+      "amount": 1
+    }
+  ],
+  "result": {
+    "item": "minecraft:gold_nugget",
+    "count": 3
+  }
+}

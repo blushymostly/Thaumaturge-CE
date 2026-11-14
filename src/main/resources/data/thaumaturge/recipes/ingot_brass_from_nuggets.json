@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["###", "###", "###"],
+  "key": {
+    "#": { "item": "thaumaturge:nugget_brass" }
+  },
+  "result": { "item": "thaumaturge:ingot_brass", "count": 1 }
+}

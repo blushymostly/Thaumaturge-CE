@@ -1,0 +1,77 @@
+{
+  "type": "thaumaturge:dust_structure",
+  "research": "thaumaturge:infusion",
+  "result": {
+    "item": "thaumaturge:infusion_matrix"
+  },
+  "cells": [
+    {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "source": "thaumaturge:infusion_matrix"
+    },
+    {
+      "x": 0,
+      "y": -2,
+      "z": 0,
+      "source": "thaumaturge:pedestal_arcane"
+    },
+    {
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "source": "thaumaturge:arcane_stone",
+      "replacement": "minecraft:air"
+    },
+    {
+      "x": -1,
+      "y": -2,
+      "z": -1,
+      "source": "thaumaturge:arcane_stone",
+      "replacement": "thaumaturge:pillar_arcane"
+    },
+    {
+      "x": -1,
+      "y": -1,
+      "z": 1,
+      "source": "thaumaturge:arcane_stone",
+      "replacement": "minecraft:air"
+    },
+    {
+      "x": -1,
+      "y": -2,
+      "z": 1,
+      "source": "thaumaturge:arcane_stone",
+      "replacement": "thaumaturge:pillar_arcane"
+    },
+    {
+      "x": 1,
+      "y": -1,
+      "z": -1,
+      "source": "thaumaturge:arcane_stone",
+      "replacement": "minecraft:air"
+    },
+    {
+      "x": 1,
+      "y": -2,
+      "z": -1,
+      "source": "thaumaturge:arcane_stone",
+      "replacement": "thaumaturge:pillar_arcane"
+    },
+    {
+      "x": 1,
+      "y": -1,
+      "z": 1,
+      "source": "thaumaturge:arcane_stone",
+      "replacement": "minecraft:air"
+    },
+    {
+      "x": 1,
+      "y": -2,
+      "z": 1,
+      "source": "thaumaturge:arcane_stone",
+      "replacement": "thaumaturge:pillar_arcane"
+    }
+  ]
+}

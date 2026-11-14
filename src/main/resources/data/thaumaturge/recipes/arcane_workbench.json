@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    { "item": "minecraft:crafting_table" },
+    { "item": "thaumaturge:salis_mundus" }
+  ],
+  "result": {
+    "item": "thaumaturge:arcane_workbench",
+    "count": 1
+  }
+}

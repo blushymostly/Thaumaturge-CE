@@ -1,31 +1,26 @@
 package com.leclowndu93150.thaumaturge.client.item;
 
 import com.leclowndu93150.thaumaturge.TTIds;
-import com.leclowndu93150.thaumaturge.compat.iris.IrisCompat;
-import com.leclowndu93150.thaumaturge.mixin.client.renderer.ItemInHandRendererInvoker;
 import com.leclowndu93150.thaumaturge.registry.TTItems;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.entity.player.AvatarRenderer;
-import net.minecraft.client.renderer.item.ItemStackRenderState;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
-import net.minecraft.world.entity.player.PlayerModelPart;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RenderHandEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RenderHandEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
-@EventBusSubscriber(modid = TTIds.MODID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = TTIds.MODID, value = Dist.CLIENT)
 public final class ThaumometerHandRenderer {
     private static final float UNIT_SCALE = 0.9F;
     private static final float SWING_SCALE = 0.15F;
@@ -63,9 +58,6 @@ public final class ThaumometerHandRenderer {
             return;
         }
         event.setCanceled(true);
-        if (IrisCompat.isSolidHandPass()) {
-            return;
-        }
         if (event.getHand() == InteractionHand.MAIN_HAND && player.getOffhandItem().isEmpty()) {
             renderTwoHanded(event, mc, player);
         } else {
@@ -79,9 +71,9 @@ public final class ThaumometerHandRenderer {
 
     private static void renderTwoHanded(RenderHandEvent event, Minecraft mc, LocalPlayer player) {
         PoseStack poseStack = event.getPoseStack();
-        SubmitNodeCollector collector = event.getSubmitNodeCollector();
+        MultiBufferSource buffer = event.getMultiBufferSource();
         int light = event.getPackedLight();
-        float partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        float partial = event.getPartialTick();
         float equip = event.getEquipProgress();
         float swing = isScanning(player) ? 0.0F : event.getSwingProgress();
         float sqrtSwing = Mth.sqrt(swing);
@@ -100,18 +92,18 @@ public final class ThaumometerHandRenderer {
         if (!player.isInvisible()) {
             poseStack.pushPose();
             poseStack.mulPose(Axis.YP.rotationDegrees(90.0F));
-            renderMapHand(mc, player, poseStack, collector, light, HumanoidArm.RIGHT);
-            renderMapHand(mc, player, poseStack, collector, light, HumanoidArm.LEFT);
+            renderMapHand(mc, player, poseStack, buffer, light, HumanoidArm.RIGHT);
+            renderMapHand(mc, player, poseStack, buffer, light, HumanoidArm.LEFT);
             poseStack.popPose();
         }
         poseStack.mulPose(Axis.XP.rotationDegrees(Mth.sin(sqrtSwing * (float) Math.PI) * 20.0F * SWING_SCALE));
-        renderLens(mc, player, event.getItemStack(), poseStack, collector, light);
+        renderLens(mc, player, event.getItemStack(), poseStack, buffer, light);
         poseStack.popPose();
     }
 
     private static void renderOneHanded(RenderHandEvent event, Minecraft mc, LocalPlayer player) {
         PoseStack poseStack = event.getPoseStack();
-        SubmitNodeCollector collector = event.getSubmitNodeCollector();
+        MultiBufferSource buffer = event.getMultiBufferSource();
         int light = event.getPackedLight();
         float equip = event.getEquipProgress();
         float swing = isScanning(player) ? 0.0F : event.getSwingProgress();
@@ -120,49 +112,50 @@ public final class ThaumometerHandRenderer {
         poseStack.pushPose();
         poseStack.translate(invert * ONE_HAND_SHIFT, -ONE_HAND_SHIFT, 0.0F);
         if (!player.isInvisible()) {
+            // Avoid ItemInHandRenderer @Invoker (SRG signature mismatch on 1.20.1);
+            // reuse PlayerRenderer arm path with one-hand roll.
             poseStack.pushPose();
             poseStack.mulPose(Axis.ZP.rotationDegrees(invert * ONE_HAND_ARM_ROLL));
-            ((ItemInHandRendererInvoker) mc.gameRenderer.itemInHandRenderer).thaumaturge$renderPlayerArm(poseStack, collector, light, equip, swing, arm);
+            renderMapHand(mc, player, poseStack, buffer, light, arm);
             poseStack.popPose();
         }
         float sqrtSwing = Mth.sqrt(swing);
         float xSwing = Mth.sin(sqrtSwing * (float) Math.PI);
         poseStack.translate(invert * ONE_HAND_X, ONE_HAND_Y + equip * ONE_HAND_EQUIP_DIP, ONE_HAND_Z);
-        poseStack.translate(invert * ONE_HAND_SWING_X * xSwing, ONE_HAND_SWING_Y * Mth.sin(sqrtSwing * (float) (Math.PI * 2)) - ONE_HAND_SWING_DROP * xSwing,
+        poseStack.translate(invert * ONE_HAND_SWING_X * xSwing,
+                ONE_HAND_SWING_Y * Mth.sin(sqrtSwing * (float) (Math.PI * 2)) - ONE_HAND_SWING_DROP * xSwing,
                 ONE_HAND_SWING_Z * Mth.sin(swing * (float) Math.PI));
         poseStack.mulPose(Axis.XP.rotationDegrees(xSwing * ONE_HAND_SWING_PITCH));
         poseStack.mulPose(Axis.YP.rotationDegrees(invert * xSwing * ONE_HAND_SWING_YAW));
         poseStack.scale(ONE_HAND_SCALE, ONE_HAND_SCALE, ONE_HAND_SCALE);
-        renderLens(mc, player, event.getItemStack(), poseStack, collector, light);
+        renderLens(mc, player, event.getItemStack(), poseStack, buffer, light);
         poseStack.popPose();
     }
 
-    private static void renderLens(Minecraft mc, LocalPlayer player, ItemStack stack, PoseStack poseStack, SubmitNodeCollector collector, int light) {
-        renderScanner(mc, player, stack, poseStack, collector, light);
+    private static void renderLens(Minecraft mc, LocalPlayer player, ItemStack stack, PoseStack poseStack, MultiBufferSource buffer, int light) {
+        // CE: ItemDisplayContext.HEAD applies model head display (rot 90 X, scale 0.45).
+        renderScanner(mc, player, stack, poseStack, buffer, light);
         poseStack.translate(0.0F, 0.0F, GLASS_Z);
         poseStack.scale(READOUT_SCALE, -READOUT_SCALE, READOUT_SCALE);
-        ThaumometerLensRenderer.submitReadout(mc, player, poseStack, collector);
+        ThaumometerLensRenderer.renderReadout(mc, player, poseStack, buffer);
     }
 
-    private static void renderScanner(Minecraft mc, AbstractClientPlayer player, ItemStack stack, PoseStack poseStack, SubmitNodeCollector collector, int light) {
-        ItemStackRenderState renderState = new ItemStackRenderState();
-        mc.getItemModelResolver().updateForTopItem(renderState, stack, ItemDisplayContext.HEAD, player.level(), player, player.getId() + ItemDisplayContext.HEAD.ordinal());
-        renderState.submit(poseStack, collector, light, OverlayTexture.NO_OVERLAY, 0);
+    private static void renderScanner(Minecraft mc, AbstractClientPlayer player, ItemStack stack, PoseStack poseStack, MultiBufferSource buffer, int light) {
+        mc.getItemRenderer().renderStatic(stack, ItemDisplayContext.HEAD, light, OverlayTexture.NO_OVERLAY, poseStack, buffer, player.level(), player.getId());
     }
 
-    private static void renderMapHand(Minecraft mc, AbstractClientPlayer player, PoseStack poseStack, SubmitNodeCollector collector, int light, HumanoidArm arm) {
-        AvatarRenderer<AbstractClientPlayer> renderer = mc.getEntityRenderDispatcher().getPlayerRenderer(player);
+    private static void renderMapHand(Minecraft mc, AbstractClientPlayer player, PoseStack poseStack, MultiBufferSource buffer, int light, HumanoidArm arm) {
+        PlayerRenderer renderer = (PlayerRenderer) mc.getEntityRenderDispatcher().getRenderer(player);
         poseStack.pushPose();
         float invert = arm == HumanoidArm.RIGHT ? 1.0F : -1.0F;
         poseStack.mulPose(Axis.YP.rotationDegrees(HAND_YAW));
         poseStack.mulPose(Axis.XP.rotationDegrees(HAND_PITCH));
         poseStack.mulPose(Axis.ZP.rotationDegrees(invert * HAND_ROLL));
         poseStack.translate(invert * HAND_X, HAND_Y, HAND_Z);
-        Identifier skinTexture = player.getSkin().body().texturePath();
         if (arm == HumanoidArm.RIGHT) {
-            renderer.renderRightHand(poseStack, collector, light, skinTexture, player.isModelPartShown(PlayerModelPart.RIGHT_SLEEVE));
+            renderer.renderRightHand(poseStack, buffer, light, player);
         } else {
-            renderer.renderLeftHand(poseStack, collector, light, skinTexture, player.isModelPartShown(PlayerModelPart.LEFT_SLEEVE));
+            renderer.renderLeftHand(poseStack, buffer, light, player);
         }
         poseStack.popPose();
     }

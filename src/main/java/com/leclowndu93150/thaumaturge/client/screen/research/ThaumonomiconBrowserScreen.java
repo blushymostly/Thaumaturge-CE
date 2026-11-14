@@ -1,52 +1,47 @@
 package com.leclowndu93150.thaumaturge.client.screen.research;
 
-import com.leclowndu93150.thaumaturge.api.capability.IPlayerKnowledge;
-import com.leclowndu93150.thaumaturge.api.capability.ResearchFlag;
-import com.leclowndu93150.thaumaturge.api.research.IResearchCategory;
-import com.leclowndu93150.thaumaturge.api.research.IResearchEntry;
-import com.leclowndu93150.thaumaturge.api.research.ResearchEntryMeta;
-import com.leclowndu93150.thaumaturge.api.research.ResearchParent;
-import com.leclowndu93150.thaumaturge.api.research.ResearchUnlockConditions;
 import com.leclowndu93150.thaumaturge.client.render.research.ConnectorRenderer;
 import com.leclowndu93150.thaumaturge.client.render.research.EntryIconRenderer;
 import com.leclowndu93150.thaumaturge.client.screen.AbstractTTScreen;
 import com.leclowndu93150.thaumaturge.client.screen.TTScreenTextures;
-import com.leclowndu93150.thaumaturge.client.screen.TTTooltips;
 import com.leclowndu93150.thaumaturge.client.screen.research.BrowserModel.CategoryRef;
 import com.leclowndu93150.thaumaturge.client.screen.research.BrowserModel.EntryNode;
 import com.leclowndu93150.thaumaturge.client.screen.tooltip.TTTooltipRenderer;
 import com.leclowndu93150.thaumaturge.client.screen.tooltip.TooltipLine;
 import com.leclowndu93150.thaumaturge.client.screen.tooltip.TooltipLineScale;
-import com.leclowndu93150.thaumaturge.network.ServerboundClearResearchFlagsPayload;
-import com.leclowndu93150.thaumaturge.network.ServerboundUnlockResearchPayload;
+import com.leclowndu93150.thaumaturge.content.research.PlayerKnowledge;
+import com.leclowndu93150.thaumaturge.content.research.ResearchEntry;
+import com.leclowndu93150.thaumaturge.content.research.ResearchFlag;
+import com.leclowndu93150.thaumaturge.content.research.ResearchParent;
+import com.leclowndu93150.thaumaturge.network.TTNetwork;
+import com.leclowndu93150.thaumaturge.network.packet.ServerboundClearResearchFlagsPacket;
+import com.leclowndu93150.thaumaturge.network.packet.ServerboundUnlockResearchPacket;
 import com.leclowndu93150.thaumaturge.registry.TTSounds;
+import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
     private static final double UNSET_MAP_POSITION = -9999.0;
     private static final double MAP_UPPER_BOUND_INSET = 1.0;
     private static final int TEX = TTScreenTextures.TEX_SIZE;
+    private static final float CLACK_VOLUME = 0.4F;
+    private static final float PAGE_VOLUME = 0.66F;
+    private static final float SOUND_PITCH = 1.0F;
 
     private static final int MARGIN = 16;
     private static final int VIEW_TRIM = 2 * MARGIN;
@@ -133,10 +128,6 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
     private static final int SCROLL_DOWN_V = 71;
     private static final int SCROLL_IDLE_TINT = 0xFFB3B3B3;
 
-    private static final float CLACK_VOLUME = 0.4F;
-    private static final float PAGE_VOLUME = 0.66F;
-    private static final float SOUND_PITCH = 1.0F;
-
     private static final int TOOLTIP_OFFSET_X = 3;
     private static final int TOOLTIP_OFFSET_Y = -3;
     private static final int STAGE_BASE = 1;
@@ -145,10 +136,10 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
 
     private static double rememberedX = UNSET_MAP_POSITION;
     private static double rememberedY = UNSET_MAP_POSITION;
-    private static @Nullable Identifier rememberedCategory;
+    private static @Nullable ResourceLocation rememberedCategory;
     private static int rememberedScroll;
     private static boolean rememberedSearch;
-    private static @Nullable Identifier rememberedEntry;
+    private static @Nullable ResourceLocation rememberedEntry;
 
     private @Nullable BrowserModel model;
     private @Nullable BrowserSearch search;
@@ -173,16 +164,19 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
 
     public static Screen reopen() {
         ThaumonomiconBrowserScreen browser = new ThaumonomiconBrowserScreen();
-        Identifier remembered = rememberedEntry;
-        return Optional.ofNullable(Minecraft.getInstance().player).filter(player -> remembered != null).map(player -> detailFor(player, remembered, browser)).orElse(browser);
+        ResourceLocation remembered = rememberedEntry;
+        return Optional.ofNullable(Minecraft.getInstance().player)
+                .filter(player -> remembered != null)
+                .map(player -> detailFor(remembered, browser))
+                .orElse(browser);
     }
 
-    private static Screen detailFor(Player player, Identifier id, Screen parent) {
-        ResourceKey<IResearchEntry> key = ResourceKey.create(IResearchEntry.REGISTRY_KEY, id);
-        return player.registryAccess().lookup(IResearchEntry.REGISTRY_KEY).flatMap(entries -> entries.get(key)).<Screen>map(found -> new EntryDetailScreen(found, id, parent)).orElse(parent);
+    private static Screen detailFor(ResourceLocation id, Screen parent) {
+        ResearchEntry entry = com.leclowndu93150.thaumaturge.content.research.ResearchData.entry(id);
+        return entry == null ? parent : new EntryDetailScreen(entry, id, parent);
     }
 
-    public static void rememberEntry(@Nullable Identifier id) {
+    public static void rememberEntry(@Nullable ResourceLocation id) {
         rememberedEntry = id;
     }
 
@@ -203,17 +197,13 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
     }
 
     private EditBox createSearchBox() {
-        EditBox box = new EditBox(font, SEARCH_BOX_X, SEARCH_BOX_Y, SEARCH_BOX_WIDTH, SEARCH_BOX_HEIGHT, Component.translatable("gui.thaumaturge.thaumonomicon.search"));
+        EditBox box = new EditBox(font, SEARCH_BOX_X, SEARCH_BOX_Y, SEARCH_BOX_WIDTH, SEARCH_BOX_HEIGHT,
+                Component.translatable("gui.thaumaturge.thaumonomicon.search"));
         box.setBordered(true);
         box.setMaxLength(SEARCH_MAX_LENGTH);
         box.setTextColor(TINT_WHITE);
         box.setResponder(this::onSearchChanged);
         return box;
-    }
-
-    @Override
-    public boolean isPauseScreen() {
-        return false;
     }
 
     @Override
@@ -230,55 +220,51 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (searching || scrollY == 0.0) {
-            return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        if (searching || delta == 0.0) {
+            return super.mouseScrolled(mouseX, mouseY, delta);
         }
         if (scrollButtonsVisible() && mouseX >= width - TAB_ADD_ON_X_OFFSET) {
-            shiftScroll(scrollY < 0.0 ? 1 : -1);
+            shiftScroll(delta < 0.0 ? 1 : -1);
             return true;
         }
-        zoom = steppedZoom(zoom, scrollY);
+        zoom = steppedZoom(zoom, delta);
         return true;
     }
 
     @Override
-    public boolean mouseReleased(MouseButtonEvent event) {
-        if (event.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             drag.release();
         }
-        return super.mouseReleased(event);
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
-    public boolean keyPressed(KeyEvent event) {
-        if (searching) {
-            if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
-                setSearchMode(false);
-                return true;
-            }
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (searching && keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            setSearchMode(false);
+            return true;
         }
         boolean boxActive = searchBox != null;
-        if (searching && boxActive && searchBox.keyPressed(event)) {
+        if (searching && boxActive && searchBox.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
         boolean typing = boxActive && searchBox.isFocused();
-        if (minecraft != null && !typing && minecraft.options.keyInventory.matches(event)) {
+        if (minecraft != null && !typing && minecraft.options.keyInventory.matches(keyCode, scanCode)) {
             onClose();
             return true;
         }
-        return super.keyPressed(event);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (event.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT || model == null) {
-            return super.mouseClicked(event, doubleClick);
+    public boolean mouseClicked(double mx, double my, int button) {
+        if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT || model == null) {
+            return super.mouseClicked(mx, my, button);
         }
-        double mx = event.x();
-        double my = event.y();
         if (inRect(mx, my, SEARCH_BUTTON_X, searchButtonY(), SEARCH_BUTTON_SIZE, SEARCH_BUTTON_SIZE)) {
-            playSound(TTSounds.CLACK, CLACK_VOLUME);
+            playUiSound(TTSounds.CLACK.get(), CLACK_VOLUME);
             setSearchMode(!searching);
             return true;
         }
@@ -301,7 +287,7 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
         if (hovered != null && clickEntry(hovered)) {
             return true;
         }
-        return clickSearchResult(mx, my) || super.mouseClicked(event, doubleClick);
+        return clickSearchResult(mx, my) || super.mouseClicked(mx, my, button);
     }
 
     private boolean clickSearchResult(double mx, double my) {
@@ -317,24 +303,28 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
     }
 
     @Override
-    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        super.extractBackground(graphics, mouseX, mouseY, partialTick);
-        if (model == null) {
-            return;
-        }
-        model.clearVisibilityCache();
-        hovered = null;
-        if (searching) {
-            drag.release();
-            search().draw(graphics, font, mouseX, mouseY, viewWidth(), viewHeight(), tickCounter);
-        } else {
-            updateDrag(mouseX, mouseY);
-            clampTarget();
-            if (active != null) {
-                drawMap(graphics, mouseX, mouseY, partialTick);
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBackground(graphics);
+        if (model != null) {
+            model.clearVisibilityCache();
+            hovered = null;
+            if (searching) {
+                drag.release();
+                search().draw(graphics, font, mouseX, mouseY, viewWidth(), viewHeight(), tickCounter);
+            } else {
+                updateDrag(mouseX, mouseY);
+                clampTarget();
+                if (active != null) {
+                    drawMap(graphics, mouseX, mouseY, partialTick);
+                }
             }
+            drawChrome(graphics, mouseX, mouseY);
         }
-        drawChrome(graphics, mouseX, mouseY);
+        super.render(graphics, mouseX, mouseY, partialTick);
+        // After widgets + map item icons (high blit Z): hover text must win.
+        if (model != null) {
+            drawHoverTooltip(graphics, mouseX, mouseY);
+        }
     }
 
     private static float steppedZoom(float from, double wheel) {
@@ -342,24 +332,22 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
         return Mth.clamp(from + signedStep, ZOOM_MIN, ZOOM_MAX);
     }
 
-    private void drawChrome(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void drawChrome(GuiGraphics graphics, int mouseX, int mouseY) {
         drawFrame(graphics);
         drawTabs(graphics, mouseX, mouseY);
         drawControls(graphics, mouseX, mouseY);
-        drawHoverTooltip(graphics, mouseX, mouseY);
     }
 
-    private void drawControls(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void drawControls(GuiGraphics graphics, int mouseX, int mouseY) {
         drawSearchButton(graphics, mouseX, mouseY);
         drawScrollButtons(graphics, mouseX, mouseY);
     }
 
-    private void drawHoverTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void drawHoverTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
         if (hovered == null) {
             return;
         }
-        List<TooltipLine> lines = tooltipLines(hovered);
-        TTTooltipRenderer.render(graphics, font, lines, mouseX + TOOLTIP_OFFSET_X, mouseY + TOOLTIP_OFFSET_Y);
+        TTTooltipRenderer.render(graphics, font, tooltipLines(hovered), mouseX + TOOLTIP_OFFSET_X, mouseY + TOOLTIP_OFFSET_Y);
     }
 
     private static void centreIfStray(MapAxis axis, int low, int high) {
@@ -382,9 +370,9 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
             return remembered;
         }
         if (!model().builtIn().isEmpty()) {
-            return model().builtIn().getFirst();
+            return model().builtIn().get(0);
         }
-        return model().addOn().isEmpty() ? null : model().addOn().getFirst();
+        return model().addOn().isEmpty() ? null : model().addOn().get(0);
     }
 
     private int viewWidth() {
@@ -401,10 +389,6 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
 
     private static boolean inRect(double x, double y, int left, int top, int w, int h) {
         return x >= left && y >= top && x < left + w && y < top + h;
-    }
-
-    private void playSound(Supplier<SoundEvent> sound, float volume) {
-        model().player().playSound(sound.get(), volume, SOUND_PITCH);
     }
 
     private void storeState() {
@@ -442,8 +426,8 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
     private void shiftScroll(int delta) {
         int target = scroll + delta;
         if (target >= 0 && (delta < 0 || scroll < maxScroll())) {
-            playSound(TTSounds.CLACK, CLACK_VOLUME);
             scroll = target;
+            playUiSound(TTSounds.CLACK.get(), CLACK_VOLUME);
         }
     }
 
@@ -467,12 +451,12 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
     }
 
     private void selectCategory(CategoryRef category) {
-        playSound(TTSounds.CLACK, CLACK_VOLUME);
         setSearchMode(false);
         active = category;
         computeBounds();
         axisX.recentre((boundLeft + boundRight) / 2.0);
         axisY.recentre((boundTop + boundBottom) / 2.0);
+        playUiSound(TTSounds.CLACK.get(), CLACK_VOLUME);
     }
 
     private void setSearchMode(boolean on) {
@@ -519,7 +503,10 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
     }
 
     private void updateDrag(int mouseX, int mouseY) {
-        boolean down = GLFW.glfwGetMouseButton(minecraft.getWindow().handle(), GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+        if (minecraft == null) {
+            return;
+        }
+        boolean down = GLFW.glfwGetMouseButton(minecraft.getWindow().getWindow(), GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
         if (!down || !inViewport(mouseX, mouseY)) {
             drag.release();
             return;
@@ -541,86 +528,104 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
     }
 
     private int drawnPosition(double from, double to, float partialTick, int low, int high) {
-        int value = (int) Mth.lerp((double) partialTick, from, to);
+        int value = (int) Mth.lerp(partialTick, from, to);
         int lowLimit = (int) (low * (double) zoom);
         int highLimit = (int) (high * (double) zoom - MAP_UPPER_BOUND_INSET);
         return lowLimit > highLimit ? value : Mth.clamp(value, lowLimit, highLimit);
     }
 
-    private void drawMap(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    private void drawMap(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         int drawnX = drawnPosition(axisX.previous(), axisX.current(), partialTick, boundLeft, boundRight);
         int drawnY = drawnPosition(axisY.previous(), axisY.current(), partialTick, boundTop, boundBottom);
         float inverse = 1.0F / zoom;
-        IResearchCategory category = active.data();
-        graphics.pose().pushMatrix();
-        graphics.pose().scale(inverse, inverse);
-        drawParallax(graphics, category.background(), drawnX / PARALLAX_BASE, drawnY / PARALLAX_BASE);
-        category.overlayBackground().ifPresent(overlay -> drawParallax(graphics, overlay, drawnX / PARALLAX_OVERLAY, drawnY / PARALLAX_OVERLAY));
-        graphics.pose().popMatrix();
+        var category = active.data();
         graphics.enableScissor(MARGIN, MARGIN, MARGIN + viewWidth(), MARGIN + viewHeight());
-        graphics.pose().pushMatrix();
-        graphics.pose().scale(inverse, inverse);
+        graphics.pose().pushPose();
+        graphics.pose().scale(inverse, inverse, 1.0F);
+        drawParallax(graphics, category.background(), drawnX / PARALLAX_BASE, drawnY / PARALLAX_BASE, false);
+        category.overlayBackground().ifPresent(overlay -> drawParallax(graphics, overlay, drawnX / PARALLAX_OVERLAY, drawnY / PARALLAX_OVERLAY, true));
         List<EntryNode> nodes = model().entriesOf(active.id());
-        drawConnectors(graphics, nodes, MARGIN - drawnX, MARGIN - drawnY);
+        drawConnectors(nodes, MARGIN - drawnX, MARGIN - drawnY);
         ConnectorRenderer.flush(graphics);
         drawNodes(graphics, nodes, drawnX, drawnY, mouseX, mouseY);
-        graphics.pose().popMatrix();
+        graphics.pose().popPose();
         graphics.disableScissor();
     }
 
-    private void drawParallax(GuiGraphicsExtractor graphics, Identifier texture, double offsetX, double offsetY) {
-        int w = (int) ((viewWidth() + BACKGROUND_EXTRA) * zoom);
-        int h = (int) ((viewHeight() + BACKGROUND_EXTRA) * zoom);
-        graphics.blit(RenderPipelines.GUI_TEXTURED, texture, (int) (BACKGROUND_OFFSET * zoom), (int) (BACKGROUND_OFFSET * zoom), (float) offsetX, (float) offsetY, w, h, w, h, TEX, TEX);
+    private void drawParallax(GuiGraphics graphics, ResourceLocation texture, double offsetX, double offsetY, boolean blend) {
+        // Gui textures clamp UVs past 1.0, so a single oversized blit becomes a solid edge smear.
+        // Tile 256×256 panels manually (CE logical tile size) with scroll offsets.
+        int tile = TEX;
+        int totalW = (int) ((viewWidth() + BACKGROUND_EXTRA) * zoom);
+        int totalH = (int) ((viewHeight() + BACKGROUND_EXTRA) * zoom);
+        int originX = (int) (BACKGROUND_OFFSET * zoom);
+        int originY = (int) (BACKGROUND_OFFSET * zoom);
+        int scrollX = Math.floorMod((int) Math.floor(offsetX), tile);
+        int scrollY = Math.floorMod((int) Math.floor(offsetY), tile);
+        if (blend) {
+            // Forge's untinted blit skips enableBlend; overlay ARGB would paint opaque without this.
+            RenderSystem.enableBlend();
+            RenderSystem.defaultBlendFunc();
+            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        }
+        for (int dy = -tile; dy < totalH + tile; dy += tile) {
+            for (int dx = -tile; dx < totalW + tile; dx += tile) {
+                graphics.blit(texture, originX + dx - scrollX, originY + dy - scrollY, 0, 0, tile, tile, tile, tile);
+            }
+        }
+        if (blend) {
+            RenderSystem.disableBlend();
+            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        }
     }
 
-    private void drawConnectors(GuiGraphicsExtractor graphics, List<EntryNode> nodes, int originX, int originY) {
+    private void drawConnectors(List<EntryNode> nodes, int originX, int originY) {
         BrowserModel data = model();
-        IPlayerKnowledge knowledge = data.knowledge();
+        PlayerKnowledge knowledge = data.knowledge();
         for (EntryNode node : nodes) {
             if (!data.visible(node)) {
                 continue;
             }
-            IResearchEntry entry = node.value();
-            boolean reverse = entry.hasMeta(ResearchEntryMeta.REVERSE);
+            ResearchEntry entry = node.value();
+            boolean reverse = entry.hasMeta("reverse");
             for (ResearchParent parent : entry.parents()) {
                 EntryNode other = data.entry(parent.id());
                 if (parent.inherit() || other == null || !other.categoryId().equals(node.categoryId()) || other.value().siblings().contains(node.id())) {
                     continue;
                 }
-                if (knowledge.isResearchComplete(other.id())) {
-                    link(graphics, node, other, originX, originY, COLOR_PARENT_DONE, LAYER_PARENT_DONE, true, reverse);
+                if (knowledge.isComplete(other.id())) {
+                    link(node, other, originX, originY, COLOR_PARENT_DONE, LAYER_PARENT_DONE, true, reverse);
                 } else if (data.visible(other)) {
-                    link(graphics, node, other, originX, originY, COLOR_PARENT_OPEN, LAYER_PARENT_OPEN, true, reverse);
+                    link(node, other, originX, originY, COLOR_PARENT_OPEN, LAYER_PARENT_OPEN, true, reverse);
                 }
             }
-            for (Identifier siblingId : entry.siblings()) {
+            for (ResourceLocation siblingId : entry.siblings()) {
                 EntryNode other = data.entry(siblingId);
                 if (other == null || !other.categoryId().equals(node.categoryId())) {
                     continue;
                 }
-                if (knowledge.isResearchComplete(other.id())) {
-                    link(graphics, other, node, originX, originY, COLOR_SIBLING_DONE, LAYER_SIBLING_DONE, false, reverse);
+                if (knowledge.isComplete(other.id())) {
+                    link(other, node, originX, originY, COLOR_SIBLING_DONE, LAYER_SIBLING_DONE, false, reverse);
                 } else if (data.visible(other)) {
-                    link(graphics, other, node, originX, originY, COLOR_SIBLING_OPEN, LAYER_SIBLING_OPEN, false, reverse);
+                    link(other, node, originX, originY, COLOR_SIBLING_OPEN, LAYER_SIBLING_OPEN, false, reverse);
                 }
             }
         }
     }
 
-    private static void link(GuiGraphicsExtractor graphics, EntryNode from, EntryNode to, int originX, int originY, int color, float layer, boolean arrow, boolean flipped) {
-        ConnectorRenderer.draw(graphics, from.value().column(), from.value().row(), to.value().column(), to.value().row(), originX, originY, color, layer, arrow, flipped);
+    private static void link(EntryNode from, EntryNode to, int originX, int originY, int color, float layer, boolean arrow, boolean flipped) {
+        ConnectorRenderer.draw(from.value().column(), from.value().row(), to.value().column(), to.value().row(), originX, originY, color, layer, arrow, flipped);
     }
 
-    private void drawNodes(GuiGraphicsExtractor graphics, List<EntryNode> nodes, int drawnX, int drawnY, int mouseX, int mouseY) {
+    private void drawNodes(GuiGraphics graphics, List<EntryNode> nodes, int drawnX, int drawnY, int mouseX, int mouseY) {
         BrowserModel data = model();
-        IPlayerKnowledge knowledge = data.knowledge();
+        PlayerKnowledge knowledge = data.knowledge();
         boolean pointerInside = inViewport(mouseX, mouseY);
         for (EntryNode node : nodes) {
             if (!data.visible(node)) {
                 continue;
             }
-            IResearchEntry entry = node.value();
+            ResearchEntry entry = node.value();
             int relX = CELL * entry.column() - drawnX;
             int relY = CELL * entry.row() - drawnY;
             if (relX < -CELL || relY < -CELL || relX > viewWidth() * zoom || relY > viewHeight() * zoom) {
@@ -629,23 +634,23 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
             int originX = MARGIN + relX;
             int originY = MARGIN + relY;
             EntryIconRenderer.Status status = EntryIconRenderer.Status.UNKNOWN;
-            if (knowledge.isResearchComplete(node.id())) {
+            if (knowledge.isComplete(node.id())) {
                 status = EntryIconRenderer.Status.COMPLETE;
             } else if (data.canUnlock(node)) {
                 status = EntryIconRenderer.Status.IN_PROGRESS;
             }
-            boolean warp = entry.stages().stream().anyMatch(stage -> stage.warp() > 0);
             Object icon = EntryIconRenderer.resolveIcon(entry, tickCounter);
-            EntryIconRenderer.render(graphics, originX, originY, entry, status, icon, warp, knowledge.hasResearchFlag(node.id(), ResearchFlag.RESEARCH),
+            EntryIconRenderer.render(graphics, originX, originY, entry, status, icon,
+                    knowledge.hasResearchFlag(node.id(), ResearchFlag.RESEARCH),
                     knowledge.hasResearchFlag(node.id(), ResearchFlag.PAGE));
-            if (pointerInside && mouseX >= (originX + HOVER_BOX_NEAR) / zoom && mouseX <= (originX + HOVER_BOX_FAR) / zoom && mouseY >= (originY + HOVER_BOX_NEAR) / zoom
-                    && mouseY <= (originY + HOVER_BOX_FAR) / zoom) {
+            if (pointerInside && mouseX >= (originX + HOVER_BOX_NEAR) / zoom && mouseX <= (originX + HOVER_BOX_FAR) / zoom
+                    && mouseY >= (originY + HOVER_BOX_NEAR) / zoom && mouseY <= (originY + HOVER_BOX_FAR) / zoom) {
                 hovered = node;
             }
         }
     }
 
-    private void drawFrame(GuiGraphicsExtractor graphics) {
+    private void drawFrame(GuiGraphics graphics) {
         int farX = width - FRAME_FAR_OFFSET;
         int farY = height - FRAME_FAR_OFFSET;
         for (int x = MARGIN; x < width - MARGIN; x += FRAME_TILE) {
@@ -664,19 +669,25 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
         sprite(graphics, farX, farY, FRAME_CORNER_U, FRAME_CORNER_V, FRAME_CORNER_SIZE, FRAME_CORNER_SIZE, TINT_WHITE);
     }
 
-    private static void sprite(GuiGraphicsExtractor graphics, int x, int y, int u, int v, int w, int h, int tint) {
-        graphics.blit(RenderPipelines.GUI_TEXTURED, TTScreenTextures.RESEARCH_BROWSER, x, y, (float) u, (float) v, w, h, TEX, TEX, tint);
+    private static void sprite(GuiGraphics graphics, int x, int y, int u, int v, int w, int h, int tint) {
+        float a = (tint >> 24 & 255) / 255.0F;
+        float r = (tint >> 16 & 255) / 255.0F;
+        float g = (tint >> 8 & 255) / 255.0F;
+        float b = (tint & 255) / 255.0F;
+        RenderSystem.setShaderColor(r, g, b, a <= 0 ? 1.0F : a);
+        graphics.blit(TTScreenTextures.RESEARCH_BROWSER, x, y, u, v, w, h, TEX, TEX);
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
     }
 
     private TabStats statsOf(CategoryRef category) {
-        IPlayerKnowledge knowledge = model().knowledge();
+        PlayerKnowledge knowledge = model().knowledge();
         boolean newResearch = false;
         boolean newPage = false;
         int known = 0;
         int counted = 0;
         for (EntryNode node : model().entriesOf(category.id())) {
-            boolean isKnown = knowledge.isResearchKnown(node.id());
-            if (!node.value().hasMeta(ResearchEntryMeta.AUTOUNLOCK)) {
+            boolean isKnown = knowledge.isKnown(node.id());
+            if (!node.value().hasMeta("autounlock")) {
                 counted++;
                 known += isKnown ? 1 : 0;
             }
@@ -688,7 +699,7 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
         return new TabStats(newResearch, newPage, counted == 0 ? 0 : (int) ((double) known / counted * PERCENT_SCALE));
     }
 
-    private void drawTabs(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void drawTabs(GuiGraphics graphics, int mouseX, int mouseY) {
         Tab labelled = null;
         TabStats labelledStats = null;
         for (Tab tab : layoutTabs()) {
@@ -696,9 +707,16 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
             int y = tab.y() + tab.shift();
             boolean isHovered = inRect(mouseX, mouseY, tab.x(), y, TAB_ICON_SIZE, TAB_ICON_SIZE);
             TabStats stats = statsOf(tab.category());
-            sprite(graphics, tab.x() - TAB_FRAME_PAD, y - TAB_FRAME_PAD, FRAME_CORNER_U, FRAME_CORNER_V, FRAME_CORNER_SIZE, FRAME_CORNER_SIZE, isActive ? TAB_FRAME_ACTIVE_TINT : TINT_WHITE);
-            graphics.blit(RenderPipelines.GUI_TEXTURED, tab.category().data().icon(), tab.x(), y, 0.0F, 0.0F, TAB_ICON_SIZE, TAB_ICON_SIZE, TAB_ICON_SIZE, TAB_ICON_SIZE,
-                    isActive || isHovered ? TINT_WHITE : TAB_ICON_DIM_TINT);
+            sprite(graphics, tab.x() - TAB_FRAME_PAD, y - TAB_FRAME_PAD, FRAME_CORNER_U, FRAME_CORNER_V, FRAME_CORNER_SIZE, FRAME_CORNER_SIZE,
+                    isActive ? TAB_FRAME_ACTIVE_TINT : TINT_WHITE);
+            int iconTint = isActive || isHovered ? TINT_WHITE : TAB_ICON_DIM_TINT;
+            float a = (iconTint >> 24 & 255) / 255.0F;
+            float r = (iconTint >> 16 & 255) / 255.0F;
+            float g = (iconTint >> 8 & 255) / 255.0F;
+            float b = (iconTint & 255) / 255.0F;
+            RenderSystem.setShaderColor(r, g, b, a <= 0 ? 1.0F : a);
+            EntryIconRenderer.drawStaticTexture(graphics, tab.category().data().icon(), tab.x(), y, TAB_ICON_SIZE);
+            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
             if (stats.newResearch()) {
                 drawBadge(graphics, tab.x() + BADGE_X, y + BADGE_RESEARCH_Y, BADGE_RESEARCH_U);
             }
@@ -715,41 +733,42 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
         }
     }
 
-    private void drawBadge(GuiGraphicsExtractor graphics, int x, int y, int u) {
-        graphics.pose().pushMatrix();
-        graphics.pose().translate(x, y);
-        graphics.pose().scale(BADGE_SCALE, BADGE_SCALE);
+    private void drawBadge(GuiGraphics graphics, int x, int y, int u) {
+        graphics.pose().pushPose();
+        graphics.pose().translate(x, y, 0);
+        graphics.pose().scale(BADGE_SCALE, BADGE_SCALE, 1.0F);
         sprite(graphics, 0, 0, u, BADGE_V, BADGE_SIZE, BADGE_SIZE, BADGE_TINT);
-        graphics.pose().popMatrix();
+        graphics.pose().popPose();
     }
 
-    private void drawTabLabel(GuiGraphicsExtractor graphics, Tab tab, TabStats stats) {
-        ResourceKey<IResearchCategory> key = ResourceKey.create(IResearchCategory.REGISTRY_KEY, tab.category().id());
+    private void drawTabLabel(GuiGraphics graphics, Tab tab, TabStats stats) {
         List<Component> lines = new ArrayList<>();
-        lines.add(TTTooltips.categoryPercent(key, stats.percent()));
+        lines.add(Component.translatable(tab.category().id().toLanguageKey("research_category")).append(" (" + stats.percent() + "%)"));
         if (stats.newResearch()) {
-            lines.add(TTTooltips.researchNew());
+            lines.add(Component.translatable("tooltip.thaumaturge.research.new").withStyle(ChatFormatting.GREEN));
         }
         if (stats.newPage()) {
-            lines.add(TTTooltips.pageNew());
+            lines.add(Component.translatable("tooltip.thaumaturge.research.page_new").withStyle(ChatFormatting.AQUA));
         }
         int y = tab.y() + tab.shift() + LABEL_TEXT_Y;
         for (Component line : lines) {
             int x = tab.addOn() ? viewWidth() + LABEL_ADD_ON_RIGHT - font.width(line) : tab.x() + LABEL_BUILT_IN_X;
-            graphics.text(font, line, x, y, TINT_WHITE, false);
+            graphics.drawString(font, line, x, y, TINT_WHITE, false);
             y += LABEL_LINE_HEIGHT;
         }
     }
 
-    private void drawSearchButton(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void drawSearchButton(GuiGraphics graphics, int mouseX, int mouseY) {
         boolean isHovered = inRect(mouseX, mouseY, SEARCH_BUTTON_X, searchButtonY(), SEARCH_BUTTON_SIZE, SEARCH_BUTTON_SIZE);
-        sprite(graphics, SEARCH_BUTTON_X, searchButtonY(), SEARCH_BUTTON_U, SEARCH_BUTTON_V, SEARCH_BUTTON_SIZE, SEARCH_BUTTON_SIZE, isHovered ? TINT_WHITE : SEARCH_BUTTON_IDLE_TINT);
+        sprite(graphics, SEARCH_BUTTON_X, searchButtonY(), SEARCH_BUTTON_U, SEARCH_BUTTON_V, SEARCH_BUTTON_SIZE, SEARCH_BUTTON_SIZE,
+                isHovered ? TINT_WHITE : SEARCH_BUTTON_IDLE_TINT);
         if (isHovered) {
-            graphics.text(font, Component.translatable("gui.thaumaturge.thaumonomicon.search"), SEARCH_BUTTON_X + SEARCH_LABEL_X, searchButtonY() + SEARCH_LABEL_Y, TINT_WHITE, false);
+            graphics.drawString(font, Component.translatable("gui.thaumaturge.thaumonomicon.search"), SEARCH_BUTTON_X + SEARCH_LABEL_X,
+                    searchButtonY() + SEARCH_LABEL_Y, TINT_WHITE, false);
         }
     }
 
-    private void drawScrollButtons(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void drawScrollButtons(GuiGraphics graphics, int mouseX, int mouseY) {
         if (!scrollButtonsVisible()) {
             return;
         }
@@ -757,7 +776,7 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
         drawScrollArrow(graphics, mouseX, mouseY, scrollDownY(), SCROLL_DOWN_V);
     }
 
-    private void drawScrollArrow(GuiGraphicsExtractor graphics, int mouseX, int mouseY, int y, int v) {
+    private void drawScrollArrow(GuiGraphics graphics, int mouseX, int mouseY, int y, int v) {
         boolean isHovered = inRect(mouseX, mouseY, scrollButtonX(), y, SCROLL_BUTTON_WIDTH, SCROLL_BUTTON_HEIGHT);
         sprite(graphics, scrollButtonX(), y, SCROLL_BUTTON_U, v, SCROLL_BUTTON_WIDTH, SCROLL_BUTTON_HEIGHT, isHovered ? TINT_WHITE : SCROLL_IDLE_TINT);
     }
@@ -778,27 +797,32 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
 
     private void openDetail(EntryNode node) {
         storeState();
-        playSound(TTSounds.PAGE, PAGE_VOLUME);
-        minecraft.setScreen(new EntryDetailScreen(node.holder(), node.id(), this));
+        playUiSound(TTSounds.PAGE.get(), PAGE_VOLUME);
+        if (minecraft != null) {
+            minecraft.setScreen(new EntryDetailScreen(node.value(), node.id(), this));
+        }
+    }
+
+    private void playUiSound(SoundEvent sound, float volume) {
+        Player player = model().player();
+        if (player != null) {
+            player.playSound(sound, volume, SOUND_PITCH);
+        }
     }
 
     private boolean clickEntry(EntryNode node) {
-        IPlayerKnowledge knowledge = model().knowledge();
-        Identifier id = node.id();
-        if (knowledge.isResearchKnown(id)) {
+        PlayerKnowledge knowledge = model().knowledge();
+        ResourceLocation id = node.id();
+        if (knowledge.isKnown(id)) {
             knowledge.clearResearchFlag(id, ResearchFlag.RESEARCH);
             knowledge.clearResearchFlag(id, ResearchFlag.PAGE);
-            ClientPacketDistributor.sendToServer(new ServerboundClearResearchFlagsPayload(id, List.of(ResearchFlag.RESEARCH, ResearchFlag.PAGE)));
-            int stage = knowledge.researchStage(id);
-            if (stage > 0 && stage >= node.value().stages().size() - 1) {
-                ClientPacketDistributor.sendToServer(new ServerboundUnlockResearchPayload(id));
-            }
+            TTNetwork.sendToServer(new ServerboundClearResearchFlagsPacket(id, List.of(ResearchFlag.RESEARCH, ResearchFlag.PAGE)));
             openDetail(node);
             return true;
         }
         if (model().canUnlock(node)) {
             computeBounds();
-            ClientPacketDistributor.sendToServer(new ServerboundUnlockResearchPayload(id));
+            TTNetwork.sendToServer(new ServerboundUnlockResearchPacket(id));
             openDetail(node);
             return true;
         }
@@ -807,49 +831,48 @@ public final class ThaumonomiconBrowserScreen extends AbstractTTScreen {
 
     private List<TooltipLine> tooltipLines(EntryNode node) {
         BrowserModel data = model();
-        IPlayerKnowledge knowledge = data.knowledge();
-        IResearchEntry entry = node.value();
-        Identifier id = node.id();
+        PlayerKnowledge knowledge = data.knowledge();
+        ResearchEntry entry = node.value();
+        ResourceLocation id = node.id();
         List<TooltipLine> lines = new ArrayList<>();
-        lines.add(new TooltipLine(TTTooltips.entryNameGold(Component.translatable(entry.nameKey())), TooltipLineScale.NORMAL));
+        lines.add(new TooltipLine(Component.translatable(entry.nameKey()).withStyle(ChatFormatting.GOLD), TooltipLineScale.NORMAL));
         if (data.canUnlock(node)) {
-            int stage = knowledge.researchStage(id);
-            boolean inProgress = !knowledge.isResearchComplete(id) && !entry.stages().isEmpty();
-            if (inProgress && stage < 0) {
-                lines.add(new TooltipLine(TTTooltips.beginResearch(), TooltipLineScale.HALF));
+            int stage = knowledge.stage(id);
+            boolean inProgress = !knowledge.isComplete(id) && !entry.stages().isEmpty();
+            if (inProgress && !knowledge.isKnown(id)) {
+                lines.add(new TooltipLine(Component.translatable("tooltip.thaumaturge.research.begin").withStyle(ChatFormatting.GREEN), TooltipLineScale.SMALL));
             } else if (inProgress) {
                 String counter = " " + (stage + STAGE_BASE) + "/" + entry.stages().size();
-                lines.add(new TooltipLine(Component.translatable("tooltip.thaumaturge.research.stage").append(counter).withStyle(ChatFormatting.AQUA), TooltipLineScale.HALF));
+                lines.add(new TooltipLine(Component.translatable("tooltip.thaumaturge.research.stage").append(counter).withStyle(ChatFormatting.AQUA),
+                        TooltipLineScale.SMALL));
             }
         } else {
-            lines.add(new TooltipLine(TTTooltips.researchMissing(), TooltipLineScale.HALF));
-            List<Component> missing = new ArrayList<>();
+            lines.add(new TooltipLine(Component.translatable("tooltip.thaumaturge.research.missing").withStyle(ChatFormatting.RED), TooltipLineScale.SMALL));
             for (ResearchParent parent : entry.parents()) {
                 if (!parent.isSatisfiedBy(knowledge)) {
                     EntryNode parentNode = data.entry(parent.id());
-                    missing.add(parentNode == null ? Component.literal("?") : Component.translatable(parentNode.value().nameKey()));
+                    String titleKey = "research." + parent.id().getNamespace() + "." + parent.id().getPath() + ".title";
+                    Component name = parentNode != null ? Component.translatable(parentNode.value().nameKey())
+                            : net.minecraft.client.resources.language.I18n.exists(titleKey) ? Component.translatable(titleKey) : Component.literal("?");
+                    lines.add(new TooltipLine(Component.literal(" - ").append(name).withStyle(ChatFormatting.YELLOW), TooltipLineScale.SMALL));
                 }
-            }
-            missing.addAll(ResearchUnlockConditions.lockedMessages(data.player(), knowledge, id));
-            for (Component item : missing) {
-                lines.add(new TooltipLine(Component.literal(" - ").append(item).withStyle(ChatFormatting.YELLOW), TooltipLineScale.HALF));
             }
         }
         for (ResearchFlag flag : FLAG_NOTE_ORDER) {
             if (knowledge.hasResearchFlag(id, flag)) {
-                Component note = flag == ResearchFlag.RESEARCH ? TTTooltips.researchNew() : TTTooltips.pageNew();
-                lines.add(new TooltipLine(note, TooltipLineScale.HALF));
+                Component note = flag == ResearchFlag.RESEARCH
+                        ? Component.translatable("tooltip.thaumaturge.research.new")
+                        : Component.translatable("tooltip.thaumaturge.research.page_new");
+                lines.add(new TooltipLine(note, TooltipLineScale.SMALL));
             }
         }
-        if (minecraft.options.advancedItemTooltips) {
+        if (minecraft != null && minecraft.options.advancedItemTooltips) {
             lines.add(new TooltipLine(Component.literal(id.toString()).withStyle(ChatFormatting.DARK_GRAY), TooltipLineScale.NORMAL));
         }
         return lines;
     }
 
-    private record Tab(CategoryRef category, int x, int y, int shift, boolean addOn) {
-    }
+    private record Tab(CategoryRef category, int x, int y, int shift, boolean addOn) {}
 
-    private record TabStats(boolean newResearch, boolean newPage, int percent) {
-    }
+    private record TabStats(boolean newResearch, boolean newPage, int percent) {}
 }

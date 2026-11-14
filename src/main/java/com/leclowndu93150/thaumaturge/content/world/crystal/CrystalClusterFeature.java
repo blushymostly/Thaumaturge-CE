@@ -1,29 +1,23 @@
 package com.leclowndu93150.thaumaturge.content.world.crystal;
 
-import com.leclowndu93150.thaumaturge.api.aspect.IAspect;
-import com.leclowndu93150.thaumaturge.api.aura.BiomeAspects;
 import com.leclowndu93150.thaumaturge.content.world.crystal.CrystalClusterConfig.Entry;
-import com.leclowndu93150.thaumaturge.data.worldgen.biome.TTBiomes;
-import com.leclowndu93150.thaumaturge.registry.TTDataMaps;
 import com.mojang.serialization.Codec;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.Holder;
 import net.minecraft.core.Vec3i;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.WorldGenLevel;
-import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.neoforged.neoforge.common.Tags;
+import net.minecraftforge.common.Tags;
 
+/** Places small underground patches of primal vis crystals. */
 public final class CrystalClusterFeature extends Feature<CrystalClusterConfig> {
     private static final int CLUSTER_SPREAD = 6;
     private static final int CLUSTER_OFFSET = 8;
@@ -48,27 +42,38 @@ public final class CrystalClusterFeature extends Feature<CrystalClusterConfig> {
         }
         WorldGenLevel level = context.level();
         RandomSource random = context.random();
-        CenterStrategy centers = config.atOrigin() ? new OriginCenter() : new UndergroundCenter();
-        CrystalSelector selector = new BiomeFlavouredSelector(config.crystals(), config.biomeAspectChance());
-        PlacementBudget budget = new PlacementBudget(config.attempts(), config.maxTotal());
+        int attemptsLeft = config.attempts();
+        int sizeLeft = config.maxTotal() + OVERSHOOT_ALLOWANCE;
         boolean placed = false;
-        while (budget.canStart()) {
-            budget.consumeAttempt();
-            BlockPos center = centers.pick(level, random, context.origin());
+        while (attemptsLeft-- > 0 && sizeLeft > 0) {
+            BlockPos center = config.atOrigin()
+                    ? context.origin()
+                    : pickUnderground(level, random, context.origin());
             if (center == null) {
                 continue;
             }
-            Entry entry = selector.pick(random, level.getBiome(center));
+            Entry entry = config.crystals().get(random.nextInt(config.crystals().size()));
             BlockState base = entry.block().defaultBlockState();
             if (!base.hasProperty(BlockCrystal.SIZE)) {
                 continue;
             }
             List<BlockPos> cells = planCells(level, random, center);
             int added = placeCells(level, random, base, cells);
-            budget.spend(added);
+            sizeLeft -= added;
             placed |= added > 0;
         }
         return placed;
+    }
+
+    private static BlockPos pickUnderground(WorldGenLevel level, RandomSource random, BlockPos origin) {
+        int z = origin.getZ() + CLUSTER_OFFSET + random.nextInt(2 * CLUSTER_SPREAD + 1) - CLUSTER_SPREAD;
+        int x = origin.getX() + CLUSTER_OFFSET + random.nextInt(2 * CLUSTER_SPREAD + 1) - CLUSTER_SPREAD;
+        int floor = level.getMinBuildHeight();
+        int ceiling = level.getHeight(Heightmap.Types.WORLD_SURFACE_WG, x, z) - SURFACE_MARGIN;
+        if (ceiling < floor) {
+            return null;
+        }
+        return new BlockPos(x, floor + random.nextInt(ceiling - floor + 1), z);
     }
 
     private static List<Vec3i> buildRadialOffsets() {
@@ -98,7 +103,13 @@ public final class CrystalClusterFeature extends Feature<CrystalClusterConfig> {
         int total = 0;
         for (BlockPos pos : cells) {
             int size = 1 + random.nextInt(SIZE_VARIATION);
-            level.setBlock(pos, base.setValue(BlockCrystal.SIZE, size), PLACE_FLAGS);
+            int support = CrystalShards.supportMask(level, pos);
+            if (support == 0) {
+                support = 1 << net.minecraft.core.Direction.DOWN.ordinal();
+            }
+            level.setBlock(pos, base
+                    .setValue(BlockCrystal.SIZE, Math.min(3, size))
+                    .setValue(BlockCrystal.SUPPORT, support), PLACE_FLAGS);
             total += size;
         }
         return total;
@@ -114,93 +125,12 @@ public final class CrystalClusterFeature extends Feature<CrystalClusterConfig> {
         }
         for (Direction direction : DIRECTIONS) {
             BlockState neighbour = level.getBlockState(pos.relative(direction));
-            if (neighbour.is(BlockTags.BASE_STONE_OVERWORLD) || neighbour.is(Tags.Blocks.STONES) || neighbour.is(Tags.Blocks.ORES) || neighbour.is(BlockTags.BASE_STONE_NETHER)) {
+            if (neighbour.is(BlockTags.BASE_STONE_OVERWORLD) || neighbour.is(Tags.Blocks.COBBLESTONE)
+                    || neighbour.is(Tags.Blocks.ORES) || neighbour.is(BlockTags.BASE_STONE_NETHER)
+                    || neighbour.is(BlockTags.STONE_ORE_REPLACEABLES) || neighbour.is(BlockTags.DEEPSLATE_ORE_REPLACEABLES)) {
                 return true;
             }
         }
         return false;
-    }
-
-    private static final class PlacementBudget {
-        private int attemptsLeft;
-        private int sizeLeft;
-
-        private PlacementBudget(int attempts, int maxTotal) {
-            this.attemptsLeft = attempts;
-            this.sizeLeft = maxTotal + OVERSHOOT_ALLOWANCE;
-        }
-
-        private boolean canStart() {
-            return attemptsLeft > 0 && sizeLeft > 0;
-        }
-
-        private void consumeAttempt() {
-            attemptsLeft--;
-        }
-
-        private void spend(int size) {
-            sizeLeft -= size;
-        }
-    }
-
-    private interface CenterStrategy {
-        BlockPos pick(WorldGenLevel level, RandomSource random, BlockPos origin);
-    }
-
-    private static final class OriginCenter implements CenterStrategy {
-        @Override
-        public BlockPos pick(WorldGenLevel level, RandomSource random, BlockPos origin) {
-            return origin;
-        }
-    }
-
-    private static final class UndergroundCenter implements CenterStrategy {
-        @Override
-        public BlockPos pick(WorldGenLevel level, RandomSource random, BlockPos origin) {
-            int z = origin.getZ() + CLUSTER_OFFSET + random.nextInt(2 * CLUSTER_SPREAD + 1) - CLUSTER_SPREAD;
-            int x = origin.getX() + CLUSTER_OFFSET + random.nextInt(2 * CLUSTER_SPREAD + 1) - CLUSTER_SPREAD;
-            int floor = level.getMinY();
-            int ceiling = level.getHeight(Heightmap.Types.WORLD_SURFACE_WG, x, z) - SURFACE_MARGIN;
-            if (ceiling < floor) {
-                return null;
-            }
-            return new BlockPos(x, floor + random.nextInt(ceiling - floor + 1), z);
-        }
-    }
-
-    private interface CrystalSelector {
-        Entry pick(RandomSource random, Holder<Biome> biome);
-    }
-
-    private static final class BiomeFlavouredSelector implements CrystalSelector {
-        private final List<Entry> crystals;
-        private final int biomeAspectChance;
-
-        private BiomeFlavouredSelector(List<Entry> crystals, int biomeAspectChance) {
-            this.crystals = crystals;
-            this.biomeAspectChance = biomeAspectChance;
-        }
-
-        @Override
-        public Entry pick(RandomSource random, Holder<Biome> biome) {
-            if (random.nextInt(biomeAspectChance) != 0 || (biome.is(TTBiomes.TAINTED_LANDS) && random.nextBoolean())) {
-                return uniform(random);
-            }
-            BiomeAspects aspects = biome.getData(TTDataMaps.BIOME_ASPECTS);
-            if (aspects == null || aspects.aspects().isEmpty()) {
-                return uniform(random);
-            }
-            ResourceKey<IAspect> wanted = aspects.aspects().get(random.nextInt(aspects.aspects().size()));
-            for (Entry entry : crystals) {
-                if (entry.aspect().equals(wanted)) {
-                    return entry;
-                }
-            }
-            return uniform(random);
-        }
-
-        private Entry uniform(RandomSource random) {
-            return crystals.get(random.nextInt(crystals.size()));
-        }
     }
 }

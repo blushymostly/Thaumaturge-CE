@@ -2,7 +2,6 @@ package com.leclowndu93150.thaumaturge.content.world.tree.crown;
 
 import com.leclowndu93150.thaumaturge.registry.TTTreePlacers;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Arrays;
@@ -10,10 +9,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.RandomizableContainer;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.block.entity.SpawnerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.treedecorators.TreeDecorator;
@@ -21,8 +21,8 @@ import net.minecraft.world.level.levelgen.feature.treedecorators.TreeDecoratorTy
 import net.minecraft.world.level.storage.loot.BuiltInLootTables;
 
 public final class SpiderNestDecorator extends TreeDecorator {
-    public static final MapCodec<SpiderNestDecorator> CODEC = RecordCodecBuilder
-            .mapCodec(instance -> instance.group(Codec.floatRange(0.0F, 1.0F).fieldOf("probability").forGetter(decorator -> decorator.probability),
+    public static final Codec<SpiderNestDecorator> CODEC = RecordCodecBuilder
+            .create(instance -> instance.group(Codec.floatRange(0.0F, 1.0F).fieldOf("probability").forGetter(decorator -> decorator.probability),
                     BuiltInRegistries.BLOCK.byNameCodec().fieldOf("log").forGetter(decorator -> decorator.log),
                     BuiltInRegistries.BLOCK.byNameCodec().fieldOf("leaves").forGetter(decorator -> decorator.leaves)).apply(instance, SpiderNestDecorator::new));
 
@@ -55,17 +55,18 @@ public final class SpiderNestDecorator extends TreeDecorator {
         }
         BlockPos foot = findFoot(context.logs());
         BlockPos spawnerPos = foot.below();
+        BlockGetter blockGetter = (BlockGetter) context.level();
         context.setBlock(spawnerPos, Blocks.SPAWNER.defaultBlockState());
-        if (context.level().getBlockEntity(spawnerPos) instanceof SpawnerBlockEntity spawner) {
+        if (blockGetter.getBlockEntity(spawnerPos) instanceof SpawnerBlockEntity spawner) {
             spawner.setEntityId(EntityType.CAVE_SPIDER, random);
             scatterWebs(context, foot, random);
-            placeLootChest(context, foot.below(CHEST_DEPTH), random);
+            placeLootChest(context, blockGetter, foot.below(CHEST_DEPTH), random);
         }
     }
 
-    private static void placeLootChest(Context context, BlockPos chestPos, RandomSource random) {
+    private static void placeLootChest(Context context, BlockGetter levelGetter, BlockPos chestPos, RandomSource random) {
         context.setBlock(chestPos, Blocks.CHEST.defaultBlockState());
-        RandomizableContainer.setBlockEntityLootTable(context.level(), random, chestPos, BuiltInLootTables.SIMPLE_DUNGEON);
+        RandomizableContainerBlockEntity.setLootTable(levelGetter, random, chestPos, BuiltInLootTables.SIMPLE_DUNGEON);
     }
 
     private void scatterWebs(Context context, BlockPos foot, RandomSource random) {
@@ -86,7 +87,7 @@ public final class SpiderNestDecorator extends TreeDecorator {
     }
 
     private boolean touchesAnchor(Context context, BlockPos pos) {
-        return Arrays.stream(DIRECTIONS).anyMatch(direction -> context.checkBlock(pos.relative(direction), this::isAnchor));
+        return Arrays.stream(DIRECTIONS).anyMatch(direction -> context.level().isStateAtPosition(pos.relative(direction), this::isAnchor));
     }
 
     private boolean isAnchor(BlockState state) {

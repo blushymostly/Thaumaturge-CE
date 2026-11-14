@@ -1,35 +1,51 @@
 package com.leclowndu93150.thaumaturge.compat.jei;
 
 import com.leclowndu93150.thaumaturge.client.screen.research.EntryDetailScreen;
-import com.leclowndu93150.thaumaturge.compat.jei.ingredient.AspectIngredientType;
 import java.util.Optional;
-import mezz.jei.api.gui.builder.IClickableIngredientFactory;
 import mezz.jei.api.gui.handlers.IGlobalGuiHandler;
-import mezz.jei.api.gui.handlers.IGuiProperties;
-import mezz.jei.api.gui.handlers.IScreenHandler;
+import mezz.jei.api.ingredients.ITypedIngredient;
 import mezz.jei.api.runtime.IClickableIngredient;
+import mezz.jei.api.runtime.IIngredientManager;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
-public final class ThaumonomiconGuiHandler implements IScreenHandler<EntryDetailScreen>, IGlobalGuiHandler {
-    @Override
-    public IGuiProperties apply(EntryDetailScreen screen) {
-        return new BookGuiProperties(screen.getClass(), 0, 0, screen.width, screen.height, screen.width, screen.height);
+/** JEI click-through from Thaumonomicon recipe inserts. */
+public final class ThaumonomiconGuiHandler implements IGlobalGuiHandler {
+    private static @Nullable IIngredientManager ingredients;
+
+    public static void bind(IIngredientManager manager) {
+        ingredients = manager;
     }
 
     @Override
-    public Optional<? extends IClickableIngredient<?>> getClickableIngredientUnderMouse(IClickableIngredientFactory factory, double mouseX, double mouseY) {
-        if (!(Minecraft.getInstance().screen instanceof EntryDetailScreen screen)) {
+    public Optional<IClickableIngredient<?>> getClickableIngredientUnderMouse(double mouseX, double mouseY) {
+        if (ingredients == null || !(Minecraft.getInstance().screen instanceof EntryDetailScreen screen)) {
             return Optional.empty();
         }
-        var item = screen.itemUnderMouse(mouseX, mouseY);
-        if (item != null && !item.stack().isEmpty()) {
-            return factory.createBuilder(item.stack()).buildWithArea(item.x(), item.y(), 16, 16);
+        EntryDetailScreen.HoveredItem hovered = screen.itemUnderMouse(mouseX, mouseY);
+        if (hovered == null || hovered.stack().isEmpty()) {
+            return Optional.empty();
         }
-        var aspect = screen.aspectUnderMouse(mouseX, mouseY);
-        return aspect == null ? Optional.empty() : factory.createBuilder(AspectIngredientType.INSTANCE, aspect.aspect()).buildWithArea(aspect.x(), aspect.y(), 16, 16);
+        Optional<ITypedIngredient<ItemStack>> typed = ingredients.createTypedIngredient(hovered.stack());
+        if (typed.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(clickable(typed.get(), new Rect2i(hovered.x(), hovered.y(), 16, 16)));
     }
 
-    private record BookGuiProperties(Class<? extends Screen> screenClass, int guiLeft, int guiTop, int guiXSize, int guiYSize, int screenWidth, int screenHeight) implements IGuiProperties {
+    private static <T> IClickableIngredient<T> clickable(ITypedIngredient<T> ingredient, Rect2i area) {
+        return new IClickableIngredient<>() {
+            @Override
+            public ITypedIngredient<T> getTypedIngredient() {
+                return ingredient;
+            }
+
+            @Override
+            public Rect2i getArea() {
+                return area;
+            }
+        };
     }
 }

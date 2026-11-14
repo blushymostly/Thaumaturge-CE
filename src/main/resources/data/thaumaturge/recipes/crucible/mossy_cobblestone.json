@@ -1,0 +1,8 @@
+{
+  "type": "thaumaturge:crucible",
+  "catalyst": { "item": "minecraft:cobblestone" },
+  "aspects": [
+    { "aspect": "thaumaturge:herba", "amount": 2 }
+  ],
+  "result": { "item": "minecraft:mossy_cobblestone", "count": 1 }
+}

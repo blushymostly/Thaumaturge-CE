@@ -1,0 +1,20 @@
+{
+  "type": "thaumaturge:crucible",
+  "research": "thaumaturge:base_eldritch",
+  "catalyst": {
+    "item": "thaumaturge:void_seed"
+  },
+  "aspects": [
+    {
+      "aspect": "thaumaturge:metallum",
+      "amount": 10
+    },
+    {
+      "aspect": "thaumaturge:vitium",
+      "amount": 5
+    }
+  ],
+  "result": {
+    "item": "thaumaturge:ingot_void"
+  }
+}

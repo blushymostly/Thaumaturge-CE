@@ -6,16 +6,15 @@ import com.leclowndu93150.thaumaturge.registry.TTBlockEntities;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.animal.equine.AbstractHorse;
+import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -31,8 +30,6 @@ public final class BlockEntityLevitator extends AbstractSyncedBlockEntity {
     private static final double SPEED_CAP = 0.35;
     private static final double DAMPING = 0.9;
     private static final double LIFT = 0.08;
-    private static final float IDLE_STREAM_CHANCE = 0.1F;
-    private static final float STREAM_CHANCE = 0.6F;
 
     private LevitatorReach reach = LevitatorReach.MEDIUM;
     private int charge;
@@ -53,7 +50,7 @@ public final class BlockEntityLevitator extends AbstractSyncedBlockEntity {
         clearanceStale = true;
         if (level != null && !level.isClientSide()) {
             setChangedAndSync();
-            player.sendSystemMessage(Component.translatable("gui.thaumaturge.levitator", reach.blocks(), reach.visCost()));
+            player.displayClientMessage(Component.translatable("gui.thaumaturge.levitator", reach.blocks(), reach.visCost()), true);
         }
     }
 
@@ -62,17 +59,17 @@ public final class BlockEntityLevitator extends AbstractSyncedBlockEntity {
     }
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
-        output.store(REACH_KEY, LevitatorReach.CODEC, reach);
-        output.putInt(CHARGE_KEY, charge);
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        tag.putString(REACH_KEY, reach.getSerializedName());
+        tag.putInt(CHARGE_KEY, charge);
     }
 
     @Override
-    protected void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
-        reach = input.read(REACH_KEY, LevitatorReach.CODEC).orElse(LevitatorReach.MEDIUM);
-        charge = input.getIntOr(CHARGE_KEY, 0);
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        reach = LevitatorReach.byName(tag.getString(REACH_KEY));
+        charge = tag.getInt(CHARGE_KEY);
         clearance = Math.min(clearance, reach.blocks());
         clearanceStale = true;
     }
@@ -90,9 +87,7 @@ public final class BlockEntityLevitator extends AbstractSyncedBlockEntity {
             return;
         }
         int carried = carry(level, pos, facing);
-        if (level.isClientSide()) {
-            LevitatorMist.stream(level, pos, facing, IDLE_STREAM_CHANCE);
-        } else if (carried > 0 && level.getGameTime() % SYNC_INTERVAL == 0) {
+        if (!level.isClientSide() && carried > 0 && level.getGameTime() % SYNC_INTERVAL == 0) {
             setChangedAndSync();
         }
     }
@@ -102,7 +97,7 @@ public final class BlockEntityLevitator extends AbstractSyncedBlockEntity {
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
         for (int distance = 1; distance <= range; distance++) {
             cursor.setWithOffset(pos, facing.getStepX() * distance, facing.getStepY() * distance, facing.getStepZ() * distance);
-            if (!level.hasChunkAt(cursor) || level.getBlockState(cursor).isSolidRender()) {
+            if (!level.hasChunkAt(cursor) || level.getBlockState(cursor).isSolidRender(level, cursor)) {
                 return distance;
             }
         }
@@ -121,7 +116,10 @@ public final class BlockEntityLevitator extends AbstractSyncedBlockEntity {
     }
 
     private int carry(Level level, BlockPos pos, Direction facing) {
-        AABB column = new AABB(pos).expandTowards(facing.getStepX() * (double) clearance, facing.getStepY() * (double) clearance, facing.getStepZ() * (double) clearance);
+        AABB column = new AABB(pos).expandTowards(
+                facing.getStepX() * (double) clearance,
+                facing.getStepY() * (double) clearance,
+                facing.getStepZ() * (double) clearance);
         List<Entity> candidates = level.getEntitiesOfClass(Entity.class, column, BlockEntityLevitator::canCarry);
         int carried = 0;
         for (Entity entity : candidates) {
@@ -131,10 +129,6 @@ public final class BlockEntityLevitator extends AbstractSyncedBlockEntity {
             push(entity, facing);
             charge -= reach.visCost();
             carried++;
-            if (level.isClientSide()) {
-                LevitatorMist.cling(level, entity);
-                LevitatorMist.stream(level, pos, facing, STREAM_CHANCE);
-            }
         }
         return carried;
     }
@@ -154,14 +148,18 @@ public final class BlockEntityLevitator extends AbstractSyncedBlockEntity {
         if (facing == Direction.UP && entity.isShiftKeyDown()) {
             y = y < 0.0 ? y * DAMPING : y;
         } else {
-            x = Math.clamp(x + facing.getStepX() * PUSH, -SPEED_CAP, SPEED_CAP);
-            y = Math.clamp(y + facing.getStepY() * PUSH, -SPEED_CAP, SPEED_CAP);
-            z = Math.clamp(z + facing.getStepZ() * PUSH, -SPEED_CAP, SPEED_CAP);
+            x = MthClamp(x + facing.getStepX() * PUSH);
+            y = MthClamp(y + facing.getStepY() * PUSH);
+            z = MthClamp(z + facing.getStepZ() * PUSH);
             if (facing.getAxis().isHorizontal() && !entity.onGround()) {
                 y = (y < 0.0 ? y * DAMPING : y) + LIFT;
             }
         }
         entity.setDeltaMovement(x, y, z);
         entity.resetFallDistance();
+    }
+
+    private static double MthClamp(double value) {
+        return Math.max(-SPEED_CAP, Math.min(SPEED_CAP, value));
     }
 }

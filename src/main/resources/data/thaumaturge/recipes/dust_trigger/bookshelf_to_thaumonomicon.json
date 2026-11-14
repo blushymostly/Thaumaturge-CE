@@ -1,0 +1,10 @@
+{
+  "type": "thaumaturge:dust_trigger_tag",
+  "target_tag": "forge:bookshelves",
+  "result": {
+    "item": "thaumaturge:thaumonomicon"
+  },
+  "research": {
+    "entry": "thaumaturge:gotdream"
+  }
+}

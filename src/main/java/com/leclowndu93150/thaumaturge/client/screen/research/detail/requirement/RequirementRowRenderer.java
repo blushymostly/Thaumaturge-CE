@@ -1,52 +1,51 @@
 package com.leclowndu93150.thaumaturge.client.screen.research.detail.requirement;
 
-import com.leclowndu93150.thaumaturge.api.aspect.AspectComponents;
 import com.leclowndu93150.thaumaturge.api.aspect.AspectInstance;
 import com.leclowndu93150.thaumaturge.api.aspect.AspectList;
 import com.leclowndu93150.thaumaturge.api.aspect.IAspect;
-import com.leclowndu93150.thaumaturge.api.capability.IPlayerKnowledge;
-import com.leclowndu93150.thaumaturge.api.capability.KnowledgeAccess;
-import com.leclowndu93150.thaumaturge.api.capability.KnowledgeType;
-import com.leclowndu93150.thaumaturge.api.research.IResearchEntry;
-import com.leclowndu93150.thaumaturge.api.research.IResearchStage;
-import com.leclowndu93150.thaumaturge.api.research.KnowledgeReward;
-import com.leclowndu93150.thaumaturge.api.research.ResearchRequirement;
-import com.leclowndu93150.thaumaturge.api.research.scan.ScanKeys;
+import com.leclowndu93150.thaumaturge.api.aspect.TTAspects;
+import com.leclowndu93150.thaumaturge.client.ClientKnowledge;
 import com.leclowndu93150.thaumaturge.client.render.aspect.AspectTagRenderer;
 import com.leclowndu93150.thaumaturge.client.render.research.EntryIconRenderer;
 import com.leclowndu93150.thaumaturge.client.screen.TTScreenTextures;
-import com.leclowndu93150.thaumaturge.client.screen.TTTooltips;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.DetailFrame;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.EntryDetailModel;
-import com.leclowndu93150.thaumaturge.client.screen.research.detail.HitRecorder;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.Rect;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.draw.AspectTileDrawer;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.draw.BookBlit;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.draw.BookSprites;
-import com.leclowndu93150.thaumaturge.content.research.ResearchManager;
+import com.leclowndu93150.thaumaturge.content.aspect.AspectNames;
+import com.leclowndu93150.thaumaturge.content.research.KnowledgeReward;
+import com.leclowndu93150.thaumaturge.content.research.KnowledgeType;
+import com.leclowndu93150.thaumaturge.content.research.PlayerKnowledge;
+import com.leclowndu93150.thaumaturge.content.research.ResearchData;
+import com.leclowndu93150.thaumaturge.content.research.ResearchEntry;
+import com.leclowndu93150.thaumaturge.content.research.ResearchRequirement;
+import com.leclowndu93150.thaumaturge.content.research.ResearchStage;
 import com.leclowndu93150.thaumaturge.content.research.note.ResearchNoteData;
 import com.leclowndu93150.thaumaturge.content.research.note.ResearchNotes;
 import com.leclowndu93150.thaumaturge.content.research.pool.AspectPools;
-import com.leclowndu93150.thaumaturge.network.ServerboundAdvanceStagePayload;
+import com.leclowndu93150.thaumaturge.network.TTNetwork;
+import com.leclowndu93150.thaumaturge.network.packet.ServerboundAdvanceStagePacket;
+import com.leclowndu93150.thaumaturge.network.packet.ServerboundObtainNotePacket;
 import com.leclowndu93150.thaumaturge.registry.TTItems;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
+/**
+ * Draws the research / obtain / craft / knowledge requirement rows at the bottom of a stage page,
+ * plus the completion divider and "Complete" button.
+ */
 public final class RequirementRowRenderer {
     private static final int LABEL_U = 200;
     private static final int LABEL_WIDTH = 56;
@@ -62,12 +61,13 @@ public final class RequirementRowRenderer {
     private static final String PREREQ_MAP_PREFIX = "m_";
     private static final String PREREQ_CHEST_PREFIX = "c_";
     private static final String PREREQ_FLASK_PREFIX = "f_";
+    private static final String SCANNED_ASPECT_PREFIX = "scanned/aspect/";
 
-    private static final int OBSERVATION_UNKNOWN_TINT = 0x80808080;
-    private static final long PULSE_PERIOD_MILLIS = 600L;
+    private static final long ROTATION_MILLIS = 1000L;
+    private static final long PULSE_PERIOD_MILLIS = 1000L;
     private static final float PULSE_AMPLITUDE = 0.25F;
     private static final float PULSE_FLOOR = 0.75F;
-    private static final long ROTATION_MILLIS = 1000L;
+    private static final int OBSERVATION_UNKNOWN_TINT = 0xFF80BFFF;
 
     private static final int COMPLETE_DIVIDER_INSET = 4;
     private static final int COMPLETE_DIVIDER_Y_OFFSET = -2;
@@ -77,19 +77,34 @@ public final class RequirementRowRenderer {
     private static final int COMPLETE_CAPTION_CENTER_X = 52;
     private static final int COMPLETE_CAPTION_Y_OFFSET = -4;
 
-    private final HitRecorder hits;
+    private Rect completeHit = new Rect(0, 0, 0, 0);
+    private final List<TheoryHit> theoryHits = new ArrayList<>();
 
-    public RequirementRowRenderer(HitRecorder hits) {
-        this.hits = hits;
+    private record TheoryHit(Rect area, ResourceLocation entryId, int ordinal, ResourceLocation learnKey) {}
+
+    public Rect completeButtonHit() {
+        return completeHit;
     }
 
-    public void render(GuiGraphicsExtractor graphics, DetailFrame frame, EntryDetailModel model, IResearchStage stage, int displayedStage, int mouseX, int mouseY) {
+    public boolean tryObtainTheoryNote(double mouseX, double mouseY) {
+        for (TheoryHit hit : theoryHits) {
+            if (hit.area().contains((int) mouseX, (int) mouseY)) {
+                TTNetwork.sendToServer(new ServerboundObtainNotePacket(hit.entryId(), hit.ordinal()));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void render(GuiGraphics graphics, DetailFrame frame, EntryDetailModel model, ResearchStage stage, int displayedStage, int mouseX, int mouseY) {
+        completeHit = new Rect(0, 0, 0, 0);
+        theoryHits.clear();
         if (model.leftPage() > 0) {
             return;
         }
         Player player = frame.player();
         boolean completedStage = model.completedStageView(player);
-        IPlayerKnowledge knowledge = KnowledgeAccess.of(player);
+        PlayerKnowledge knowledge = ClientKnowledge.get();
         RequirementLayout layout = RequirementLayout.of(stage, frame.top());
         boolean allMet = true;
         if (layout.hasResearch()) {
@@ -98,101 +113,128 @@ public final class RequirementRowRenderer {
         }
         if (layout.hasObtain()) {
             drawRowLabel(graphics, frame, layout.obtainY(), RequirementRowKind.OBTAIN, mouseX, mouseY);
-            allMet &= drawItemRow(graphics, frame, stage.obtain(), layout.obtainY(), true, completedStage, mouseX, mouseY);
+            allMet &= drawItemRow(graphics, frame, knowledge, stage.obtain(), layout.obtainY(), true, completedStage, mouseX, mouseY);
         }
         if (layout.hasCraft()) {
             drawRowLabel(graphics, frame, layout.craftY(), RequirementRowKind.CRAFT, mouseX, mouseY);
-            allMet &= drawItemRow(graphics, frame, stage.craft(), layout.craftY(), false, completedStage, mouseX, mouseY);
+            allMet &= drawItemRow(graphics, frame, knowledge, stage.craft(), layout.craftY(), false, completedStage, mouseX, mouseY);
         }
         if (layout.hasKnowledge()) {
             drawRowLabel(graphics, frame, layout.knowledgeY(), RequirementRowKind.KNOWLEDGE, mouseX, mouseY);
-            allMet &= drawKnowledgeRow(graphics, frame, model, stage, displayedStage, layout.knowledgeY(), knowledge, completedStage, mouseX, mouseY);
+            allMet &= drawKnowledgeRow(graphics, frame, model, stage, knowledge, layout.knowledgeY(), displayedStage, completedStage, mouseX, mouseY);
         }
         if (layout.any()) {
-            drawCompletionBar(graphics, frame, model, layout, allMet, completedStage, mouseX, mouseY);
-        } else if (!completedStage) {
-            int storedStage = knowledge.researchStage(model.entryId());
-            if (model.claimAutoAdvance(storedStage)) {
-                ClientPacketDistributor.sendToServer(new ServerboundAdvanceStagePayload(model.entryId()));
+            BookBlit.sprite(graphics, frame.left() + COMPLETE_DIVIDER_INSET, layout.dividerY() + COMPLETE_DIVIDER_Y_OFFSET, BookSprites.DIVIDER_U, BookSprites.DIVIDER_V,
+                    BookSprites.DIVIDER_WIDTH, BookSprites.DIVIDER_TALL_HEIGHT);
+            if (allMet && !completedStage) {
+                drawCompleteButton(graphics, frame, layout, mouseX, mouseY);
+            } else if (allMet) {
+                drawCaption(graphics, frame, layout, Component.translatable("gui.thaumaturge.thaumonomicon.stage_completed"));
             }
+        } else if (!completedStage && model.claimAutoAdvance()) {
+            // CE: stages with no requirements auto-advance once when the page is viewed.
+            tryAdvance(model);
         }
     }
 
-    private void drawCompletionBar(GuiGraphicsExtractor graphics, DetailFrame frame, EntryDetailModel model, RequirementLayout layout, boolean allMet, boolean completedStage, int mouseX, int mouseY) {
-        BookBlit.sprite(graphics, frame.left() + COMPLETE_DIVIDER_INSET, layout.dividerY() + COMPLETE_DIVIDER_Y_OFFSET, BookSprites.DIVIDER_U, BookSprites.DIVIDER_V, BookSprites.DIVIDER_WIDTH,
-                BookSprites.DIVIDER_TALL_HEIGHT);
-        if (!allMet) {
-            return;
-        }
-        if (completedStage) {
-            drawCaption(graphics, frame, layout, "gui.thaumaturge.thaumonomicon.stage_completed");
-        } else if (model.isHolding()) {
-            drawCaption(graphics, frame, layout, "gui.thaumaturge.thaumonomicon.stage_hold");
-        } else {
-            Rect button = layout.completeButton(frame.left());
-            int tint = button.contains(mouseX, mouseY) ? BookSprites.WHITE : COMPLETE_BUTTON_TINT_IDLE;
-            BookBlit.tintedSprite(graphics, button.x(), button.y(), COMPLETE_BUTTON_U, COMPLETE_BUTTON_V, button.width(), button.height(), tint);
-            drawCaption(graphics, frame, layout, "gui.thaumaturge.thaumonomicon.stage_complete");
-        }
+    public void tryAdvance(EntryDetailModel model) {
+        TTNetwork.sendToServer(new ServerboundAdvanceStagePacket(model.entryId()));
     }
 
-    private void drawCaption(GuiGraphicsExtractor graphics, DetailFrame frame, RequirementLayout layout, String translationKey) {
-        Component caption = Component.translatable(translationKey);
-        graphics.text(frame.font(), caption, frame.left() + COMPLETE_CAPTION_CENTER_X - frame.font().width(caption) / 2, layout.dividerY() + COMPLETE_CAPTION_Y_OFFSET, BookSprites.WHITE, true);
+    private void drawCompleteButton(GuiGraphics graphics, DetailFrame frame, RequirementLayout layout, int mouseX, int mouseY) {
+        Rect button = layout.completeButton(frame.left());
+        completeHit = button;
+        int tint = button.contains(mouseX, mouseY) ? BookSprites.WHITE : COMPLETE_BUTTON_TINT_IDLE;
+        BookBlit.tintedSprite(graphics, button.x(), button.y(), COMPLETE_BUTTON_U, COMPLETE_BUTTON_V, button.width(), button.height(), tint);
+        drawCaption(graphics, frame, layout, Component.translatable("gui.thaumaturge.thaumonomicon.complete_stage"));
     }
 
-    private void drawRowLabel(GuiGraphicsExtractor graphics, DetailFrame frame, int rowY, RequirementRowKind kind, int mouseX, int mouseY) {
+    private void drawCaption(GuiGraphics graphics, DetailFrame frame, RequirementLayout layout, Component caption) {
+        graphics.drawString(frame.font(), caption, frame.left() + COMPLETE_CAPTION_CENTER_X - frame.font().width(caption) / 2, layout.dividerY() + COMPLETE_CAPTION_Y_OFFSET,
+                BookSprites.WHITE, true);
+    }
+
+    private void drawRowLabel(GuiGraphics graphics, DetailFrame frame, int rowY, RequirementRowKind kind, int mouseX, int mouseY) {
         int labelX = frame.left() + LABEL_OFFSET_X;
         BookBlit.tintedSprite(graphics, labelX, rowY + LABEL_DRAW_Y_SHIFT, LABEL_U, kind.labelV(), LABEL_WIDTH, LABEL_HEIGHT, LABEL_TINT);
         if (Rect.inside(labelX, rowY, LABEL_WIDTH / LABEL_HOVER_DIVISOR, LABEL_HEIGHT, mouseX, mouseY)) {
-            graphics.setTooltipForNextFrame(Component.translatable(kind.tooltipKey()), mouseX, mouseY);
+            graphics.renderTooltip(frame.font(), Component.translatable(kind.tooltipKey()), mouseX, mouseY);
         }
     }
 
-    private boolean drawResearchRow(GuiGraphicsExtractor graphics, DetailFrame frame, List<Identifier> prerequisites, IPlayerKnowledge knowledge, int rowY, boolean completedStage, int mouseX, int mouseY) {
+    private boolean drawResearchRow(GuiGraphics graphics, DetailFrame frame, List<ResourceLocation> prerequisites, PlayerKnowledge knowledge, int rowY, boolean completedStage,
+            int mouseX, int mouseY) {
         int spacing = RequirementLayout.spacingFor(prerequisites.size());
         boolean allMet = true;
         for (int index = 0; index < prerequisites.size(); index++) {
-            Identifier prerequisite = prerequisites.get(index);
+            ResourceLocation prerequisite = prerequisites.get(index);
             int slotX = RequirementLayout.slotX(frame.left(), index, spacing);
             drawPrerequisiteIcon(graphics, frame, slotX, rowY, prerequisite);
-            boolean met = completedStage || knowledge.isResearchComplete(prerequisite);
+            boolean met = completedStage || knowledge.isComplete(prerequisite);
             allMet &= met;
             if (met) {
                 BookBlit.checkmark(graphics, slotX, rowY);
             }
             if (Rect.inside(slotX, rowY, BookSprites.SLOT_SIZE, BookSprites.SLOT_SIZE, mouseX, mouseY)) {
-                graphics.setTooltipForNextFrame(frame.font(), TTTooltips.prereqEntryName(prerequisite), mouseX, mouseY);
+                Component name = prerequisiteName(prerequisite);
+                String hint = "research." + prerequisite.getNamespace() + "." + prerequisite.getPath() + ".title.hint";
+                if (net.minecraft.client.resources.language.I18n.exists(hint)) {
+                    graphics.renderComponentTooltip(frame.font(), List.of(name, Component.translatable(hint)), mouseX, mouseY);
+                } else {
+                    graphics.renderTooltip(frame.font(), name, mouseX, mouseY);
+                }
             }
         }
         return allMet;
     }
 
-    private void drawPrerequisiteIcon(GuiGraphicsExtractor graphics, DetailFrame frame, int x, int y, Identifier prerequisite) {
-        HolderLookup.Provider registries = frame.player().registryAccess();
-        Optional<Holder.Reference<IResearchEntry>> linkedEntry = registries.lookup(IResearchEntry.REGISTRY_KEY)
-                .flatMap(lookup -> lookup.get(ResourceKey.create(IResearchEntry.REGISTRY_KEY, prerequisite)));
-        if (linkedEntry.isPresent()) {
-            EntryIconRenderer.drawResearchIcon(graphics, x, y, EntryIconRenderer.resolveIcon(linkedEntry.get().value(), frame.tick()), false);
+    private static Component prerequisiteName(ResourceLocation prerequisite) {
+        ResearchEntry entry = ResearchData.entry(prerequisite);
+        if (entry != null) {
+            return Component.translatable(entry.nameKey());
+        }
+        IAspect aspect = scannedAspect(prerequisite);
+        if (aspect != null) {
+            return Component.literal(aspect.tag());
+        }
+        String key = "research." + prerequisite.getNamespace() + "." + prerequisite.getPath() + ".title";
+        return net.minecraft.client.resources.language.I18n.exists(key) ? Component.translatable(key) : Component.literal(prerequisite.toString());
+    }
+
+    private void drawPrerequisiteIcon(GuiGraphics graphics, DetailFrame frame, int x, int y, ResourceLocation prerequisite) {
+        ResearchEntry linked = ResearchData.entry(prerequisite);
+        if (linked != null) {
+            EntryIconRenderer.drawResearchIcon(graphics, x, y, EntryIconRenderer.resolveIcon(linked, frame.tick()), false);
             return;
         }
-        Identifier flagIcon = flagIconFor(prerequisite.getPath());
+        ResourceLocation flagIcon = flagIconFor(prerequisite.getPath());
         if (flagIcon != null) {
-            graphics.blit(RenderPipelines.GUI_TEXTURED, flagIcon, x, y, 0.0F, 0.0F, PREREQ_ICON_SIZE, PREREQ_ICON_SIZE, PREREQ_TEXTURE_SIZE, PREREQ_TEXTURE_SIZE, PREREQ_TEXTURE_SIZE,
-                    PREREQ_TEXTURE_SIZE);
+            graphics.blit(flagIcon, x, y, PREREQ_ICON_SIZE, PREREQ_ICON_SIZE, 0.0F, 0.0F, PREREQ_TEXTURE_SIZE, PREREQ_TEXTURE_SIZE, PREREQ_TEXTURE_SIZE, PREREQ_TEXTURE_SIZE);
             return;
         }
-        Optional<Holder.Reference<IAspect>> scannedAspect = registries.lookupOrThrow(IAspect.REGISTRY_KEY).listElements().filter(holder -> ScanKeys.aspect(holder.key()).equals(prerequisite))
-                .findFirst();
-        if (scannedAspect.isPresent()) {
-            hits.recordAspect(new AspectInstance(scannedAspect.get(), 1), x, y);
-            AspectTileDrawer.known(graphics, x, y, scannedAspect.get());
+        IAspect aspect = scannedAspect(prerequisite);
+        if (aspect != null) {
+            AspectTileDrawer.known(graphics, x, y, aspect);
             return;
         }
         BookBlit.iconTile(graphics, AspectTileDrawer.UNKNOWN_TILE, x, y, PREREQ_UNKNOWN_TINT);
     }
 
-    private static @Nullable Identifier flagIconFor(String path) {
+    private static @Nullable IAspect scannedAspect(ResourceLocation prerequisite) {
+        String path = prerequisite.getPath();
+        if (!path.startsWith(SCANNED_ASPECT_PREFIX)) {
+            return null;
+        }
+        String rest = path.substring(SCANNED_ASPECT_PREFIX.length());
+        int slash = rest.indexOf('/');
+        if (slash <= 0) {
+            return null;
+        }
+        ResourceLocation aspectId = ResourceLocation.tryParse(rest.substring(0, slash) + ":" + rest.substring(slash + 1));
+        return aspectId == null ? null : TTAspects.get(aspectId);
+    }
+
+    private static @Nullable ResourceLocation flagIconFor(String path) {
         if (path.startsWith(PREREQ_MAP_PREFIX)) {
             return TTScreenTextures.RESEARCH_PREREQ_MAP;
         }
@@ -205,7 +247,8 @@ public final class RequirementRowRenderer {
         return null;
     }
 
-    private boolean drawItemRow(GuiGraphicsExtractor graphics, DetailFrame frame, List<ResearchRequirement> requirements, int rowY, boolean obtainRow, boolean completedStage, int mouseX, int mouseY) {
+    private boolean drawItemRow(GuiGraphics graphics, DetailFrame frame, PlayerKnowledge knowledge, List<ResearchRequirement> requirements, int rowY, boolean obtainRow,
+            boolean completedStage, int mouseX, int mouseY) {
         Player player = frame.player();
         Font font = frame.font();
         int spacing = RequirementLayout.spacingFor(requirements.size());
@@ -215,22 +258,21 @@ public final class RequirementRowRenderer {
             int slotX = RequirementLayout.slotX(frame.left(), index, spacing);
             ItemStack shown = rotatingStack(requirement, index);
             if (!shown.isEmpty()) {
-                hits.recordItem(shown, slotX, rowY);
-                graphics.item(shown, slotX, rowY);
-                graphics.itemDecorations(font, shown, slotX, rowY);
+                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+                graphics.renderItem(shown, slotX, rowY);
+                graphics.renderItemDecorations(font, shown, slotX, rowY);
+                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
             }
-            boolean met = completedStage || (obtainRow
-                    ? StageRequirementCheck.countMatching(player, requirement) >= requirement.amount()
-                    : ResearchManager.isCraftSatisfied(player, KnowledgeAccess.of(player), requirement));
+            boolean met = completedStage || (obtainRow ? StageRequirementCheck.obtainMet(player, requirement) : StageRequirementCheck.craftMet(knowledge, requirement));
             allMet &= met;
             if (met) {
                 BookBlit.checkmark(graphics, slotX, rowY);
             }
             if (Rect.inside(slotX, rowY, BookSprites.SLOT_SIZE, BookSprites.SLOT_SIZE, mouseX, mouseY)) {
                 if (shown.isEmpty()) {
-                    graphics.setTooltipForNextFrame(font, TTTooltips.need(obtainRow ? "obtain" : "craft"), mouseX, mouseY);
+                    graphics.renderTooltip(font, Component.translatable(obtainRow ? RequirementRowKind.OBTAIN.tooltipKey() : RequirementRowKind.CRAFT.tooltipKey()), mouseX, mouseY);
                 } else {
-                    graphics.setTooltipForNextFrame(font, shown, mouseX, mouseY);
+                    graphics.renderTooltip(font, shown, mouseX, mouseY);
                 }
             }
         }
@@ -238,97 +280,95 @@ public final class RequirementRowRenderer {
     }
 
     private static ItemStack rotatingStack(ResearchRequirement requirement, int slotIndex) {
-        int candidates = requirement.items().size();
-        if (candidates == 0) {
-            return ItemStack.EMPTY;
+        ItemStack stack = requirement.stackAt(slotIndex + System.currentTimeMillis() / ROTATION_MILLIS);
+        if (!stack.isEmpty()) {
+            stack.setCount(Math.max(1, Math.min(requirement.amount(), stack.getMaxStackSize())));
         }
-        long rotationStep = slotIndex + System.currentTimeMillis() / ROTATION_MILLIS;
-        int pick = (int) Math.floorMod(rotationStep, (long) candidates);
-        return new ItemStack(requirement.items().get(pick), Math.max(1, requirement.amount()), requirement.components());
+        return stack;
     }
 
-    private boolean drawKnowledgeRow(GuiGraphicsExtractor graphics, DetailFrame frame, EntryDetailModel model, IResearchStage stage, int displayedStage, int rowY, IPlayerKnowledge knowledge, boolean completedStage, int mouseX, int mouseY) {
+    private boolean drawKnowledgeRow(GuiGraphics graphics, DetailFrame frame, EntryDetailModel model, ResearchStage stage, PlayerKnowledge knowledge, int rowY,
+            int displayedStage, boolean completedStage, int mouseX, int mouseY) {
         Player player = frame.player();
+        Font font = frame.font();
         List<KnowledgeReward> rewards = stage.requiredKnowledge();
         AspectList observationCost = ResearchNotes.stageObservationCost(model.research(), stage);
-        int spacing = RequirementLayout.spacingFor(rewards.size());
+        int spacing = RequirementLayout.spacingFor(Math.max(rewards.size(), observationCost.entries().size()));
         int[] slotXs = RequirementLayout.knowledgeSlotXs(frame.left(), rewards, spacing, observationCost.entries().size());
-        int theoryOrdinal = ResearchNotes.theoryRowsBefore(model.research(), displayedStage);
         boolean observationAffordable = completedStage || observationCost.isEmpty() || AspectPools.canAfford(player, observationCost);
         boolean observationDrawn = false;
         boolean allMet = true;
+        int theoryOrdinal = ResearchNotes.theoryRowsBefore(model.research(), displayedStage);
         for (int index = 0; index < rewards.size(); index++) {
             KnowledgeReward reward = rewards.get(index);
+            int slotX = slotXs[index];
             if (reward.type() == KnowledgeType.THEORY) {
-                Identifier learnKey = ResearchNoteData.learnKey(model.entryId(), theoryOrdinal++);
-                allMet &= drawTheoryNote(graphics, frame, model, reward, learnKey, slotXs[index], rowY, knowledge, completedStage, mouseX, mouseY);
-            } else {
-                allMet &= observationAffordable;
-                if (!observationDrawn) {
-                    observationDrawn = true;
-                    drawObservationChips(graphics, frame, observationCost, slotXs[index], rowY, spacing, completedStage, mouseX, mouseY);
+                int ordinal = theoryOrdinal++;
+                ResourceLocation learnKey = ResearchNoteData.learnKey(model.entryId(), ordinal);
+                boolean met = completedStage || knowledge.isKnown(learnKey);
+                allMet &= met;
+                ItemStack noteIcon = new ItemStack(TTItems.RESEARCH_NOTE.get());
+                graphics.renderItem(noteIcon, slotX, rowY);
+                graphics.renderItemDecorations(font, noteIcon, slotX, rowY);
+                theoryHits.add(new TheoryHit(new Rect(slotX, rowY, BookSprites.SLOT_SIZE, BookSprites.SLOT_SIZE), model.entryId(), ordinal, learnKey));
+                if (met) {
+                    BookBlit.checkmark(graphics, slotX, rowY);
                 }
+                if (Rect.inside(slotX, rowY, BookSprites.SLOT_SIZE, BookSprites.SLOT_SIZE, mouseX, mouseY)) {
+                    List<Component> lines = new ArrayList<>();
+                    lines.add(Component.translatable("tooltip.thaumaturge.research_note.theory", Component.translatable(model.research().nameKey())));
+                    if (!met) {
+                        String hint = ResearchNotes.hasNoteFor(frame.player(), learnKey)
+                                ? "tooltip.thaumaturge.research_note.table"
+                                : "gui.thaumaturge.thaumonomicon.note_click";
+                        lines.add(Component.translatable(hint).withStyle(ChatFormatting.GRAY));
+                    }
+                    graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
+                }
+                continue;
+            }
+            allMet &= observationAffordable;
+            if (!observationDrawn) {
+                observationDrawn = true;
+                drawObservationChips(graphics, frame, observationCost, slotX, rowY, spacing, completedStage, mouseX, mouseY);
             }
         }
         return allMet;
     }
 
-    private boolean drawTheoryNote(GuiGraphicsExtractor graphics, DetailFrame frame, EntryDetailModel model, KnowledgeReward reward, Identifier learnKey, int slotX, int rowY, IPlayerKnowledge knowledge, boolean completedStage, int mouseX, int mouseY) {
-        Font font = frame.font();
-        boolean met = completedStage || knowledge.isResearchKnown(learnKey);
-        ItemStack note = new ItemStack(TTItems.RESEARCH_NOTE.get());
-        hits.recordItem(note, slotX, rowY);
-        graphics.item(note, slotX, rowY);
-        boolean hovered = Rect.inside(slotX, rowY, BookSprites.SLOT_SIZE, BookSprites.SLOT_SIZE, mouseX, mouseY);
-        if (hovered) {
-            List<Component> lines = new ArrayList<>();
-            lines.add(Component.translatable("tooltip.thaumaturge.research_note.theory", Component.translatable(model.research().nameKey())));
-            if (!met) {
-                String hintKey = ResearchNotes.hasNoteFor(frame.player(), learnKey) ? "tooltip.thaumaturge.research_note.table" : "gui.thaumaturge.thaumonomicon.note_click";
-                lines.add(Component.translatable(hintKey).withStyle(ChatFormatting.GRAY));
-            }
-            graphics.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
-        }
-        if (met) {
-            BookBlit.checkmark(graphics, slotX, rowY);
-        }
-        if (hovered) {
-            reward.category().unwrapKey().ifPresent(categoryKey -> graphics.setTooltipForNextFrame(font, TTTooltips.knowledgeLabel(reward.type(), categoryKey), mouseX, mouseY));
-        }
-        return met;
-    }
-
-    private void drawObservationChips(GuiGraphicsExtractor graphics, DetailFrame frame, AspectList cost, int firstX, int rowY, int spacing, boolean completedStage, int mouseX, int mouseY) {
+    private void drawObservationChips(GuiGraphics graphics, DetailFrame frame, AspectList cost, int firstX, int rowY, int spacing, boolean completedStage, int mouseX, int mouseY) {
         Player player = frame.player();
         Font font = frame.font();
         List<AspectInstance> chips = cost.entries();
         for (int index = 0; index < chips.size(); index++) {
             AspectInstance chip = chips.get(index);
             int chipX = firstX + index * spacing;
-            boolean discovered = AspectPools.isDiscovered(player, chip.aspect());
+            boolean discovered = AspectPools.isDiscovered(player, chip.aspectId());
             boolean hovered = Rect.inside(chipX, rowY, BookSprites.SLOT_SIZE, BookSprites.SLOT_SIZE, mouseX, mouseY);
-            if (discovered) {
-                hits.recordAspect(chip, chipX, rowY);
-                int have = AspectPools.amount(player, chip.aspect());
-                float alpha = have < chip.amount() ? Mth.sin(System.currentTimeMillis() % PULSE_PERIOD_MILLIS / (float) PULSE_PERIOD_MILLIS * Mth.TWO_PI) * PULSE_AMPLITUDE + PULSE_FLOOR : 1.0F;
-                AspectTagRenderer.render(graphics, font, chipX, rowY, chip.aspect(), chip.amount(), 0, alpha, false);
+            IAspect aspect = TTAspects.get(chip.aspectId());
+            if (discovered && aspect != null) {
+                int have = AspectPools.amount(player, chip.aspectId());
+                float alpha = have < chip.amount()
+                        ? Mth.sin(System.currentTimeMillis() % PULSE_PERIOD_MILLIS / (float) PULSE_PERIOD_MILLIS * Mth.TWO_PI) * PULSE_AMPLITUDE + PULSE_FLOOR
+                        : 1.0F;
+                AspectTagRenderer.render(graphics, font, chipX, rowY, aspect, chip.amount(), alpha, false);
                 if (hovered) {
                     List<Component> lines = new ArrayList<>();
                     lines.add(Component.translatable("gui.thaumaturge.thaumonomicon.research_cost"));
-                    lines.add(Component.translatable("tooltip.thaumaturge.amount_needed", AspectComponents.name(chip.aspect()), have, chip.amount())
+                    lines.add(Component.translatable("tooltip.thaumaturge.amount_needed", AspectNames.name(chip.aspectId()), have, chip.amount())
                             .withStyle(have >= chip.amount() ? ChatFormatting.GREEN : ChatFormatting.RED));
-                    graphics.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
+                    graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
                 }
             } else {
                 BookBlit.iconTile(graphics, AspectTileDrawer.UNKNOWN_TILE, chipX, rowY, OBSERVATION_UNKNOWN_TINT);
                 if (hovered) {
                     List<Component> lines = new ArrayList<>();
                     lines.add(Component.translatable("tooltip.thaumaturge.aspect.unknown"));
-                    lines.add(Component.translatable("message.thaumaturge.research.discovery_error", AspectComponents.help(chip.aspect())).withStyle(ChatFormatting.GRAY));
-                    graphics.setTooltipForNextFrame(font, lines, Optional.empty(), mouseX, mouseY);
+                    lines.add(Component.translatable("message.thaumaturge.research.discovery_error", AspectNames.help(chip.aspectId())).withStyle(ChatFormatting.GRAY));
+                    graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
                 }
             }
-            if (completedStage || discovered && AspectPools.amount(player, chip.aspect()) >= chip.amount()) {
+            if (completedStage || discovered && AspectPools.amount(player, chip.aspectId()) >= chip.amount()) {
                 BookBlit.checkmark(graphics, chipX, rowY);
             }
         }

@@ -2,26 +2,25 @@ package com.leclowndu93150.thaumaturge.content.research.note;
 
 import com.leclowndu93150.thaumaturge.api.aspect.AspectInstance;
 import com.leclowndu93150.thaumaturge.api.aspect.AspectList;
-import com.leclowndu93150.thaumaturge.api.aspect.IAspect;
 import com.leclowndu93150.thaumaturge.api.aspect.TTAspects;
-import com.leclowndu93150.thaumaturge.api.capability.IPlayerKnowledge;
-import com.leclowndu93150.thaumaturge.api.capability.KnowledgeAccess;
-import com.leclowndu93150.thaumaturge.api.capability.KnowledgeType;
-import com.leclowndu93150.thaumaturge.api.research.IResearchEntry;
-import com.leclowndu93150.thaumaturge.api.research.IResearchStage;
-import com.leclowndu93150.thaumaturge.api.research.KnowledgeReward;
+import com.leclowndu93150.thaumaturge.content.research.KnowledgeReward;
+import com.leclowndu93150.thaumaturge.content.research.KnowledgeType;
 import com.leclowndu93150.thaumaturge.content.research.PlayerKnowledge;
+import com.leclowndu93150.thaumaturge.content.research.ResearchData;
+import com.leclowndu93150.thaumaturge.content.research.ResearchEntry;
+import com.leclowndu93150.thaumaturge.content.research.ResearchStage;
 import com.leclowndu93150.thaumaturge.content.research.table.MenuResearchTable;
-import com.leclowndu93150.thaumaturge.registry.TTDataComponents;
+import com.leclowndu93150.thaumaturge.registry.TTAttachments;
+import com.leclowndu93150.thaumaturge.registry.TTItemData;
 import com.leclowndu93150.thaumaturge.registry.TTItemTags;
 import com.leclowndu93150.thaumaturge.registry.TTItems;
 import com.leclowndu93150.thaumaturge.registry.TTSounds;
-import java.util.List;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Inventory;
@@ -29,12 +28,14 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 public final class ResearchNotes {
+    public static final String NOTE_KEY = "ResearchNote";
+
     private ResearchNotes() {}
 
-    public static int theoryRowsBefore(IResearchEntry entry, int stageIndex) {
+    public static int theoryRowsBefore(ResearchEntry entry, int stageIndex) {
         int count = 0;
         for (int i = 0; i < stageIndex && i < entry.stages().size(); i++) {
             count += theoryRows(entry.stages().get(i));
@@ -42,18 +43,18 @@ public final class ResearchNotes {
         return count;
     }
 
-    private static boolean isReachableTheoryRow(IPlayerKnowledge knowledge, Identifier entryId, IResearchEntry entry, int ordinal) {
-        if (!knowledge.isResearchKnown(entryId) || knowledge.isResearchComplete(entryId)) {
+    private static boolean isReachableTheoryRow(PlayerKnowledge knowledge, ResourceLocation entryId, ResearchEntry entry, int ordinal) {
+        if (!knowledge.isKnown(entryId) || knowledge.isComplete(entryId)) {
             return false;
         }
-        int stage = Math.max(0, knowledge.researchStage(entryId));
+        int stage = Math.max(0, knowledge.stage(entryId));
         if (stage >= entry.stages().size()) {
             return false;
         }
         return ordinal >= 0 && ordinal < theoryRowsBefore(entry, stage + 1);
     }
 
-    public static int theoryRows(IResearchStage stage) {
+    public static int theoryRows(ResearchStage stage) {
         int count = 0;
         for (KnowledgeReward reward : stage.requiredKnowledge()) {
             if (reward.type() == KnowledgeType.THEORY) {
@@ -63,28 +64,30 @@ public final class ResearchNotes {
         return count;
     }
 
-    public static AspectList anchors(HolderLookup.Provider registries, IResearchEntry entry) {
+    public static AspectList anchors(ResearchEntry entry) {
         AspectList authored = entry.noteAspects();
         if (!authored.isEmpty()) {
             return authored;
         }
-        HolderLookup.RegistryLookup<IAspect> lookup = registries.lookupOrThrow(IAspect.REGISTRY_KEY);
         AspectList fallback = AspectList.EMPTY;
-        for (ResourceKey<IAspect> primal : List.of(TTAspects.AER, TTAspects.IGNIS, TTAspects.AQUA)) {
-            fallback = fallback.add(lookup.getOrThrow(primal), 1);
+        for (ResourceLocation primal : new ResourceLocation[] {TTAspects.AER, TTAspects.IGNIS, TTAspects.AQUA}) {
+            fallback = fallback.add(new AspectInstance(primal, 1));
         }
         return fallback;
     }
 
-    public static AspectList observationCost(IResearchEntry entry, int amount) {
+    /** CE: observation stage cost = note_aspects × max(1, amount). */
+    public static AspectList observationCost(ResearchEntry entry, int amount) {
         AspectList cost = AspectList.EMPTY;
+        int multiplier = Math.max(1, amount);
         for (AspectInstance instance : entry.noteAspects().entries()) {
-            cost = cost.add(instance.aspect(), instance.amount() * Math.max(1, amount));
+            cost = cost.add(new AspectInstance(instance.aspectId(), instance.amount() * multiplier));
         }
         return cost;
     }
 
-    public static int stageObservationAmount(IResearchStage stage) {
+    /** Max non-theory knowledge amount on the stage, or -1 if none. */
+    public static int stageObservationAmount(ResearchStage stage) {
         int amount = -1;
         for (KnowledgeReward reward : stage.requiredKnowledge()) {
             if (reward.type() != KnowledgeType.THEORY) {
@@ -94,16 +97,28 @@ public final class ResearchNotes {
         return amount;
     }
 
-    public static AspectList stageObservationCost(IResearchEntry entry, IResearchStage stage) {
+    public static AspectList stageObservationCost(ResearchEntry entry, ResearchStage stage) {
         int amount = stageObservationAmount(stage);
         return amount < 0 ? AspectList.EMPTY : observationCost(entry, amount);
     }
 
     public static @Nullable ResearchNoteData dataOf(ItemStack stack) {
-        return stack.get(TTDataComponents.RESEARCH_NOTE.get());
+        CompoundTag tag = stack.getTag();
+        if (tag == null || !tag.contains(TTItemData.ROOT, Tag.TAG_COMPOUND)) {
+            return null;
+        }
+        CompoundTag root = tag.getCompound(TTItemData.ROOT);
+        if (!root.contains(NOTE_KEY, Tag.TAG_COMPOUND)) {
+            return null;
+        }
+        return ResearchNoteData.CODEC.parse(NbtOps.INSTANCE, root.get(NOTE_KEY)).result().orElse(null);
     }
 
-    public static boolean hasNoteFor(Player player, Identifier learnKey) {
+    public static void write(ItemStack stack, ResearchNoteData data) {
+        ResearchNoteData.CODEC.encodeStart(NbtOps.INSTANCE, data).result().ifPresent(encoded -> TTItemData.root(stack).put(NOTE_KEY, encoded));
+    }
+
+    public static boolean hasNoteFor(Player player, ResourceLocation learnKey) {
         Inventory inv = player.getInventory();
         for (int i = 0; i < inv.getContainerSize(); i++) {
             ResearchNoteData data = dataOf(inv.getItem(i));
@@ -114,15 +129,14 @@ public final class ResearchNotes {
         return false;
     }
 
-    public static boolean obtainNote(ServerPlayer player, Identifier entryId, int ordinal) {
-        ResourceKey<IResearchEntry> key = ResourceKey.create(IResearchEntry.REGISTRY_KEY, entryId);
-        IResearchEntry entry = player.registryAccess().lookupOrThrow(IResearchEntry.REGISTRY_KEY).get(key).map(holder -> holder.value()).orElse(null);
-        PlayerKnowledge knowledge = (PlayerKnowledge) KnowledgeAccess.of(player);
+    public static boolean obtainNote(ServerPlayer player, ResourceLocation entryId, int ordinal) {
+        ResearchEntry entry = ResearchData.entry(entryId);
+        PlayerKnowledge knowledge = TTAttachments.knowledge(player);
         if (entry == null || !isReachableTheoryRow(knowledge, entryId, entry, ordinal)) {
             return false;
         }
-        Identifier learnKey = ResearchNoteData.learnKey(entryId, ordinal);
-        if (knowledge.isResearchKnown(learnKey) || hasNoteFor(player, learnKey)) {
+        ResourceLocation learnKey = ResearchNoteData.learnKey(entryId, ordinal);
+        if (knowledge.isKnown(learnKey) || hasNoteFor(player, learnKey)) {
             return false;
         }
         if ((!consumeInk(player, true) || !hasItem(player, Items.PAPER)) && !player.getAbilities().instabuild) {
@@ -131,14 +145,13 @@ public final class ResearchNotes {
         }
         consumeInk(player, false);
         consumeItem(player, Items.PAPER);
-        AspectList anchors = anchors(player.registryAccess(), entry);
-        ResearchNoteData data = NoteGenerator.generate(entryId, ordinal, anchors, entry.complexity(), player.getRandom());
+        ResearchNoteData data = NoteGenerator.generate(entryId, ordinal, anchors(entry), entry.complexity(), player.getRandom());
         ItemStack note = new ItemStack(TTItems.RESEARCH_NOTE.get());
-        note.set(TTDataComponents.RESEARCH_NOTE.get(), data);
+        write(note, data);
         if (!player.getInventory().add(note)) {
             player.drop(note, false);
         }
-        player.level().playSound(null, player, TTSounds.WRITE.get(), SoundSource.UI, 0.5F, 1.0F);
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(), TTSounds.WRITE.get(), SoundSource.PLAYERS, 0.5F, 1.0F);
         return true;
     }
 
@@ -153,13 +166,8 @@ public final class ResearchNotes {
                 return true;
             }
         }
-        if (player.containerMenu instanceof MenuResearchTable table) {
-            if (table.blockEntity() != null && table.blockEntity().hasInkReady()) {
-                if (!simulate) {
-                    return table.blockEntity().consumeInk();
-                }
-                return true;
-            }
+        if (player.containerMenu instanceof MenuResearchTable table && table.blockEntity() != null && table.blockEntity().hasInkReady()) {
+            return simulate || table.blockEntity().consumeInk();
         }
         return false;
     }
@@ -185,8 +193,8 @@ public final class ResearchNotes {
         }
     }
 
-    public static Component entryName(HolderLookup.Provider registries, Identifier entryId) {
-        return registries.lookupOrThrow(IResearchEntry.REGISTRY_KEY).get(ResourceKey.create(IResearchEntry.REGISTRY_KEY, entryId))
-                .map(holder -> (Component) Component.translatable(holder.value().nameKey())).orElse(Component.literal(entryId.toString()));
+    public static Component entryName(ResourceLocation entryId) {
+        ResearchEntry entry = ResearchData.entry(entryId);
+        return entry == null ? Component.literal(entryId.toString()) : Component.translatable(entry.nameKey());
     }
 }

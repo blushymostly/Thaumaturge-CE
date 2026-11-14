@@ -1,0 +1,12 @@
+{
+  "type": "thaumaturge:crucible",
+  "research": "thaumaturge:ethereal_bloom",
+  "catalyst": { "item": "thaumaturge:shimmerleaf" },
+  "aspects": [
+    { "aspect": "thaumaturge:lux", "amount": 8 },
+    { "aspect": "thaumaturge:herba", "amount": 16 },
+    { "aspect": "thaumaturge:victus", "amount": 16 },
+    { "aspect": "thaumaturge:vitium", "amount": 16 }
+  ],
+  "result": { "item": "thaumaturge:ethereal_bloom", "count": 1 }
+}

@@ -21,7 +21,9 @@ public final class BookSprites {
     public static final int PAPER_SIZE = 255;
     public static final int PAPER_LAYOUT_SPAN = 256;
 
+    /** On-screen size of an item / aspect slot. */
     public static final int SLOT_SIZE = 16;
+    /** Source size of the aspect and prerequisite icon textures. */
     public static final int ICON_TEXTURE_SIZE = 32;
 
     public static final int INK_COLOR = 0xFF000000;

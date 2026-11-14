@@ -1,0 +1,8 @@
+{
+  "type": "thaumaturge:crucible",
+  "catalyst": { "item": "minecraft:bone" },
+  "aspects": [
+    { "aspect": "thaumaturge:perditio", "amount": 1 }
+  ],
+  "result": { "item": "minecraft:bone_meal", "count": 4 }
+}

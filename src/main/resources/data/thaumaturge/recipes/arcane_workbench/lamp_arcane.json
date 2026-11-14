@@ -1,0 +1,14 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:arcane_lamp",
+  "pattern": [" I ", "IAI", " I "],
+  "key": {
+    "A": { "item": "thaumaturge:amber_block" },
+    "I": { "item": "thaumaturge:plate_iron" }
+  },
+  "result": { "item": "thaumaturge:lamp_arcane", "count": 1 },
+  "vis": [
+    { "aspect": "thaumaturge:aer", "amount": 1 },
+    { "aspect": "thaumaturge:ignis", "amount": 1 }
+  ]
+}

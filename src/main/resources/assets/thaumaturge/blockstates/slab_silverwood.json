@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "thaumaturge:block/slab_silverwood"
+    },
+    "type=double": {
+      "model": "thaumaturge:block/plank_silverwood"
+    },
+    "type=top": {
+      "model": "thaumaturge:block/slab_silverwood_top"
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "itemGroup.thaumaturge": "Thaumaturge",
+  "thaumaturge.message.thaumonomicon_wip": "The Thaumonomicon whispers unfinished secrets...",
+  "thaumaturge.message.scan_success": "Scanned: %s"
+}

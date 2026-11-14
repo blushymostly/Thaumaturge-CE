@@ -1,0 +1,14 @@
+{
+  "parent": "minecraft:block/block",
+  "loader": "thaumaturge:mesh",
+  "model": "thaumaturge:models/mesh/advanced_alchemical_furnace_forge.ttmesh",
+  "corner_space": true,
+  "flip_v": true,
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "thaumaturge:block/advanced_alchemical_furnace",
+    "body": "thaumaturge:block/advanced_alchemical_furnace_on",
+    "tank": "thaumaturge:block/advanced_alchemical_furnace_tank_on",
+    "trim": "thaumaturge:block/metal_thaumium"
+  }
+}

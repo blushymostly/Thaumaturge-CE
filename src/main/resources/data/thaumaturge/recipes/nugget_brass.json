@@ -1,0 +1,5 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [{ "item": "thaumaturge:ingot_brass" }],
+  "result": { "item": "thaumaturge:nugget_brass", "count": 9 }
+}

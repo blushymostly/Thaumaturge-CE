@@ -1,0 +1,86 @@
+{
+  "parent": "minecraft:block/block",
+  "loader": "thaumaturge:mesh",
+  "model": "thaumaturge:models/mesh/advanced_alchemical_furnace_forge.ttmesh",
+  "corner_space": true,
+  "flip_v": true,
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "thaumaturge:block/advanced_alchemical_furnace",
+    "body": "thaumaturge:block/advanced_alchemical_furnace",
+    "tank": "thaumaturge:block/advanced_alchemical_furnace_tank",
+    "trim": "thaumaturge:block/metal_thaumium"
+  },
+  "display": {
+    "gui": {
+      "rotation": [
+        30,
+        225,
+        0
+      ],
+      "translation": [
+        0,
+        -2,
+        0
+      ],
+      "scale": [
+        0.3,
+        0.3,
+        0.3
+      ]
+    },
+    "ground": {
+      "translation": [
+        0,
+        2,
+        0
+      ],
+      "scale": [
+        0.19,
+        0.19,
+        0.19
+      ]
+    },
+    "fixed": {
+      "translation": [
+        0,
+        -1,
+        0
+      ],
+      "scale": [
+        0.22,
+        0.22,
+        0.22
+      ]
+    },
+    "firstperson_righthand": {
+      "rotation": [
+        0,
+        45,
+        0
+      ],
+      "scale": [
+        0.18,
+        0.18,
+        0.18
+      ]
+    },
+    "thirdperson_righthand": {
+      "rotation": [
+        75,
+        45,
+        0
+      ],
+      "translation": [
+        0,
+        2,
+        0
+      ],
+      "scale": [
+        0.17,
+        0.17,
+        0.17
+      ]
+    }
+  }
+}

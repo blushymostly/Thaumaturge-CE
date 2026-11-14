@@ -1,169 +1,183 @@
 package com.leclowndu93150.thaumaturge.content.aura.relay;
 
-import com.leclowndu93150.thaumaturge.api.aspect.Aspects;
-import com.leclowndu93150.thaumaturge.api.aspect.IAspect;
-import com.leclowndu93150.thaumaturge.api.aura.VisRelayHelper;
-import com.leclowndu93150.thaumaturge.content.aura.node.BlockEntityJarNode;
+import com.leclowndu93150.thaumaturge.api.aspect.TTAspects;
 import com.leclowndu93150.thaumaturge.content.aura.node.BlockEntityNode;
+import com.leclowndu93150.thaumaturge.content.item.WandCharge;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.SectionPos;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.chunk.LevelChunk;
-import net.neoforged.neoforge.transfer.transaction.RootCommitJournal;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
-import org.jspecify.annotations.Nullable;
+import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
-public final class VisRelayNetwork implements VisRelayHelper.Bindings {
-    public static final int CONSUMER_RANGE = 8;
+public final class VisRelayNetwork {
+    private static final int RANGE = 8;
+    static final int MAX_HOPS = 16;
 
-    @Override
-    public int drainCentivis(ServerLevel level, BlockPos consumerPos, ResourceKey<IAspect> primal, int amount, boolean simulate) {
-        Tap tap = tap(level, consumerPos, primal, amount);
-        if (tap == null) {
-            return 0;
+    private VisRelayNetwork() {}
+
+    public static List<Connection> connections(ServerLevel level, BlockPos consumer) {
+        var seenSources = new HashSet<BlockPos>();
+        List<Connection> result = new ArrayList<>();
+        for (var relay : nearby(level, consumer, VisRelayBlockEntity.class)) {
+            Connection connection = resolve(level, relay).connection();
+            if (connection != null && seenSources.add(connection.node.getBlockPos())) result.add(connection);
         }
-        if (simulate) {
-            return clamp(tap.source().source().availableCentivis(primal), amount);
-        }
-        int drained = drainNow(tap.source(), primal, amount);
-        if (drained > 0) {
-            tap.relay().triggerConsumeEffect(level, tap.aspect());
-        }
-        return drained;
+        return result;
     }
 
-    @Override
-    public int drainCentivis(ServerLevel level, BlockPos consumerPos, ResourceKey<IAspect> primal, int amount, TransactionContext transaction) {
-        Tap tap = tap(level, consumerPos, primal, amount);
-        if (tap == null) {
-            return 0;
+    public static @Nullable Connection nearest(ServerLevel level, BlockPos consumer) {
+        for (var relay : nearby(level, consumer, VisRelayBlockEntity.class)) {
+            Connection connection = resolve(level, relay).connection();
+            if (connection != null) return connection;
         }
-        int drained = clamp(tap.source().source().drainCentivis(primal, amount, transaction), amount);
-        if (drained > 0) {
-            new RootCommitJournal(() -> tap.relay().triggerConsumeEffect(level, tap.aspect())).updateSnapshots(transaction);
-        }
-        return drained;
+        return null;
     }
 
-    public static int drainNow(LinkedRelaySource source, ResourceKey<IAspect> primal, int amount) {
-        if (amount <= 0) {
-            return 0;
-        }
-        try (Transaction transaction = Transaction.openRoot()) {
-            int drained = clamp(source.source().drainCentivis(primal, amount, transaction), amount);
-            transaction.commit();
-            return drained;
-        }
-    }
-
-    public static int drainEverySourceNear(ServerLevel level, BlockPos consumerPos, ResourceKey<IAspect> primal, int amount) {
-        if (amount <= 0) {
-            return 0;
-        }
-        Holder<IAspect> aspect = Aspects.resolve(level.registryAccess(), primal);
-        Set<BlockPos> drainedSources = new HashSet<>();
+    public static int drainEverySourceNear(ServerLevel level, BlockPos consumer, ResourceLocation aspect, int amount) {
         int drained = 0;
-        for (BlockEntityVisRelay relay : blockEntitiesNear(level, consumerPos, BlockEntityVisRelay.class)) {
-            if (drained >= amount) {
-                break;
-            }
-            if (!relay.isLinked()) {
-                continue;
-            }
-            LinkedRelaySource source = relay.resolveSource(level);
-            if (source == null || !drainedSources.add(source.position())) {
-                continue;
-            }
-            int taken = drainNow(source, primal, amount - drained);
-            if (taken > 0) {
-                drained += taken;
-                if (aspect != null) {
-                    relay.triggerConsumeEffect(level, aspect);
-                }
-            }
+        for (Connection source : connections(level, consumer)) {
+            if (drained >= amount) break;
+            drained += source.drain(level, aspect, amount - drained);
         }
         return drained;
     }
 
-    public static int drainNodesNear(ServerLevel level, BlockPos consumerPos, ResourceKey<IAspect> primal, int amount) {
+    public static int drainNodesNear(ServerLevel level, BlockPos consumer, ResourceLocation aspect, int amount) {
         int drained = 0;
-        for (BlockEntityNode node : blockEntitiesNear(level, consumerPos, BlockEntityNode.class)) {
-            if (drained >= amount) {
-                break;
-            }
-            if (node instanceof BlockEntityJarNode) {
-                continue;
-            }
-            drained += drainNow(new LinkedRelaySource(node.getBlockPos(), node.relaySource()), primal, amount - drained);
+        for (BlockEntityNode node : nearby(level, consumer, BlockEntityNode.class)) {
+            if (drained >= amount) break;
+            drained += node.drainCentivis(aspect, amount - drained);
         }
         return drained;
     }
 
-    private static int clamp(int supplied, int amount) {
-        return Math.max(0, Math.min(amount, supplied));
-    }
+    static void refreshLink(ServerLevel level, VisRelayBlockEntity relay) {
+        Resolution current = resolve(level, relay);
+        if (current.connection() != null || current.unloaded()) return;
 
-    private static @Nullable Tap tap(ServerLevel level, BlockPos consumerPos, ResourceKey<IAspect> primal, int amount) {
-        if (amount <= 0) {
-            return null;
-        }
-        BlockEntityVisRelay relay = findRelayNear(level, consumerPos);
-        LinkedRelaySource source = relay == null ? null : relay.resolveSource(level);
-        if (source == null) {
-            return null;
-        }
-        Holder<IAspect> aspect = Aspects.resolve(level.registryAccess(), primal);
-        return aspect == null ? null : new Tap(relay, source, aspect);
-    }
-
-    public static @Nullable BlockEntityVisRelay findRelayNear(ServerLevel level, BlockPos consumerPos) {
-        BlockEntityVisRelay best = null;
-        double bestDistance = Double.MAX_VALUE;
-        for (BlockEntityVisRelay relay : blockEntitiesNear(level, consumerPos, BlockEntityVisRelay.class)) {
-            if (!relay.isLinked()) {
-                continue;
-            }
-            double distance = relay.getBlockPos().distSqr(consumerPos);
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                best = relay;
+        BlockPos origin = relay.getBlockPos();
+        for (var node : nearby(level, origin, BlockEntityNode.class)) {
+            if (node.isEnergized() && sightline(level, origin, node.getBlockPos()) == Sightline.CLEAR) {
+                relay.setLink(node.getBlockPos(), 1);
+                return;
             }
         }
-        return best;
+        var upstream = nearby(level, origin, VisRelayBlockEntity.class).stream()
+                .filter(other -> other.depth() > 0 && other.depth() < MAX_HOPS
+                        && sightline(level, origin, other.getBlockPos()) == Sightline.CLEAR
+                        && resolve(level, other).connection() != null)
+                .min(Comparator.comparingInt(VisRelayBlockEntity::depth))
+                .orElse(null);
+        if (upstream == null) relay.setLink(null, 0);
+        else relay.setLink(upstream.getBlockPos(), upstream.depth() + 1);
     }
 
-    private static <T extends BlockEntity> List<T> blockEntitiesNear(ServerLevel level, BlockPos center, Class<T> type) {
+    private static Resolution resolve(ServerLevel level, VisRelayBlockEntity relay) {
+        Hop route = null;
+        int depth = relay.depth();
+        for (int remaining = depth; remaining > 0 && depth <= MAX_HOPS; remaining--) {
+            BlockPos pos = relay.getBlockPos();
+            BlockPos parent = relay.parent();
+            if (parent == null || pos.equals(parent) || !inRange(pos, parent)) return Resolution.INVALID;
+            if (!level.hasChunkAt(parent)) return Resolution.UNLOADED;
+            Sightline sightline = sightline(level, pos, parent);
+            if (sightline == Sightline.UNLOADED) return Resolution.UNLOADED;
+            if (sightline == Sightline.BLOCKED) return Resolution.INVALID;
+
+            route = new Hop(pos, route);
+            BlockEntity next = level.getBlockEntity(parent);
+            if (remaining == 1 && next instanceof BlockEntityNode node && node.isEnergized() && !node.isRemoved()) {
+                return new Resolution(new Connection(node, route), false);
+            }
+            if (!(next instanceof VisRelayBlockEntity upstream) || upstream.isRemoved() || upstream.depth() != remaining - 1) {
+                return Resolution.INVALID;
+            }
+            relay = upstream;
+        }
+        return Resolution.INVALID;
+    }
+
+    private static boolean inRange(BlockPos from, BlockPos to) {
+        return Math.abs(from.getX() - to.getX()) <= RANGE
+                && Math.abs(from.getY() - to.getY()) <= RANGE
+                && Math.abs(from.getZ() - to.getZ()) <= RANGE;
+    }
+
+    private static <T extends BlockEntity> List<T> nearby(ServerLevel level, BlockPos origin, Class<T> type) {
+        // Inspect block entities in loaded chunks without loading chunks to discover connections.
         List<T> found = new ArrayList<>();
-        int minChunkX = SectionPos.blockToSectionCoord(center.getX() - CONSUMER_RANGE);
-        int maxChunkX = SectionPos.blockToSectionCoord(center.getX() + CONSUMER_RANGE);
-        int minChunkZ = SectionPos.blockToSectionCoord(center.getZ() - CONSUMER_RANGE);
-        int maxChunkZ = SectionPos.blockToSectionCoord(center.getZ() + CONSUMER_RANGE);
-        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
-            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
-                LevelChunk chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
-                if (chunk == null) {
-                    continue;
-                }
-                for (BlockEntity blockEntity : chunk.getBlockEntities().values()) {
-                    BlockPos pos = blockEntity.getBlockPos();
-                    if (type.isInstance(blockEntity) && !blockEntity.isRemoved() && Math.abs(pos.getX() - center.getX()) <= CONSUMER_RANGE && Math.abs(pos.getY() - center.getY()) <= CONSUMER_RANGE
-                            && Math.abs(pos.getZ() - center.getZ()) <= CONSUMER_RANGE) {
-                        found.add(type.cast(blockEntity));
+        for (int x = (origin.getX() - RANGE) >> 4; x <= (origin.getX() + RANGE) >> 4; x++) {
+            for (int z = (origin.getZ() - RANGE) >> 4; z <= (origin.getZ() + RANGE) >> 4; z++) {
+                var chunk = level.getChunkSource().getChunkNow(x, z);
+                if (chunk == null) continue;
+                for (var entity : chunk.getBlockEntities().values()) {
+                    BlockPos pos = entity.getBlockPos();
+                    if (!entity.isRemoved() && !pos.equals(origin) && inRange(origin, pos) && type.isInstance(entity)) {
+                        found.add(type.cast(entity));
                     }
                 }
             }
         }
+        found.sort(Comparator.<T>comparingDouble(entity -> entity.getBlockPos().distSqr(origin))
+                .thenComparing(BlockEntity::getBlockPos));
         return found;
     }
 
-    private record Tap(BlockEntityVisRelay relay, LinkedRelaySource source, Holder<IAspect> aspect) {
+    private static Sightline sightline(ServerLevel level, BlockPos from, BlockPos to) {
+        Vec3 start = Vec3.atCenterOf(from);
+        Vec3 end = Vec3.atCenterOf(to);
+        return BlockGetter.traverseBlocks(start, end, level, (world, point) -> {
+            if (point.equals(from) || point.equals(to)) return null;
+            if (!world.hasChunkAt(point)) return Sightline.UNLOADED;
+            var shape = world.getBlockState(point).getCollisionShape(world, point);
+            return shape.clip(start, end, point) == null ? null : Sightline.BLOCKED;
+        }, world -> Sightline.CLEAR);
+    }
+
+    public static final class Connection {
+        private final BlockEntityNode node;
+        private final Hop route;
+
+        private Connection(BlockEntityNode node, Hop route) {
+            this.node = node;
+            this.route = route;
+        }
+
+        public int available(ResourceLocation aspect) {
+            return node.availableCentivis(aspect);
+        }
+
+        public int available() {
+            return WandCharge.PRIMALS.stream().mapToInt(this::available).sum();
+        }
+
+        public int drain(ServerLevel level, ResourceLocation aspect, int amount) {
+            int drawn = node.drainCentivis(aspect, amount);
+            if (drawn > 0) {
+                var entry = TTAspects.get(aspect);
+                int color = entry == null ? 0xFFFFFF : entry.color();
+                for (Hop hop = route; hop != null; hop = hop.previous()) {
+                    if (level.getBlockEntity(hop.pos()) instanceof VisRelayBlockEntity relay) {
+                        relay.pulse(level.getGameTime(), color);
+                    }
+                }
+            }
+            return drawn;
+        }
+    }
+
+    private enum Sightline { CLEAR, BLOCKED, UNLOADED }
+
+    private record Hop(BlockPos pos, @Nullable Hop previous) {}
+
+    private record Resolution(@Nullable Connection connection, boolean unloaded) {
+        private static final Resolution INVALID = new Resolution(null, false);
+        private static final Resolution UNLOADED = new Resolution(null, true);
     }
 }

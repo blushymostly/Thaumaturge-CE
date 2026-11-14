@@ -1,0 +1,15 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:arcane_ear",
+  "pattern": ["P P", " G ", "WRW"],
+  "key": {
+    "P": { "tag": "forge:plates/brass" },
+    "G": { "item": "thaumaturge:mechanism_simple" },
+    "W": { "tag": "minecraft:wooden_slabs" },
+    "R": { "tag": "forge:dusts/redstone" }
+  },
+  "result": { "item": "thaumaturge:arcane_ear", "count": 1 },
+  "vis": [
+    { "aspect": "thaumaturge:aer", "amount": 1 }
+  ]
+}

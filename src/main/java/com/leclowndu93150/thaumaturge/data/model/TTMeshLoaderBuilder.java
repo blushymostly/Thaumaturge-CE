@@ -1,43 +1,42 @@
 package com.leclowndu93150.thaumaturge.data.model;
 
 import com.google.gson.JsonObject;
-import com.leclowndu93150.thaumaturge.client.model.TTModelsHandlers;
+import com.leclowndu93150.thaumaturge.TTIds;
 import java.util.Objects;
-import net.minecraft.resources.Identifier;
-import net.neoforged.neoforge.client.model.generators.template.CustomLoaderBuilder;
-import org.jspecify.annotations.Nullable;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.client.model.generators.CustomLoaderBuilder;
+import net.minecraftforge.client.model.generators.ModelBuilder;
+import net.minecraftforge.common.data.ExistingFileHelper;
+import org.jetbrains.annotations.Nullable;
 
-public final class TTMeshLoaderBuilder extends CustomLoaderBuilder {
-    private @Nullable Identifier mesh;
+public final class TTMeshLoaderBuilder<T extends ModelBuilder<T>> extends CustomLoaderBuilder<T> {
+    private @Nullable ResourceLocation mesh;
     private boolean flipV;
     private boolean cornerSpace;
+    private boolean worldLight;
 
-    public TTMeshLoaderBuilder() {
-        super(TTModelsHandlers.MESH_LOADER_ID, false);
+    public TTMeshLoaderBuilder(T parent, ExistingFileHelper existingFileHelper) {
+        super(new ResourceLocation(TTIds.MODID, "mesh"), parent, existingFileHelper);
     }
 
-    public TTMeshLoaderBuilder mesh(Identifier mesh) {
-        this.mesh = Objects.requireNonNull(mesh);
+    public TTMeshLoaderBuilder<T> mesh(ResourceLocation mesh) {
+        this.mesh = Objects.requireNonNull(mesh, "mesh");
         return this;
     }
 
-    public TTMeshLoaderBuilder flipV(boolean flipV) {
+    public TTMeshLoaderBuilder<T> flipV(boolean flipV) {
         this.flipV = flipV;
         return this;
     }
 
-    public TTMeshLoaderBuilder cornerSpace(boolean cornerSpace) {
+    public TTMeshLoaderBuilder<T> cornerSpace(boolean cornerSpace) {
         this.cornerSpace = cornerSpace;
         return this;
     }
 
-    @Override
-    protected CustomLoaderBuilder copyInternal() {
-        TTMeshLoaderBuilder copy = new TTMeshLoaderBuilder();
-        copy.mesh = mesh;
-        copy.flipV = flipV;
-        copy.cornerSpace = cornerSpace;
-        return copy;
+    public TTMeshLoaderBuilder<T> worldLight(boolean worldLight) {
+        this.worldLight = worldLight;
+        return this;
     }
 
     @Override
@@ -49,6 +48,9 @@ public final class TTMeshLoaderBuilder extends CustomLoaderBuilder {
         }
         if (cornerSpace) {
             result.addProperty("corner_space", true);
+        }
+        if (worldLight) {
+            result.addProperty("world_light", true);
         }
         return result;
     }

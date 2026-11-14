@@ -4,6 +4,9 @@
   "parents": [
     "thaumaturge:first_steps"
   ],
+  "siblings": [
+    "thaumaturge:base_alchemy"
+  ],
   "column": 0,
   "row": 2,
   "meta": [

@@ -1,14 +1,13 @@
 package com.leclowndu93150.thaumaturge.client.screen;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import org.jspecify.annotations.Nullable;
+import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Nullable;
 
 public abstract class AbstractTTScreen extends Screen {
-    private final @Nullable Identifier background;
+    private final @Nullable ResourceLocation background;
     private final int backgroundTextureWidth;
     private final int backgroundTextureHeight;
 
@@ -16,11 +15,11 @@ public abstract class AbstractTTScreen extends Screen {
         this(title, null, 256, 256);
     }
 
-    protected AbstractTTScreen(Component title, @Nullable Identifier background) {
+    protected AbstractTTScreen(Component title, @Nullable ResourceLocation background) {
         this(title, background, 256, 256);
     }
 
-    protected AbstractTTScreen(Component title, @Nullable Identifier background, int backgroundTextureWidth, int backgroundTextureHeight) {
+    protected AbstractTTScreen(Component title, @Nullable ResourceLocation background, int backgroundTextureWidth, int backgroundTextureHeight) {
         super(title);
         this.background = background;
         this.backgroundTextureWidth = backgroundTextureWidth;
@@ -28,10 +27,10 @@ public abstract class AbstractTTScreen extends Screen {
     }
 
     @Override
-    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        super.extractBackground(graphics, mouseX, mouseY, partialTick);
+    public void renderBackground(GuiGraphics graphics) {
+        super.renderBackground(graphics);
         if (background != null) {
-            graphics.blit(RenderPipelines.GUI_TEXTURED, background, 0, 0, 0.0F, 0.0F, width, height, width, height, backgroundTextureWidth, backgroundTextureHeight);
+            graphics.blit(background, 0, 0, 0, 0, width, height, backgroundTextureWidth, backgroundTextureHeight);
         }
     }
 

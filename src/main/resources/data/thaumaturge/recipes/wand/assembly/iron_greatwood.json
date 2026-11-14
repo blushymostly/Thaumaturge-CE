@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "  I",
+    " S ",
+    "I  "
+  ],
+  "key": {
+    "I": {
+      "item": "thaumaturge:wand_cap_iron"
+    },
+    "S": {
+      "item": "thaumaturge:wand_rod_greatwood"
+    }
+  },
+  "result": {
+    "item": "thaumaturge:wand",
+    "nbt": {
+      "Thaumaturge": {
+        "Rod": "greatwood"
+      }
+    }
+  }
+}

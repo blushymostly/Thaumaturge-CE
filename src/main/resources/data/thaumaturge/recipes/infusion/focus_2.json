@@ -1,0 +1,35 @@
+{
+  "type": "thaumaturge:infusion",
+  "research": "thaumaturge:focus_advanced@0",
+  "central": {
+    "item": "thaumaturge:focus_1"
+  },
+  "components": [
+    {
+      "item": "thaumaturge:quicksilver"
+    },
+    {
+      "item": "minecraft:diamond"
+    },
+    {
+      "item": "thaumaturge:quicksilver"
+    },
+    {
+      "item": "minecraft:ender_pearl"
+    }
+  ],
+  "aspects": [
+    {
+      "aspect": "thaumaturge:praecantatio",
+      "amount": 25
+    },
+    {
+      "aspect": "thaumaturge:ordo",
+      "amount": 50
+    }
+  ],
+  "instability": 3,
+  "result": {
+    "item": "thaumaturge:focus_2"
+  }
+}

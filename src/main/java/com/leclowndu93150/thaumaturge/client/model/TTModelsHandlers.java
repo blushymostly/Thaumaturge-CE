@@ -2,63 +2,19 @@ package com.leclowndu93150.thaumaturge.client.model;
 
 import com.leclowndu93150.thaumaturge.TTIds;
 import com.leclowndu93150.thaumaturge.client.model.mesh.TTMeshUnbakedModel;
-import net.minecraft.resources.Identifier;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ModelEvent;
-import net.neoforged.neoforge.client.event.RegisterConditionalItemModelPropertyEvent;
-import net.neoforged.neoforge.client.event.RegisterSpecialModelRendererEvent;
+import com.leclowndu93150.thaumaturge.client.render.crystal.CrystalUnbakedModel;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.ModelEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
-@EventBusSubscriber(modid = TTIds.MODID, value = Dist.CLIENT)
-public class TTModelsHandlers {
-
-    public static final Identifier JAR_MODEL_ID = TTIds.rl("jar");
-
-    public static final Identifier JAR_BRAIN_MODEL_ID = TTIds.rl("jar_brain");
-
-    public static final Identifier JAR_NODE_MODEL_ID = TTIds.rl("jar_node");
-
-    public static final Identifier GOLEM_BUILDER_MODEL_ID = TTIds.rl("golem_builder");
-
-    public static final Identifier ADVANCED_ALCHEMICAL_FURNACE_MODEL_ID = TTIds.rl("advanced_alchemical_furnace");
-
-    public static final Identifier DECON_TABLE_MODEL_ID = TTIds.rl("deconstruction_table");
-
-    public static final Identifier WAND_MODEL_ID = TTIds.rl("wand");
-
-    public static final Identifier NODE_STABILIZER_MODEL_ID = TTIds.rl("node_stabilizer");
-
-    public static final Identifier NITOR_MODEL_ID = TTIds.rl("nitor");
-
-    public static final Identifier RESEARCH_TABLE_MODEL_ID = TTIds.rl("research_table");
-
-    public static final Identifier WAND_IS_STAFF_PROPERTY_ID = TTIds.rl("wand_is_staff");
-
-    public static final Identifier MESH_LOADER_ID = TTIds.rl("mesh");
+@Mod.EventBusSubscriber(modid = TTIds.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+public final class TTModelsHandlers {
+    private TTModelsHandlers() {}
 
     @SubscribeEvent
-    public static void onRegisterItemModels(RegisterSpecialModelRendererEvent event) {
-        event.register(TTIds.rl("golem"), GolemItemSpecialRenderer.Unbaked.MAP_CODEC);
-        event.register(JAR_MODEL_ID, JarItemSpecialRenderer.Unbaked.MAP_CODEC);
-        event.register(JAR_BRAIN_MODEL_ID, JarBrainItemSpecialRenderer.Unbaked.MAP_CODEC);
-        event.register(JAR_NODE_MODEL_ID, JarNodeItemSpecialRenderer.Unbaked.MAP_CODEC);
-        event.register(GOLEM_BUILDER_MODEL_ID, GolemBuilderItemSpecialRenderer.Unbaked.MAP_CODEC);
-        event.register(ADVANCED_ALCHEMICAL_FURNACE_MODEL_ID, AdvancedAlchemicalFurnaceItemSpecialRenderer.Unbaked.MAP_CODEC);
-        event.register(DECON_TABLE_MODEL_ID, DeconTableItemSpecialRenderer.Unbaked.MAP_CODEC);
-        event.register(WAND_MODEL_ID, WandItemSpecialRenderer.Unbaked.MAP_CODEC);
-        event.register(NODE_STABILIZER_MODEL_ID, NodeStabilizerItemSpecialRenderer.Unbaked.MAP_CODEC);
-        event.register(NITOR_MODEL_ID, NitorItemSpecialRenderer.Unbaked.MAP_CODEC);
-        event.register(RESEARCH_TABLE_MODEL_ID, ResearchTableItemSpecialRenderer.Unbaked.MAP_CODEC);
-    }
-
-    @SubscribeEvent
-    public static void onRegisterConditionalProperties(RegisterConditionalItemModelPropertyEvent event) {
-        event.register(WAND_IS_STAFF_PROPERTY_ID, WandIsStaffProperty.MAP_CODEC);
-    }
-
-    @SubscribeEvent
-    public static void onRegisterLoaders(ModelEvent.RegisterLoaders event) {
-        event.register(MESH_LOADER_ID, TTMeshUnbakedModel.Loader.INSTANCE);
+    public static void onRegisterGeometryLoaders(ModelEvent.RegisterGeometryLoaders event) {
+        event.register("mesh", TTMeshUnbakedModel.Loader.INSTANCE);
+        event.register("crystal", CrystalUnbakedModel.Loader.INSTANCE);
     }
 }

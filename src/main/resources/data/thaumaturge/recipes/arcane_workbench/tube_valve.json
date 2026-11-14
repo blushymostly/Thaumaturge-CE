@@ -1,0 +1,22 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:tubes",
+  "pattern": [
+    " L ",
+    " T "
+  ],
+  "key": {
+    "L": {
+      "item": "minecraft:lever"
+    },
+    "T": {
+      "item": "thaumaturge:tube"
+    }
+  },
+  "vis": 10,
+  "crystals": [],
+  "result": {
+    "item": "thaumaturge:tube_valve",
+    "count": 1
+  }
+}

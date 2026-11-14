@@ -1,99 +1,83 @@
 package com.leclowndu93150.thaumaturge.content.warp;
 
-import com.leclowndu93150.thaumaturge.api.warp.IPlayerWarp;
-import com.leclowndu93150.thaumaturge.api.warp.WarpType;
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.util.Mth;
 
-public final class PlayerWarpState implements IPlayerWarp {
-    public static final int POOL_MIN = 0;
-    public static final int POOL_MAX = 500;
+public final class PlayerWarpState {
+    private int permanent;
+    private int normal;
+    private int temporary;
 
-    public static final MapCodec<PlayerWarpState> CODEC = RecordCodecBuilder
-            .mapCodec(instance -> instance
-                    .group(Codec.INT.fieldOf("permanent").forGetter(PlayerWarpState::permanent), Codec.INT.fieldOf("normal").forGetter(PlayerWarpState::normal),
-                            Codec.INT.fieldOf("temporary").forGetter(PlayerWarpState::temporary), Codec.INT.fieldOf("counter").forGetter(PlayerWarpState::getCounter))
-                    .apply(instance, PlayerWarpState::new));
-
-    public static final StreamCodec<RegistryFriendlyByteBuf, PlayerWarpState> STREAM_CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, PlayerWarpState::permanent, ByteBufCodecs.VAR_INT,
-            PlayerWarpState::normal, ByteBufCodecs.VAR_INT, PlayerWarpState::temporary, ByteBufCodecs.VAR_INT, PlayerWarpState::getCounter, PlayerWarpState::new);
-
-    private final int[] pools = new int[WarpType.values().length];
-    private int counter;
-
-    public PlayerWarpState() {}
-
-    private PlayerWarpState(int permanent, int normal, int temporary, int counter) {
-        set(WarpType.PERMANENT, permanent);
-        set(WarpType.NORMAL, normal);
-        set(WarpType.TEMPORARY, temporary);
-        this.counter = counter;
+    public int getPermanent() {
+        return permanent;
     }
 
-    private int permanent() {
-        return get(WarpType.PERMANENT);
+    public int getNormal() {
+        return normal;
     }
 
-    private int normal() {
-        return get(WarpType.NORMAL);
-    }
-
-    private int temporary() {
-        return get(WarpType.TEMPORARY);
-    }
-
-    public int actual() {
-        return permanent() + normal();
+    public int getTemporary() {
+        return temporary;
     }
 
     public int total() {
-        return actual() + temporary();
+        return permanent + normal + temporary;
     }
 
-    @Override
-    public int get(WarpType type) {
-        return pools[type.ordinal()];
+    public void addPermanent(int amount) {
+        permanent = Math.max(0, permanent + amount);
     }
 
-    @Override
-    public void set(WarpType type, int amount) {
-        pools[type.ordinal()] = Mth.clamp(amount, POOL_MIN, POOL_MAX);
+    public void addNormal(int amount) {
+        normal = Math.max(0, normal + amount);
     }
 
-    @Override
-    public int add(WarpType type, int amount) {
-        long next = (long) get(type) + amount;
-        pools[type.ordinal()] = (int) Mth.clamp(next, POOL_MIN, POOL_MAX);
-        return get(type);
+    public void addTemporary(int amount) {
+        temporary = Math.max(0, temporary + amount);
     }
 
-    @Override
-    public int reduce(WarpType type, int amount) {
-        long next = (long) get(type) - amount;
-        pools[type.ordinal()] = (int) Mth.clamp(next, POOL_MIN, POOL_MAX);
-        return get(type);
-    }
-
-    @Override
-    public int getCounter() {
-        return counter;
-    }
-
-    @Override
-    public void setCounter(int counter) {
-        this.counter = counter;
-    }
-
-    @Override
-    public void clear() {
-        for (WarpType type : WarpType.values()) {
-            pools[type.ordinal()] = POOL_MIN;
+    public void tickDownTemporary() {
+        if (temporary > 0) {
+            temporary = Math.max(0, temporary - 1);
         }
-        counter = 0;
+    }
+
+    public CompoundTag save() {
+        CompoundTag tag = new CompoundTag();
+        tag.putInt("perm", permanent);
+        tag.putInt("normal", normal);
+        tag.putInt("temp", temporary);
+        return tag;
+    }
+
+    public void load(CompoundTag tag) {
+        permanent = Math.max(0, tag.getInt("perm"));
+        normal = Math.max(0, tag.getInt("normal"));
+        temporary = Math.max(0, tag.getInt("temp"));
+    }
+
+    public void write(FriendlyByteBuf buf) {
+        buf.writeVarInt(permanent);
+        buf.writeVarInt(normal);
+        buf.writeVarInt(temporary);
+    }
+
+    public void read(FriendlyByteBuf buf) {
+        permanent = buf.readVarInt();
+        normal = buf.readVarInt();
+        temporary = buf.readVarInt();
+    }
+
+    public void copyFrom(PlayerWarpState other) {
+        this.permanent = other.permanent;
+        this.normal = other.normal;
+        this.temporary = other.temporary;
+    }
+
+    public void clamp() {
+        permanent = Mth.clamp(permanent, 0, 1000);
+        normal = Mth.clamp(normal, 0, 1000);
+        temporary = Mth.clamp(temporary, 0, 1000);
     }
 }

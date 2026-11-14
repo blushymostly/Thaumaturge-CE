@@ -2,7 +2,7 @@ package com.leclowndu93150.thaumaturge.content.world.tree.crown;
 
 import com.leclowndu93150.thaumaturge.content.world.tree.TrunkQuadrant;
 import com.leclowndu93150.thaumaturge.registry.TTTreePlacers;
-import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,19 +11,21 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LevelSimulatedReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 import net.minecraft.world.level.levelgen.feature.foliageplacers.FoliagePlacer;
 import net.minecraft.world.level.levelgen.feature.trunkplacers.TrunkPlacer;
 import net.minecraft.world.level.levelgen.feature.trunkplacers.TrunkPlacerType;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 public final class CrownTrunkPlacer extends TrunkPlacer {
-    public static final MapCodec<CrownTrunkPlacer> CODEC = RecordCodecBuilder.mapCodec(instance -> trunkPlacerParts(instance).and(CrownShape.CODEC.fieldOf("shape").forGetter(placer -> placer.shape))
+    public static final Codec<CrownTrunkPlacer> CODEC = RecordCodecBuilder.create(instance -> trunkPlacerParts(instance).and(CrownShape.CODEC.fieldOf("shape").forGetter(placer -> placer.shape))
             .and(CrownRule.CODEC.fieldOf("rule").forGetter(placer -> placer.rule)).apply(instance, CrownTrunkPlacer::new));
 
     private static final int MIN_TREE_HEIGHT = 6;
@@ -63,15 +65,16 @@ public final class CrownTrunkPlacer extends TrunkPlacer {
     }
 
     @Override
-    public boolean isFree(WorldGenLevel level, BlockPos pos) {
+    public boolean isFree(LevelSimulatedReader level, BlockPos pos) {
         return true;
     }
 
     @Override
-    public List<FoliagePlacer.FoliageAttachment> placeTrunk(WorldGenLevel level, BiConsumer<BlockPos, BlockState> trunkSetter, RandomSource random, int treeHeight, BlockPos origin, TreeConfiguration config) {
+    public List<FoliagePlacer.FoliageAttachment> placeTrunk(LevelSimulatedReader level, BiConsumer<BlockPos, BlockState> trunkSetter, RandomSource random, int treeHeight, BlockPos origin, TreeConfiguration config) {
+        LevelAccessor accessor = (LevelAccessor) level;
         List<FoliagePlacer.FoliageAttachment> attachments = new ArrayList<>();
-        Block leaves = config.foliageProvider.getState(level, random, origin).getBlock();
-        int height = clearHeight(level, origin, treeHeight, leaves);
+        Block leaves = config.foliageProvider.getState(random, origin).getBlock();
+        int height = clearHeight(accessor, origin, treeHeight, leaves);
         if (height == INVALID_HEIGHT) {
             return attachments;
         }
@@ -82,25 +85,29 @@ public final class CrownTrunkPlacer extends TrunkPlacer {
                 placeBelowTrunkBlock(level, trunkSetter, random, origin.offset(dx, -1, dz), config);
             }
         }
-        List<CrownNode> lower = survey(level, random, origin, shape.crownWidth(), height, trunkTop, leaves);
-        placeColumn(level, trunkSetter, random, config, origin, 0, trunkTop);
-        placeLimbs(level, trunkSetter, random, config, origin, height, lower, attachments);
+        List<CrownNode> lower = survey(accessor, random, origin, shape.crownWidth(), height, trunkTop, leaves);
+        placeColumn(accessor, trunkSetter, random, config, origin, 0, trunkTop);
+        placeLimbs(accessor, trunkSetter, random, config, origin, height, lower, attachments);
         if (shape.stackedCrown()) {
             BlockPos upper = origin.above(trunkTop);
-            List<CrownNode> stacked = survey(level, random, upper, STACKED_CROWN_WIDTH, height, trunkTop, leaves);
-            placeColumn(level, trunkSetter, random, config, upper, 1, trunkTop);
-            placeLimbs(level, trunkSetter, random, config, upper, height, stacked, attachments);
+            List<CrownNode> stacked = survey(accessor, random, upper, STACKED_CROWN_WIDTH, height, trunkTop, leaves);
+            placeColumn(accessor, trunkSetter, random, config, upper, 1, trunkTop);
+            placeLimbs(accessor, trunkSetter, random, config, upper, height, stacked, attachments);
         }
         return attachments;
     }
 
-    private int clearHeight(WorldGenLevel level, BlockPos origin, int treeHeight, Block leaves) {
+    private void placeBelowTrunkBlock(LevelSimulatedReader level, BiConsumer<BlockPos, BlockState> trunkSetter, RandomSource random, BlockPos pos, TreeConfiguration config) {
+        setDirtAt(level, trunkSetter, random, pos, config);
+    }
+
+    private int clearHeight(LevelAccessor level, BlockPos origin, int treeHeight, Block leaves) {
         int limit = treeHeight;
         int width = shape.trunkWidth();
         for (int dx = 0; dx < width; dx++) {
             for (int dz = 0; dz < width; dz++) {
                 BlockState ground = level.getBlockState(origin.offset(dx, -1, dz));
-                if (!ground.is(BlockTags.SUBSTRATE_OVERWORLD) && !ground.is(Blocks.FARMLAND)) {
+                if (!Feature.isDirt(ground) && !ground.is(BlockTags.SAND) && !ground.is(Blocks.FARMLAND)) {
                     return INVALID_HEIGHT;
                 }
                 for (int y = 0; y < limit; y++) {
@@ -121,7 +128,7 @@ public final class CrownTrunkPlacer extends TrunkPlacer {
         return limit;
     }
 
-    private List<CrownNode> survey(WorldGenLevel level, RandomSource random, BlockPos base, double crownWidth, int height, int trunkTop, Block leaves) {
+    private List<CrownNode> survey(LevelAccessor level, RandomSource random, BlockPos base, double crownWidth, int height, int trunkTop, Block leaves) {
         List<CrownNode> nodes = new ArrayList<>();
         int highestStart = base.getY() + trunkTop;
         nodes.add(new CrownNode(base.above(height - TOP_CLUSTER_DROP), highestStart));
@@ -153,7 +160,7 @@ public final class CrownTrunkPlacer extends TrunkPlacer {
         return span <= 0.0 ? 0.0 : SHRINK_FACTOR * Math.sqrt(span);
     }
 
-    private void placeLimbs(WorldGenLevel level, BiConsumer<BlockPos, BlockState> trunkSetter, RandomSource random, TreeConfiguration config, BlockPos base, int height, List<CrownNode> nodes, List<FoliagePlacer.FoliageAttachment> attachments) {
+    private void placeLimbs(LevelAccessor level, BiConsumer<BlockPos, BlockState> trunkSetter, RandomSource random, TreeConfiguration config, BlockPos base, int height, List<CrownNode> nodes, List<FoliagePlacer.FoliageAttachment> attachments) {
         for (CrownNode node : nodes) {
             if (node.branchFootY() - base.getY() < LIMB_FLOOR_FRACTION * height) {
                 continue;
@@ -169,7 +176,7 @@ public final class CrownTrunkPlacer extends TrunkPlacer {
         }
     }
 
-    private void placeColumn(WorldGenLevel level, BiConsumer<BlockPos, BlockState> trunkSetter, RandomSource random, TreeConfiguration config, BlockPos base, int fromOffset, int toOffset) {
+    private void placeColumn(LevelAccessor level, BiConsumer<BlockPos, BlockState> trunkSetter, RandomSource random, TreeConfiguration config, BlockPos base, int fromOffset, int toOffset) {
         int width = shape.trunkWidth();
         boolean wideTrunk = width == TrunkQuadrant.TRUNK_WIDTH;
         for (int y = fromOffset; y <= toOffset; y++) {
@@ -182,11 +189,11 @@ public final class CrownTrunkPlacer extends TrunkPlacer {
         }
     }
 
-    private void placeLog(WorldGenLevel level, BiConsumer<BlockPos, BlockState> trunkSetter, RandomSource random, TreeConfiguration config, BlockPos pos, Direction.Axis axis, @Nullable TrunkQuadrant quadrant) {
+    private void placeLog(LevelAccessor level, BiConsumer<BlockPos, BlockState> trunkSetter, RandomSource random, TreeConfiguration config, BlockPos pos, Direction.Axis axis, @Nullable TrunkQuadrant quadrant) {
         if (level.isOutsideBuildHeight(pos) || !CrownRule.canHostLog(level.getBlockState(pos))) {
             return;
         }
-        BlockState log = config.trunkProvider.getState(level, random, pos);
+        BlockState log = config.trunkProvider.getState(random, pos);
         if (log.hasProperty(RotatedPillarBlock.AXIS)) {
             log = log.setValue(RotatedPillarBlock.AXIS, axis);
         }
@@ -221,7 +228,7 @@ public final class CrownTrunkPlacer extends TrunkPlacer {
         return cells;
     }
 
-    private boolean isClear(WorldGenLevel level, BlockPos from, BlockPos to, Block leaves) {
+    private boolean isClear(LevelAccessor level, BlockPos from, BlockPos to, Block leaves) {
         for (BlockPos cell : run(from, to)) {
             if (!isOpen(level, cell, leaves)) {
                 return false;
@@ -230,7 +237,7 @@ public final class CrownTrunkPlacer extends TrunkPlacer {
         return true;
     }
 
-    private boolean isOpen(WorldGenLevel level, BlockPos pos, Block leaves) {
+    private boolean isOpen(LevelAccessor level, BlockPos pos, Block leaves) {
         return !level.isOutsideBuildHeight(pos) && rule.isOpen(level.getBlockState(pos), leaves);
     }
 }

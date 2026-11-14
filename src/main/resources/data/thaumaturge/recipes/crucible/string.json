@@ -1,0 +1,9 @@
+{
+  "type": "thaumaturge:crucible",
+  "catalyst": { "tag": "forge:crops/wheat" },
+  "aspects": [
+    { "aspect": "thaumaturge:bestia", "amount": 5 },
+    { "aspect": "thaumaturge:fabrico", "amount": 1 }
+  ],
+  "result": { "item": "minecraft:string", "count": 1 }
+}

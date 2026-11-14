@@ -5,11 +5,9 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.ParticleProvider;
 import net.minecraft.util.Mth;
-import net.minecraft.util.RandomSource;
 
 public final class SparkleParticle extends TTParticle {
     private static final int FRAMES_PER_ROW = 16;
-    private static final int TOTAL_FRAMES = 32;
     private static final float SMALL_CHANCE = 0.2F;
     private static final int FLICKER_STEP = 4;
     private static final float DRIFT_X = 5.0E-4F;
@@ -36,8 +34,10 @@ public final class SparkleParticle extends TTParticle {
         this.peakSize = this.baseSize * 2.0F;
         this.quadSize = this.baseSize;
         this.flickerTo = this.random.nextFloat();
+        this.alpha = 0.0F;
         setDelay(options.delay());
         setMoonWind(WIND_SCALE);
+        frame(this.rowOffset);
     }
 
     @Override
@@ -51,19 +51,19 @@ public final class SparkleParticle extends TTParticle {
                 this.flickerTo = t > 0.85F ? 0.0F : this.random.nextFloat();
             }
             this.alpha = Mth.lerp((float) (this.age % FLICKER_STEP) / FLICKER_STEP, this.flickerFrom, this.flickerTo);
-            this.quadSize = Keyframes.sample(t, this.baseSize, this.peakSize);
+            this.quadSize = Mth.lerp(t, this.baseSize, this.peakSize);
         } else {
             this.alpha = 1.0F - Math.abs(2.0F * t - 1.0F);
-            this.quadSize = Keyframes.sample(t, this.baseSize, this.peakSize, this.baseSize);
+            this.quadSize = t < 0.5F ? Mth.lerp(t * 2.0F, this.baseSize, this.peakSize) : Mth.lerp(t * 2.0F - 1.0F, this.peakSize, this.baseSize);
         }
     }
 
     public static final class Provider implements ParticleProvider<SparkleParticleOptions> {
-        private static final ParticleSheet SHEET = TTParticleSheets.sheet("sparkle");
+        private final ParticleSheet sheet = ParticleSheet.sheet("sparkle");
 
         @Override
-        public Particle createParticle(SparkleParticleOptions options, ClientLevel level, double x, double y, double z, double vx, double vy, double vz, RandomSource random) {
-            return new SparkleParticle(level, x, y, z, vx, vy, vz, options, SHEET);
+        public Particle createParticle(SparkleParticleOptions options, ClientLevel level, double x, double y, double z, double vx, double vy, double vz) {
+            return new SparkleParticle(level, x, y, z, vx, vy, vz, options, sheet);
         }
     }
 }

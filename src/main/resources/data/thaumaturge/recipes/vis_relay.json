@@ -1,0 +1,28 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:vis_relay",
+  "pattern": [
+    " A ",
+    "GNG",
+    " S "
+  ],
+  "key": {
+    "A": {
+      "item": "minecraft:amethyst_shard"
+    },
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "N": {
+      "tag": "thaumaturge:nitors"
+    },
+    "S": {
+      "item": "thaumaturge:arcane_stone"
+    }
+  },
+  "result": {
+    "item": "thaumaturge:vis_relay",
+    "count": 1
+  },
+  "vis": 96
+}

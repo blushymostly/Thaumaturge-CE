@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "com.leclowndu93150.thaumaturge.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "compat.expatternprovider.InfinityCellCreativeTabMixin"
+  ],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

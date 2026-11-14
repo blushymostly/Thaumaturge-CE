@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "enabled=true": { "model": "thaumaturge:block/dioptra_on" },
+    "enabled=false": { "model": "thaumaturge:block/dioptra_off" }
+  }
+}

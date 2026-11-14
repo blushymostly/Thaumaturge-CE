@@ -1,0 +1,6 @@
+{
+  "type": "forge:add_features",
+  "biomes": "thaumaturge:tainted_lands",
+  "features": "thaumaturge:taint_biome",
+  "step": "top_layer_modification"
+}

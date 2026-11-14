@@ -1,0 +1,15 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:base_artifice",
+  "pattern": [" B ", "ISI", " B "],
+  "key": {
+    "B": { "item": "thaumaturge:plate_brass" },
+    "I": { "item": "thaumaturge:plate_iron" },
+    "S": { "tag": "forge:rods/wooden" }
+  },
+  "result": { "item": "thaumaturge:mechanism_simple", "count": 1 },
+  "vis": [
+    { "aspect": "thaumaturge:ignis", "amount": 1 },
+    { "aspect": "thaumaturge:aqua", "amount": 1 }
+  ]
+}

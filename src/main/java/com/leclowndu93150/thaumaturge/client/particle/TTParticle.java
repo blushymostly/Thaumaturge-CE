@@ -1,41 +1,30 @@
 package com.leclowndu93150.thaumaturge.client.particle;
 
+import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.particle.SingleQuadParticle;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.util.ARGB;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.util.Mth;
-import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.phys.Vec3;
-import org.jspecify.annotations.Nullable;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
+/** Forge 1.20.1 base for CE sheet particles: delay, moon wind, drift and per-frame UVs from a {@link ParticleSheet}. */
 public abstract class TTParticle extends SingleQuadParticle {
-    private static final double FULL_TURN_RADIANS = Math.PI * 2.0;
-    private static final double SPIN_UNIT_DEGREES_PER_TICK = 360.0 * Math.PI / 180.0;
-    private static final float SPIN_UNIT_RADIANS_PER_TICK = (float) Math.toRadians(SPIN_UNIT_DEGREES_PER_TICK);
     private static final int MOON_PHASE_COUNT = 8;
     private static final double MOON_PHASE_STEP_RADIANS = Math.PI / 4.0;
-    private static final float[] MOON_PHASE_HEADINGS = buildMoonPhaseHeadings();
     private static final float WIND_STRENGTH = 0.1F;
     private static final float HEADING_JITTER_RADIANS = 0.17F;
 
-    protected final @Nullable ParticleSheet sheet;
+    protected final ParticleSheet sheet;
     protected int frame;
     private int delay;
-    private float rollStepRadians;
     private double moonPushX;
     private double moonPushZ;
 
     protected TTParticle(ClientLevel level, double x, double y, double z, double vx, double vy, double vz, ParticleSheet sheet) {
-        this(level, x, y, z, vx, vy, vz, sheet, null);
-    }
-
-    protected TTParticle(ClientLevel level, double x, double y, double z, double vx, double vy, double vz, TextureAtlasSprite sprite) {
-        this(level, x, y, z, vx, vy, vz, null, sprite);
-    }
-
-    private TTParticle(ClientLevel level, double x, double y, double z, double vx, double vy, double vz, @Nullable ParticleSheet sheet, @Nullable TextureAtlasSprite sprite) {
-        super(level, x, y, z, vx, vy, vz, sprite);
+        super(level, x, y, z, vx, vy, vz);
         this.sheet = sheet;
         this.xd = vx;
         this.yd = vy;
@@ -49,12 +38,15 @@ public abstract class TTParticle extends SingleQuadParticle {
 
     @Override
     public void tick() {
-        recordPreviousPosition();
-        if (consumeDelayTick()) {
+        this.xo = this.x;
+        this.yo = this.y;
+        this.zo = this.z;
+        if (this.delay > 0) {
+            this.delay--;
             return;
         }
-        advanceRoll();
-        applyMoonPush();
+        this.xd += this.moonPushX;
+        this.zd += this.moonPushZ;
         super.tick();
         if (!this.removed) {
             update();
@@ -62,38 +54,6 @@ public abstract class TTParticle extends SingleQuadParticle {
     }
 
     protected abstract void update();
-
-    private static float[] buildMoonPhaseHeadings() {
-        float[] headings = new float[MOON_PHASE_COUNT];
-        for (int phase = 0; phase < MOON_PHASE_COUNT; phase++) {
-            headings[phase] = (float) (phase * MOON_PHASE_STEP_RADIANS);
-        }
-        return headings;
-    }
-
-    private void recordPreviousPosition() {
-        this.xo = this.x;
-        this.yo = this.y;
-        this.zo = this.z;
-    }
-
-    private boolean consumeDelayTick() {
-        if (this.delay <= 0) {
-            return false;
-        }
-        this.delay--;
-        return true;
-    }
-
-    private void advanceRoll() {
-        this.oRoll = this.roll;
-        this.roll += this.rollStepRadians;
-    }
-
-    private void applyMoonPush() {
-        this.xd += this.moonPushX;
-        this.zd += this.moonPushZ;
-    }
 
     protected float progress() {
         return Mth.clamp((float) this.age / this.lifetime, 0.0F, 1.0F);
@@ -106,86 +66,81 @@ public abstract class TTParticle extends SingleQuadParticle {
         }
     }
 
-    protected boolean delayed() {
-        return this.delay > 0;
-    }
-
-    protected void setSpin(float startTurns, float speed) {
-        this.roll = (float) (startTurns * FULL_TURN_RADIANS);
-        this.oRoll = this.roll;
-        this.rollStepRadians = speed * SPIN_UNIT_RADIANS_PER_TICK;
-    }
-
     protected void setMoonWind(double scale) {
-        int phase = this.level.environmentAttributes().getValue(EnvironmentAttributes.MOON_PHASE, new Vec3(this.x, this.y, this.z)).index();
-        float heading = MOON_PHASE_HEADINGS[Math.floorMod(phase, MOON_PHASE_COUNT)] + this.random.nextFloat() * HEADING_JITTER_RADIANS;
+        int phase = Math.floorMod(this.level.getMoonPhase(), MOON_PHASE_COUNT);
+        float heading = (float) (phase * MOON_PHASE_STEP_RADIANS) + this.random.nextFloat() * HEADING_JITTER_RADIANS;
         this.moonPushX = Mth.cos(heading) * WIND_STRENGTH * scale;
         this.moonPushZ = Mth.sin(heading) * WIND_STRENGTH * scale;
     }
 
     protected void drift(float strengthX, float strengthY, float strengthZ) {
-        if (strengthX != 0.0F)
+        if (strengthX != 0.0F) {
             this.xd += this.random.nextGaussian() * strengthX;
-        if (strengthY != 0.0F)
+        }
+        if (strengthY != 0.0F) {
             this.yd += this.random.nextGaussian() * strengthY;
-        if (strengthZ != 0.0F)
+        }
+        if (strengthZ != 0.0F) {
             this.zd += this.random.nextGaussian() * strengthZ;
-    }
-
-    protected void jitterVelocity(double deviation) {
-        this.xd += this.random.nextGaussian() * deviation;
-        this.yd += this.random.nextGaussian() * deviation;
-        this.zd += this.random.nextGaussian() * deviation;
-    }
-
-    protected void frame(int index) {
-        this.frame = Mth.clamp(index, 0, this.sheet == null ? 0 : this.sheet.frames() - 1);
-    }
-
-    protected void frameByProgress() {
-        if (this.sheet != null) {
-            frame((int) (progress() * this.sheet.frames()));
         }
     }
 
-    protected int sheetFrames() {
-        return this.sheet == null ? 1 : this.sheet.frames();
+    protected void frame(int index) {
+        this.frame = Mth.clamp(index, 0, this.sheet.frames() - 1);
     }
 
     protected void setColor(int color) {
-        this.rCol = ARGB.red(color) / 255.0F;
-        this.gCol = ARGB.green(color) / 255.0F;
-        this.bCol = ARGB.blue(color) / 255.0F;
-    }
-
-    protected void lerpColor(float t, float r0, float g0, float b0, float r1, float g1, float b1) {
-        this.rCol = Mth.lerp(t, r0, r1);
-        this.gCol = Mth.lerp(t, g0, g1);
-        this.bCol = Mth.lerp(t, b0, b1);
+        this.rCol = (color >> 16 & 0xFF) / 255.0F;
+        this.gCol = (color >> 8 & 0xFF) / 255.0F;
+        this.bCol = (color & 0xFF) / 255.0F;
     }
 
     @Override
     protected float getU0() {
-        return this.sheet != null ? this.sheet.u0(this.frame) : super.getU0();
+        return this.sheet.u0(this.frame);
     }
 
     @Override
     protected float getU1() {
-        return this.sheet != null ? this.sheet.u1(this.frame) : super.getU1();
+        return this.sheet.u1(this.frame);
     }
 
     @Override
     protected float getV0() {
-        return this.sheet != null ? 0.0F : super.getV0();
+        return 0.0F;
     }
 
     @Override
     protected float getV1() {
-        return this.sheet != null ? 1.0F : super.getV1();
+        return 1.0F;
     }
 
     @Override
-    public SingleQuadParticle.Layer getLayer() {
-        return this.sheet != null ? TTParticleLayers.additive(this.sheet) : Layer.bySprite(this.sprite);
+    public ParticleRenderType getRenderType() {
+        return this.sheet.renderType();
+    }
+
+    /** Draws the quad with an explicit orientation instead of the camera's (vanilla {@code SingleQuadParticle.render} body). */
+    protected void renderQuad(VertexConsumer buffer, Camera camera, Quaternionf rotation, float offsetX, float offsetY, float offsetZ, float partialTick) {
+        Vec3 cam = camera.getPosition();
+        float x = (float) (Mth.lerp(partialTick, this.xo, this.x) - cam.x()) + offsetX;
+        float y = (float) (Mth.lerp(partialTick, this.yo, this.y) - cam.y()) + offsetY;
+        float z = (float) (Mth.lerp(partialTick, this.zo, this.z) - cam.z()) + offsetZ;
+        Vector3f[] corners = {new Vector3f(-1.0F, -1.0F, 0.0F), new Vector3f(-1.0F, 1.0F, 0.0F), new Vector3f(1.0F, 1.0F, 0.0F), new Vector3f(1.0F, -1.0F, 0.0F)};
+        float size = this.getQuadSize(partialTick);
+        for (Vector3f corner : corners) {
+            corner.rotate(rotation);
+            corner.mul(size);
+            corner.add(x, y, z);
+        }
+        float u0 = getU0();
+        float u1 = getU1();
+        float v0 = getV0();
+        float v1 = getV1();
+        int light = getLightColor(partialTick);
+        buffer.vertex(corners[0].x(), corners[0].y(), corners[0].z()).uv(u1, v1).color(this.rCol, this.gCol, this.bCol, this.alpha).uv2(light).endVertex();
+        buffer.vertex(corners[1].x(), corners[1].y(), corners[1].z()).uv(u1, v0).color(this.rCol, this.gCol, this.bCol, this.alpha).uv2(light).endVertex();
+        buffer.vertex(corners[2].x(), corners[2].y(), corners[2].z()).uv(u0, v0).color(this.rCol, this.gCol, this.bCol, this.alpha).uv2(light).endVertex();
+        buffer.vertex(corners[3].x(), corners[3].y(), corners[3].z()).uv(u0, v1).color(this.rCol, this.gCol, this.bCol, this.alpha).uv2(light).endVertex();
     }
 }

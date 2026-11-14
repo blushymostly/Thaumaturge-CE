@@ -1,8 +1,6 @@
 package com.leclowndu93150.thaumaturge.content.recipe.dust;
 
 import com.leclowndu93150.thaumaturge.registry.TTAttachments;
-import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -11,6 +9,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
@@ -20,10 +21,11 @@ import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 
+/**
+ * Per-chunk queue of delayed block swaps (stored in the {@code dust_queue} chunk capability), plus the
+ * session-wide "active chunks" and "blocked positions" indexes.
+ */
 public final class DustTriggerSwapQueue {
-    public static final MapCodec<DustTriggerSwapQueue> CODEC = RecordCodecBuilder
-            .mapCodec(i -> i.group(PendingSwap.CODEC.listOf().optionalFieldOf("pending", List.of()).forGetter(q -> List.copyOf(q.pending))).apply(i, DustTriggerSwapQueue::fromCodec));
-
     private static final Map<ResourceKey<Level>, Set<ChunkPos>> ACTIVE = new ConcurrentHashMap<>();
     private static final Map<ResourceKey<Level>, Set<Long>> BLOCKED = new ConcurrentHashMap<>();
 
@@ -36,10 +38,22 @@ public final class DustTriggerSwapQueue {
         BLOCKED.clear();
     }
 
-    private static DustTriggerSwapQueue fromCodec(List<PendingSwap> entries) {
-        DustTriggerSwapQueue queue = new DustTriggerSwapQueue();
-        queue.pending.addAll(entries);
-        return queue;
+    public CompoundTag save() {
+        CompoundTag tag = new CompoundTag();
+        ListTag list = new ListTag();
+        for (PendingSwap entry : this.pending) {
+            list.add(entry.save());
+        }
+        tag.put("pending", list);
+        return tag;
+    }
+
+    public void load(CompoundTag tag) {
+        this.pending.clear();
+        ListTag list = tag.getList("pending", Tag.TAG_COMPOUND);
+        for (int i = 0; i < list.size(); i++) {
+            this.pending.add(PendingSwap.load(list.getCompound(i)));
+        }
     }
 
     public List<PendingSwap> entries() {
@@ -71,11 +85,11 @@ public final class DustTriggerSwapQueue {
     }
 
     private static void enqueueInternal(ServerLevel level, PendingSwap entry) {
-        ChunkPos cp = ChunkPos.containing(entry.pos());
-        LevelChunk chunk = level.getChunk(cp.x(), cp.z());
-        DustTriggerSwapQueue queue = chunk.getData(TTAttachments.DUST_TRIGGER_QUEUE.get());
+        ChunkPos cp = new ChunkPos(entry.pos());
+        LevelChunk chunk = level.getChunk(cp.x, cp.z);
+        DustTriggerSwapQueue queue = TTAttachments.dustQueue(chunk);
         queue.add(entry);
-        chunk.markUnsaved();
+        chunk.setUnsaved(true);
         ACTIVE.computeIfAbsent(level.dimension(), k -> ConcurrentHashMap.newKeySet()).add(cp);
         markBlocked(level, entry.pos());
     }

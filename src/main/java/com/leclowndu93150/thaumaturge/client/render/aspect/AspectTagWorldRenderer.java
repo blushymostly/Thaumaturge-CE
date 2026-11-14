@@ -4,29 +4,29 @@ import com.leclowndu93150.thaumaturge.TTIds;
 import com.leclowndu93150.thaumaturge.api.aspect.AspectInstance;
 import com.leclowndu93150.thaumaturge.api.aspect.AspectList;
 import com.leclowndu93150.thaumaturge.api.aspect.IAspect;
+import com.leclowndu93150.thaumaturge.api.aspect.TTAspects;
 import com.leclowndu93150.thaumaturge.client.render.TTFlatRenderTypes;
-import com.leclowndu93150.thaumaturge.client.render.aspect.AspectTagRenderer.BlendMode;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.util.List;
 import java.util.function.Predicate;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
-import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
-import net.minecraft.util.LightCoordsUtil;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
+/** Billboard aspect tags in world / on the thaumometer lens (Forge port of CE AspectTagWorldRenderer). */
 public final class AspectTagWorldRenderer {
     public static final float DEFAULT_SCALE = 0.0625F;
-    public static final Identifier UNKNOWN_TEXTURE = TTIds.rl("textures/aspects/_unknown.png");
+    public static final ResourceLocation UNKNOWN_TEXTURE = TTIds.rl("textures/aspects/_unknown.png");
 
     private static final float HALF = 0.5F;
     private static final int ROW_SIZE = 5;
@@ -39,56 +39,145 @@ public final class AspectTagWorldRenderer {
     private static final float AMOUNT_TOP = 0.24F;
     private static final float DARK_LIFT = 0.004F;
     private static final float WHITE_LIFT = 0.008F;
+    private static final float LENS_TAG_SIZE = 16.0F;
+    private static final float LENS_TAG_HALF = 8.0F;
+    private static final float LENS_AMOUNT_SCALE = 0.5F;
+    private static final float LENS_AMOUNT_GAP = 1.0F;
+    /** CE {@code AMOUNT_FRONT_Z}: in front of the tag quad before GRID_SCALE. */
+    private static final float LENS_AMOUNT_Z = 0.01F;
     private static final int AMOUNT_COLOR = 0xFFFFFFFF;
     private static final int AMOUNT_SHADOW_COLOR = 0xFF111111;
-    private static final int NO_BACKGROUND = 0;
-    private static final boolean[] SHADOW_THEN_FACE = {true, false};
-    private static final float NORMAL_Z = -1.0F;
-    private static final Predicate<Holder<IAspect>> ALL_DISCOVERED = aspect -> true;
-    private static final float[][] QUAD_CORNERS = {{-HALF, -HALF, 0.0F, 1.0F}, {HALF, -HALF, 1.0F, 1.0F}, {HALF, HALF, 1.0F, 0.0F}, {-HALF, HALF, 0.0F, 0.0F}};
 
     private AspectTagWorldRenderer() {}
 
-    public static void renderTagCloud(PoseStack poseStack, Minecraft minecraft, double x, double y, double z, AspectList aspects, @Nullable Direction face, float scale, float alpha) {
-        renderTagCloud(poseStack, minecraft, x, y, z, aspects, face, scale, alpha, ALL_DISCOVERED, true);
-    }
-
-    public static void renderTagCloud(PoseStack poseStack, Minecraft minecraft, double x, double y, double z, AspectList aspects, @Nullable Direction face, float scale, float alpha, Predicate<Holder<IAspect>> discovered) {
-        renderTagCloud(poseStack, minecraft, x, y, z, aspects, face, scale, alpha, discovered, true);
-    }
-
-    public static void renderTagCloud(PoseStack poseStack, Minecraft minecraft, double x, double y, double z, AspectList aspects, @Nullable Direction face, float scale, float alpha, Predicate<Holder<IAspect>> discovered, boolean showAmounts) {
+    public static void renderTagCloud(PoseStack poseStack, Minecraft minecraft, double x, double y, double z, AspectList aspects,
+            @Nullable Direction face, float scale, float alpha, Predicate<ResourceLocation> discovered) {
         MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
-        Vec3 camera = minecraft.gameRenderer.getMainCamera().position();
+        Vec3 camera = minecraft.gameRenderer.getMainCamera().getPosition();
         double baseX = face == null ? x - HALF : x;
         double baseZ = face == null ? z - HALF : z;
         Vec3 anchor = cloudAnchor(baseX, y, baseZ, face, scale);
         double bearing = Math.atan2(camera.x - (baseX + HALF), camera.z - (baseZ + HALF));
         Quaternionf facing = new Quaternionf().rotationY((float) bearing);
         Vec3 right = new Vec3(Math.cos(bearing), 0.0, -Math.sin(bearing));
-        List<AspectInstance> tags = aspects.sortedByTag();
+        List<AspectInstance> tags = aspects.sortedByAmount();
         for (int index = 0; index < tags.size(); index++) {
             int row = index / ROW_SIZE;
-            double slide = rowSlide(index % ROW_SIZE, Math.min(ROW_SIZE, tags.size() - row * ROW_SIZE), scale);
+            int columns = Math.min(ROW_SIZE, tags.size() - row * ROW_SIZE);
+            double slide = (index % ROW_SIZE - columns / 2.0 + HALF) * SPACING_FACTOR * scale * scale;
             Vec3 at = anchor.add(right.scale(slide)).add(0.0, row * ROW_HEIGHT_FACTOR * scale, 0.0);
             poseStack.pushPose();
             poseStack.translate(at.x - camera.x, at.y - camera.y, at.z - camera.z);
             poseStack.mulPose(facing);
-            drawTag(poseStack, buffers, minecraft.font, tags.get(index), scale, alpha, discovered, showAmounts);
+            drawTag(poseStack, buffers, minecraft.font, tags.get(index), scale, alpha, discovered);
             poseStack.popPose();
         }
         buffers.endBatch();
     }
 
-    private static double rowSlide(int column, int rowCount, float scale) {
-        return (column - rowCount / 2.0 + HALF) * SPACING_FACTOR * scale * scale;
+    public static void renderLensGrid(PoseStack poseStack, MultiBufferSource buffers, Font font, List<AspectInstance> entries,
+            Predicate<ResourceLocation> discovered) {
+        int row = 0;
+        int placed = 0;
+        final int gridRows = 5;
+        while (row < gridRows && placed < entries.size()) {
+            int count = Math.min(gridRows - row, entries.size() - placed);
+            float left = -(count * LENS_TAG_SIZE / 2.0F);
+            float top = -LENS_TAG_HALF + LENS_TAG_SIZE * row;
+            for (int column = 0; column < count; column++) {
+                AspectInstance entry = entries.get(placed + column);
+                boolean known = discovered.test(entry.aspectId());
+                IAspect aspect = TTAspects.get(entry.aspectId());
+                ResourceLocation texture = known && aspect != null ? AspectTagRenderer.textureOf(aspect) : UNKNOWN_TEXTURE;
+                IAspect tint = aspect != null ? aspect : TTAspects.get(TTAspects.ORDO);
+                int color = known && aspect != null ? AspectTagRenderer.colorOf(aspect, 1.0F, false)
+                        : AspectTagRenderer.colorOf(tint, UNKNOWN_ALPHA, true);
+                poseStack.pushPose();
+                poseStack.translate(left + LENS_TAG_SIZE * column + LENS_TAG_HALF, top + LENS_TAG_HALF, 0.0F);
+                RenderType type = TTFlatRenderTypes.entityTranslucentFlat(texture);
+                poseStack.pushPose();
+                poseStack.scale(LENS_TAG_SIZE, -LENS_TAG_SIZE, LENS_TAG_SIZE);
+                renderQuad(poseStack.last(), buffers.getBuffer(type), color, LightTexture.FULL_BRIGHT);
+                poseStack.popPose();
+                // Flush glyph before amount so translucent sort cannot cover the digit.
+                flush(buffers, type);
+                if (known) {
+                    poseStack.pushPose();
+                    poseStack.translate(LENS_TAG_HALF, LENS_TAG_HALF, LENS_AMOUNT_Z);
+                    poseStack.scale(LENS_AMOUNT_SCALE, LENS_AMOUNT_SCALE, LENS_AMOUNT_SCALE);
+                    String label = Integer.toString(entry.amount());
+                    font.drawInBatch(label, -font.width(label) - LENS_AMOUNT_GAP, -font.lineHeight, AMOUNT_COLOR, true,
+                            poseStack.last().pose(), buffers, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+                    poseStack.popPose();
+                }
+                poseStack.popPose();
+            }
+            placed += count;
+            row++;
+        }
     }
 
-    private static RenderType billboardType(Identifier texture, BlendMode blend) {
-        return switch (blend) {
-            case ADDITIVE -> TTFlatRenderTypes.entityAdditiveFlat(texture);
-            case ALPHA -> TTFlatRenderTypes.entityTranslucentFlat(texture);
-        };
+    private static void drawTag(PoseStack poseStack, MultiBufferSource buffers, Font font, AspectInstance entry, float scale, float alpha,
+            Predicate<ResourceLocation> discovered) {
+        boolean known = discovered.test(entry.aspectId());
+        IAspect aspect = TTAspects.get(entry.aspectId());
+        ResourceLocation texture = known && aspect != null ? AspectTagRenderer.textureOf(aspect) : UNKNOWN_TEXTURE;
+        IAspect tint = aspect != null ? aspect : TTAspects.get(TTAspects.ORDO);
+        int color = known && aspect != null
+                ? AspectTagRenderer.colorOf(aspect, alpha, false)
+                : AspectTagRenderer.colorOf(tint, alpha * UNKNOWN_ALPHA, true);
+        RenderType type = TTFlatRenderTypes.entityTranslucentFlat(texture);
+        poseStack.pushPose();
+        poseStack.scale(scale, scale, scale);
+        renderQuad(poseStack.last(), buffers.getBuffer(type), color, LightTexture.FULL_BRIGHT);
+        flush(buffers, type);
+        if (known) {
+            drawAmount(poseStack, buffers, font, Integer.toString(entry.amount()), scale);
+        }
+        poseStack.popPose();
+    }
+
+    private static void drawAmount(PoseStack poseStack, MultiBufferSource buffers, Font font, String text, float scale) {
+        float pixel = TEXT_PIXEL * scale;
+        float width = font.width(text);
+        drawDigits(poseStack, buffers, font, text, width, AMOUNT_RIGHT * scale + pixel, -AMOUNT_TOP * scale - pixel, DARK_LIFT * scale, pixel, AMOUNT_SHADOW_COLOR);
+        drawDigits(poseStack, buffers, font, text, width, AMOUNT_RIGHT * scale, -AMOUNT_TOP * scale, WHITE_LIFT * scale, pixel, AMOUNT_COLOR);
+    }
+
+    private static void drawDigits(PoseStack poseStack, MultiBufferSource buffers, Font font, String text, float width, float right, float top,
+            float lift, float pixel, int color) {
+        poseStack.pushPose();
+        poseStack.translate(right, top, lift);
+        poseStack.scale(pixel, -pixel, pixel);
+        font.drawInBatch(text, -width, 0.0F, color, false, poseStack.last().pose(), buffers, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+        poseStack.popPose();
+    }
+
+    private static void flush(MultiBufferSource buffers, RenderType type) {
+        if (buffers instanceof MultiBufferSource.BufferSource source) {
+            source.endBatch(type);
+        }
+    }
+
+    public static void renderQuad(PoseStack.Pose pose, VertexConsumer buffer, int argb, int packedLight) {
+        Matrix4f matrix = pose.pose();
+        float a = ((argb >> 24) & 255) / 255.0F;
+        float r = ((argb >> 16) & 255) / 255.0F;
+        float g = ((argb >> 8) & 255) / 255.0F;
+        float b = (argb & 255) / 255.0F;
+        if (a <= 0.0F) {
+            a = 1.0F;
+        }
+        vertex(buffer, matrix, pose, -HALF, -HALF, 0.0F, 1.0F, r, g, b, a, packedLight);
+        vertex(buffer, matrix, pose, HALF, -HALF, 1.0F, 1.0F, r, g, b, a, packedLight);
+        vertex(buffer, matrix, pose, HALF, HALF, 1.0F, 0.0F, r, g, b, a, packedLight);
+        vertex(buffer, matrix, pose, -HALF, HALF, 0.0F, 0.0F, r, g, b, a, packedLight);
+    }
+
+    private static void vertex(VertexConsumer buffer, Matrix4f matrix, PoseStack.Pose pose, float x, float y, float u, float v,
+            float r, float g, float b, float a, int light) {
+        buffer.vertex(matrix, x, y, 0.0F).color(r, g, b, a).uv(u, v).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light)
+                .normal(pose.normal(), 0.0F, 0.0F, -1.0F).endVertex();
     }
 
     private static Vec3 cloudAnchor(double baseX, double baseY, double baseZ, @Nullable Direction face, float scale) {
@@ -96,81 +185,7 @@ public final class AspectTagWorldRenderer {
         if (face == null) {
             return center;
         }
-        double reach = FACE_REACH_FACTOR * scale;
+        double reach = Math.max(0.55, FACE_REACH_FACTOR * scale);
         return center.add(face.getStepX() * reach, face.getStepY() * reach, face.getStepZ() * reach);
-    }
-
-    public static void renderBillboard(PoseStack poseStack, MultiBufferSource buffers, Holder<IAspect> aspect, float scale, float alpha, boolean monochrome, int packedLight) {
-        renderBillboard(poseStack, buffers, aspect, scale, alpha, monochrome, packedLight, BlendMode.ALPHA);
-    }
-
-    public static void renderBillboardAdditive(PoseStack poseStack, MultiBufferSource buffers, Holder<IAspect> aspect, float scale, float alpha, boolean monochrome, int packedLight) {
-        renderBillboard(poseStack, buffers, aspect, scale, alpha, monochrome, packedLight, BlendMode.ADDITIVE);
-    }
-
-    public static void renderBillboard(PoseStack poseStack, MultiBufferSource buffers, @Nullable Holder<IAspect> aspect, float scale, float alpha, boolean monochrome, int packedLight, BlendMode blend) {
-        if (aspect == null || !aspect.isBound()) {
-            return;
-        }
-        RenderType renderType = billboardType(aspect.value().texture(), blend);
-        poseStack.pushPose();
-        poseStack.mulPose(Minecraft.getInstance().gameRenderer.getMainCamera().rotation());
-        drawScaledQuad(poseStack, buffers.getBuffer(renderType), scale, AspectTagRenderer.colorOf(aspect.value(), alpha, monochrome), packedLight);
-        poseStack.popPose();
-    }
-
-    public static void renderQuad(PoseStack poseStack, VertexConsumer buffer, Holder<IAspect> aspect, float alpha, boolean monochrome, int packedLight) {
-        renderQuad(poseStack.last(), buffer, aspect, alpha, monochrome, packedLight);
-    }
-
-    public static void renderQuad(PoseStack.Pose pose, VertexConsumer buffer, @Nullable Holder<IAspect> aspect, float alpha, boolean monochrome, int packedLight) {
-        if (aspect == null || !aspect.isBound()) {
-            return;
-        }
-        renderQuad(pose, buffer, AspectTagRenderer.colorOf(aspect.value(), alpha, monochrome), packedLight);
-    }
-
-    public static void renderQuad(PoseStack.Pose pose, VertexConsumer buffer, int color, int packedLight) {
-        for (float[] corner : QUAD_CORNERS) {
-            quadVertex(pose, buffer, corner, color, packedLight);
-        }
-    }
-
-    private static void drawScaledQuad(PoseStack poseStack, VertexConsumer buffer, float scale, int color, int packedLight) {
-        poseStack.pushPose();
-        poseStack.scale(scale, scale, scale);
-        renderQuad(poseStack.last(), buffer, color, packedLight);
-        poseStack.popPose();
-    }
-
-    private static void drawTag(PoseStack poseStack, MultiBufferSource.BufferSource buffers, Font font, AspectInstance entry, float scale, float alpha, Predicate<Holder<IAspect>> discovered, boolean showAmounts) {
-        Holder<IAspect> aspect = entry.aspect();
-        boolean known = discovered.test(aspect);
-        Identifier texture = known ? aspect.value().texture() : UNKNOWN_TEXTURE;
-        int color = AspectTagRenderer.colorOf(aspect.value(), known ? alpha : UNKNOWN_ALPHA, false);
-        drawScaledQuad(poseStack, buffers.getBuffer(TTFlatRenderTypes.entityTranslucentFlat(texture)), scale, color, LightCoordsUtil.FULL_BRIGHT);
-        if (showAmounts) {
-            drawAmount(poseStack, buffers, font, Integer.toString(entry.amount()), scale);
-        }
-    }
-
-    private static void drawAmount(PoseStack poseStack, MultiBufferSource.BufferSource buffers, Font font, String text, float scale) {
-        float pixel = TEXT_PIXEL * scale;
-        float width = font.width(text);
-        for (boolean shadow : SHADOW_THEN_FACE) {
-            float nudgeX = shadow ? pixel : 0.0F;
-            float nudgeY = shadow ? -pixel : 0.0F;
-            float lift = (shadow ? DARK_LIFT : WHITE_LIFT) * scale;
-            drawDigits(poseStack, buffers, font, text, width, AMOUNT_RIGHT * scale + nudgeX, -AMOUNT_TOP * scale + nudgeY, lift, pixel, shadow ? AMOUNT_SHADOW_COLOR : AMOUNT_COLOR);
-        }
-    }
-
-    private static void drawDigits(PoseStack poseStack, MultiBufferSource.BufferSource buffers, Font font, String text, float width, float right, float top, float lift, float pixel, int color) {
-        Matrix4f matrix = new Matrix4f(poseStack.last().pose()).translate(right, top, lift).scale(pixel, -pixel, pixel);
-        font.drawInBatch(text, -width, 0.0F, color, false, matrix, buffers, Font.DisplayMode.NORMAL, NO_BACKGROUND, LightCoordsUtil.FULL_BRIGHT);
-    }
-
-    private static void quadVertex(PoseStack.Pose pose, VertexConsumer buffer, float[] corner, int color, int light) {
-        buffer.addVertex(pose, corner[0], corner[1], 0.0F).setUv(corner[2], corner[3]).setColor(color).setNormal(pose, 0.0F, 0.0F, NORMAL_Z).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light);
     }
 }

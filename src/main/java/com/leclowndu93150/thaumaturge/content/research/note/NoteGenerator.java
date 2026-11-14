@@ -2,6 +2,8 @@ package com.leclowndu93150.thaumaturge.content.research.note;
 
 import com.leclowndu93150.thaumaturge.api.aspect.AspectInstance;
 import com.leclowndu93150.thaumaturge.api.aspect.AspectList;
+import com.leclowndu93150.thaumaturge.api.aspect.IAspect;
+import com.leclowndu93150.thaumaturge.api.aspect.TTAspects;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -10,7 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 
@@ -27,7 +29,7 @@ public final class NoteGenerator {
 
     private NoteGenerator() {}
 
-    public static ResearchNoteData generate(Identifier entry, int index, AspectList anchors, int complexity, RandomSource random) {
+    public static ResearchNoteData generate(ResourceLocation entry, int index, AspectList anchors, int complexity, RandomSource random) {
         int level = Mth.clamp(complexity, MIN_COMPLEXITY, MAX_COMPLEXITY);
         int radius = RADIUS_BASE + Math.min(MAX_COMPLEXITY, level);
         int color = primaryColor(anchors);
@@ -44,7 +46,12 @@ public final class NoteGenerator {
     }
 
     public static int primaryColor(AspectList anchors) {
-        return anchors.entries().stream().max(Comparator.comparingInt(AspectInstance::amount)).map(strongest -> strongest.aspect().value().color()).orElse(DEFAULT_COLOR);
+        return anchors.entries().stream().max(Comparator.comparingInt(AspectInstance::amount)).map(strongest -> colorOf(strongest.aspectId())).orElse(DEFAULT_COLOR);
+    }
+
+    private static int colorOf(ResourceLocation aspect) {
+        IAspect value = TTAspects.get(aspect);
+        return value == null ? DEFAULT_COLOR : value.color();
     }
 
     private static void placeRoots(Map<HexGrid.Hex, ResearchNoteData.Cell> grid, AspectList anchors, int radius, RandomSource random) {
@@ -57,7 +64,7 @@ public final class NoteGenerator {
     }
 
     private static ResearchNoteData.Cell rootAt(HexGrid.Hex spot, AspectInstance anchor) {
-        return new ResearchNoteData.Cell(spot, ResearchNoteData.TYPE_ROOT, Optional.of(anchor.aspect()));
+        return new ResearchNoteData.Cell(spot, ResearchNoteData.TYPE_ROOT, Optional.of(anchor.aspectId()));
     }
 
     private static void punchHoles(Map<HexGrid.Hex, ResearchNoteData.Cell> grid, int holes, RandomSource random) {

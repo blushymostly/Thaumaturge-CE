@@ -5,6 +5,9 @@
     "thaumaturge:unlock_alchemy",
     "thaumaturge:metallurgy@2"
   ],
+  "siblings": [
+    "thaumaturge:base_artifice"
+  ],
   "column": 2,
   "row": 4,
   "meta": [

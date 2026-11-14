@@ -1,0 +1,5 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [{ "tag": "forge:gems/quartz" }],
+  "result": { "item": "thaumaturge:nugget_quartz", "count": 9 }
+}

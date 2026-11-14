@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "thaumaturge:block/nitor",
+    "layer1": "thaumaturge:block/nitor_core"
+  }
+}

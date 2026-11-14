@@ -1,0 +1,8 @@
+{
+  "type": "thaumaturge:crucible",
+  "catalyst": { "item": "minecraft:dirt" },
+  "aspects": [
+    { "aspect": "thaumaturge:aqua", "amount": 5 }
+  ],
+  "result": { "item": "minecraft:clay_ball", "count": 1 }
+}

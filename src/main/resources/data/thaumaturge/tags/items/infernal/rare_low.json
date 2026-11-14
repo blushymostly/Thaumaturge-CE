@@ -1,0 +1,45 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "#forge:ores/tin",
+      "required": false
+    },
+    {
+      "id": "#forge:ores/lead",
+      "required": false
+    },
+    {
+      "id": "#forge:ores/iron",
+      "required": false
+    },
+    {
+      "id": "#forge:ores/coal",
+      "required": false
+    },
+    {
+      "id": "#forge:ores/copper",
+      "required": false
+    },
+    {
+      "id": "#forge:ores/lapis",
+      "required": false
+    },
+    {
+      "id": "#forge:ores/redstone",
+      "required": false
+    },
+    {
+      "id": "#forge:ores/quartz",
+      "required": false
+    },
+    {
+      "id": "#forge:raw_materials/iron",
+      "required": false
+    },
+    {
+      "id": "#forge:raw_materials/copper",
+      "required": false
+    }
+  ]
+}

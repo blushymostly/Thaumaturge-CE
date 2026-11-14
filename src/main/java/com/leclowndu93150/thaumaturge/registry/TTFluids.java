@@ -1,49 +1,43 @@
 package com.leclowndu93150.thaumaturge.registry;
 
 import com.leclowndu93150.thaumaturge.TTIds;
-import com.leclowndu93150.thaumaturge.content.alchemy.LiquidDeathFluid;
-import com.leclowndu93150.thaumaturge.content.spa.PurifyingFluid;
 import com.leclowndu93150.thaumaturge.content.taint.flux.FluxGooFluid;
-import net.minecraft.core.registries.Registries;
+import java.util.function.Consumer;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.LiquidBlock;
-import net.minecraft.world.level.material.Fluid;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.fluids.BaseFlowingFluid;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraft.world.level.material.FlowingFluid;
+import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fluids.FluidType;
+import net.minecraftforge.fluids.ForgeFlowingFluid;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
 
 public final class TTFluids {
-    public static final DeferredRegister<Fluid> FLUIDS = DeferredRegister.create(Registries.FLUID, TTIds.MODID);
-
-    public static final DeferredHolder<Fluid, FluxGooFluid.Source> FLUX_GOO_SOURCE = FLUIDS.register("flux_goo", () -> new FluxGooFluid.Source(props()));
-
-    public static final DeferredHolder<Fluid, FluxGooFluid.Flowing> FLUX_GOO_FLOWING = FLUIDS.register("flowing_flux_goo", () -> new FluxGooFluid.Flowing(props()));
-
-    public static final DeferredHolder<Fluid, PurifyingFluid.Source> PURIFYING_SOURCE = FLUIDS.register("purifying", () -> new PurifyingFluid.Source(purifyingProps()));
-
-    public static final DeferredHolder<Fluid, PurifyingFluid.Flowing> PURIFYING_FLOWING = FLUIDS.register("flowing_purifying", () -> new PurifyingFluid.Flowing(purifyingProps()));
-
-    public static final DeferredHolder<Fluid, LiquidDeathFluid.Source> LIQUID_DEATH_SOURCE = FLUIDS.register("liquid_death", () -> new LiquidDeathFluid.Source(liquidDeathProps()));
-
-    public static final DeferredHolder<Fluid, LiquidDeathFluid.Flowing> LIQUID_DEATH_FLOWING = FLUIDS.register("flowing_liquid_death", () -> new LiquidDeathFluid.Flowing(liquidDeathProps()));
-
-    private static BaseFlowingFluid.Properties liquidDeathProps() {
-        return new BaseFlowingFluid.Properties(TTFluidTypes.LIQUID_DEATH, LIQUID_DEATH_SOURCE, LIQUID_DEATH_FLOWING).block(() -> (LiquidBlock) TTBlocks.LIQUID_DEATH.get())
-                .bucket(TTItems.BUCKET_LIQUID_DEATH).levelDecreasePerBlock(2).tickRate(15);
-    }
-
-    private static BaseFlowingFluid.Properties purifyingProps() {
-        return new BaseFlowingFluid.Properties(TTFluidTypes.PURIFYING, PURIFYING_SOURCE, PURIFYING_FLOWING).block(() -> (LiquidBlock) TTBlocks.PURIFYING_FLUID.get()).bucket(TTItems.BUCKET_PURIFYING);
-    }
-
-    private static BaseFlowingFluid.Properties props() {
-        return new BaseFlowingFluid.Properties(TTFluidTypes.FLUX_GOO, FLUX_GOO_SOURCE, FLUX_GOO_FLOWING).block(() -> (LiquidBlock) TTBlocks.FLUX_GOO.get()).tickRate(30).levelDecreasePerBlock(2)
-                .slopeFindDistance(2).explosionResistance(100.0F);
-    }
+    private static final DeferredRegister<FluidType> TYPES = DeferredRegister.create(ForgeRegistries.Keys.FLUID_TYPES, TTIds.MODID);
+    private static final DeferredRegister<net.minecraft.world.level.material.Fluid> FLUIDS =
+            DeferredRegister.create(ForgeRegistries.FLUIDS, TTIds.MODID);
+    public static final RegistryObject<FluidType> GOO_TYPE = TYPES.register("flux_goo", () -> new FluidType(
+            FluidType.Properties.create().descriptionId("block.thaumaturge.flux_goo").density(1400).viscosity(2000)) {
+        @Override
+        public void initializeClient(Consumer<IClientFluidTypeExtensions> consumer) {
+            consumer.accept(new IClientFluidTypeExtensions() {
+                @Override public ResourceLocation getStillTexture() { return TTIds.rl("block/flux_goo"); }
+                @Override public ResourceLocation getFlowingTexture() { return getStillTexture(); }
+            });
+        }
+    });
+    public static final RegistryObject<FlowingFluid> GOO_SOURCE = FLUIDS.register("flux_goo", FluxGooFluid.Source::new);
+    public static final RegistryObject<FlowingFluid> GOO_FLOWING = FLUIDS.register("flowing_flux_goo", FluxGooFluid.Flowing::new);
+    public static final ForgeFlowingFluid.Properties GOO_PROPERTIES = new ForgeFlowingFluid.Properties(GOO_TYPE, GOO_SOURCE, GOO_FLOWING)
+            .block(() -> (LiquidBlock) TTBulkContent.BLOCKS.get("flux_goo").get())
+            .bucket(() -> TTBulkItems.ITEMS.get("flux_goo_bucket").get()).tickRate(10);
 
     private TTFluids() {}
 
-    public static void register(IEventBus modBus) {
-        FLUIDS.register(modBus);
+    public static void register(IEventBus bus) {
+        TYPES.register(bus);
+        FLUIDS.register(bus);
     }
 }

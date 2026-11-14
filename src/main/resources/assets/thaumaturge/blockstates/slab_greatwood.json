@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "thaumaturge:block/slab_greatwood"
+    },
+    "type=double": {
+      "model": "thaumaturge:block/plank_greatwood"
+    },
+    "type=top": {
+      "model": "thaumaturge:block/slab_greatwood_top"
+    }
+  }
+}

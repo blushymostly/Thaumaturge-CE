@@ -1,0 +1,16 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:recharge_pedestal",
+  "pattern": [" R ", "DID", "SSS"],
+  "key": {
+    "R": { "item": "thaumaturge:vis_resonator" },
+    "D": { "tag": "forge:gems/diamond" },
+    "I": { "tag": "forge:ingots/gold" },
+    "S": { "tag": "forge:stone" }
+  },
+  "result": { "item": "thaumaturge:recharge_pedestal", "count": 1 },
+  "vis": [
+    { "aspect": "thaumaturge:aer", "amount": 1 },
+    { "aspect": "thaumaturge:ordo", "amount": 1 }
+  ]
+}

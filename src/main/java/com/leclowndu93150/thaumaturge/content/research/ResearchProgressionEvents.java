@@ -1,289 +1,288 @@
 package com.leclowndu93150.thaumaturge.content.research;
 
 import com.leclowndu93150.thaumaturge.TTIds;
-import com.leclowndu93150.thaumaturge.api.capability.KnowledgeAccess;
-import com.leclowndu93150.thaumaturge.api.crucible.CrucibleEvent;
 import com.leclowndu93150.thaumaturge.config.ThaumaturgeCommonConfig;
+import com.leclowndu93150.thaumaturge.registry.TTAttachments;
 import com.leclowndu93150.thaumaturge.registry.TTItems;
 import java.util.List;
-import java.util.Optional;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.network.Filterable;
-import net.minecraft.stats.Stats;
 import net.minecraft.tags.BiomeTags;
-import net.minecraft.tags.TagKey;
 import net.minecraft.tags.DamageTypeTags;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.projectile.LlamaSpit;
-import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
-import net.minecraft.world.entity.projectile.hurtingprojectile.AbstractHurtingProjectile;
+import net.minecraftforge.event.entity.living.LivingDamageEvent;
+import com.leclowndu93150.thaumaturge.content.research.scan.DiscoveryScans;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.biome.Biome;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.common.util.FakePlayer;
-import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
-import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerWakeUpEvent;
-import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import org.jspecify.annotations.Nullable;
+import net.minecraftforge.common.util.FakePlayer;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.entity.player.PlayerWakeUpEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
-@EventBusSubscriber(modid = TTIds.MODID)
+/**
+ * Early progression: craft flags, crystal → dream journal → Salis Mundus path,
+ * plus auromancy altitude milestones (CE {@code checkAltitude} parity).
+ */
+@Mod.EventBusSubscriber(modid = TTIds.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class ResearchProgressionEvents {
-    private static final Identifier CRYSTALS = TTIds.rl("gotcrystals");
-    private static final Identifier DREAM = TTIds.rl("gotdream");
-    private static final Identifier BOOK = TTIds.rl("gotthaumonomicon");
-    private static final Identifier UNLOCK_AUROMANCY = TTIds.rl("unlock_auromancy");
-    private static final Identifier BASE_AUROMANCY = TTIds.rl("base_auromancy");
-    private static final Identifier FOCUS_PROJECTILE = TTIds.rl("focus_projectile");
-    private static final Identifier ON_FIRE = TTIds.rl("f_onfire");
-    private static final Identifier ARROW = TTIds.rl("f_arrow");
-    private static final Identifier FIREBALL = TTIds.rl("f_fireball");
-    private static final Identifier SPIT = TTIds.rl("f_spit");
-    private static final Identifier DEEP_DOWN = TTIds.rl("m_deepdown");
-    private static final Identifier UP_HIGH = TTIds.rl("m_uphigh");
-    private static final Identifier HELL_AND_BACK = TTIds.rl("m_hellandback");
-    private static final Identifier END_OF_THE_WORLD = TTIds.rl("m_endoftheworld");
-    private static final Identifier WALKER = TTIds.rl("m_walker");
-    private static final Identifier RUNNER = TTIds.rl("m_runner");
-    private static final Identifier JUMPER = TTIds.rl("m_jumper");
-    private static final Identifier SWIMMER = TTIds.rl("m_swimmer");
+    private static final ResourceLocation BOOK = TTIds.rl("gotthaumonomicon");
+    private static final ResourceLocation CRYSTALS = TTIds.rl("gotcrystals");
+    private static final ResourceLocation DREAM = TTIds.rl("gotdream");
+    private static final ResourceLocation UNLOCK_AUROMANCY = TTIds.rl("unlock_auromancy");
+    private static final ResourceLocation DEEP_DOWN = TTIds.rl("m_deepdown");
+    private static final ResourceLocation UP_HIGH = TTIds.rl("m_uphigh");
+    private static final ResourceLocation HELL_AND_BACK = TTIds.rl("m_hellandback");
 
     private static final String CRYSTALS_MESSAGE = "message.thaumaturge.discovery.crystals";
     private static final String DREAM_MESSAGE = "message.thaumaturge.discovery.dream";
-    private static final String ON_FIRE_MESSAGE = "message.thaumaturge.discovery.on_fire";
-    private static final String PROJECTILE_MESSAGE = "message.thaumaturge.discovery.projectile";
     private static final String DEEP_DOWN_MESSAGE = "message.thaumaturge.discovery.deep_down";
     private static final String UP_HIGH_MESSAGE = "message.thaumaturge.discovery.up_high";
     private static final String HELL_AND_BACK_MESSAGE = "message.thaumaturge.discovery.hell_and_back";
-    private static final String END_OF_THE_WORLD_MESSAGE = "message.thaumaturge.discovery.end_of_the_world";
+    private static final int BIOME_CHECK_INTERVAL = 200;
     private static final String BOOK_TITLE_KEY = "book.thaumaturge.start.title";
-    private static final List<String> BOOK_PAGE_KEYS = List.of("book.thaumaturge.start.1", "book.thaumaturge.start.2", "book.thaumaturge.start.3");
+    private static final List<String> BOOK_PAGE_KEYS = List.of(
+            "book.thaumaturge.start.1",
+            "book.thaumaturge.start.2",
+            "book.thaumaturge.start.3");
 
-    private static final int MILESTONE_INTERVAL_TICKS = 200;
+    /** CE ResearchProgressionEvents.DEEP_MARGIN_BLOCKS */
     private static final int DEEP_MARGIN_BLOCKS = 10;
+    /** CE ResearchProgressionEvents.HIGH_HEIGHT_FACTOR */
     private static final double HIGH_HEIGHT_FACTOR = 0.4;
-    private static final int WALK_CENTIMETRES = 160000;
-    private static final int RUN_CENTIMETRES = 80000;
-    private static final int JUMP_COUNT = 500;
-    private static final int SWIM_CENTIMETRES = 8000;
-    private static final int MINIMUM_STAGE = 1;
 
-    private static final List<ProjectileRule> PROJECTILE_RULES = List.of(new ProjectileRule(AbstractArrow.class, ARROW), new ProjectileRule(AbstractHurtingProjectile.class, FIREBALL),
-            new ProjectileRule(LlamaSpit.class, SPIT));
+    private static final ResourceLocation[] EARLY_CRAFTS = {
+            TTItems.SALIS_MUNDUS.getId(),
+            TTItems.THAUMOMETER.getId(),
+            TTItems.THAUMONOMICON.getId(),
+            TTItems.ARCANE_WORKBENCH.getId(),
+            TTItems.CRUCIBLE.getId(),
+            TTItems.RESEARCH_TABLE.getId(),
+            TTItems.PHIAL.getId()
+    };
+
+    /** Unlock → base pairs so old saves get category openers / base_* after Wave 5 sibling fix. */
+    private static final ResourceLocation[][] UNLOCK_BASE_PAIRS = {
+            { TTIds.rl("unlock_alchemy"), TTIds.rl("base_alchemy") },
+            { TTIds.rl("unlock_artifice"), TTIds.rl("base_artifice") },
+            { TTIds.rl("unlock_infusion"), TTIds.rl("base_infusion") },
+            { TTIds.rl("unlock_golemancy"), TTIds.rl("base_golemancy") },
+            { TTIds.rl("unlock_eldritch"), TTIds.rl("base_eldritch") }
+    };
 
     private ResearchProgressionEvents() {}
 
-    private static final List<BiomeMilestone> BIOME_MILESTONES = List.of(new BiomeMilestone(BiomeTags.IS_NETHER, HELL_AND_BACK, HELL_AND_BACK_MESSAGE),
-            new BiomeMilestone(BiomeTags.IS_END, END_OF_THE_WORLD, END_OF_THE_WORLD_MESSAGE));
-
-    private static final List<StatMilestone> STAT_MILESTONES = List.of(new StatMilestone(WALKER, Stats.WALK_ONE_CM, WALK_CENTIMETRES), new StatMilestone(RUNNER, Stats.SPRINT_ONE_CM, RUN_CENTIMETRES),
-            new StatMilestone(JUMPER, Stats.JUMP, JUMP_COUNT), new StatMilestone(SWIMMER, Stats.SWIM_ONE_CM, SWIM_CENTIMETRES));
-
-    private record ProjectileRule(Class<? extends Entity> type, Identifier research) {
-    }
-
-    private record StatMilestone(Identifier research, Identifier stat, int threshold) {
-    }
-
-    private record BiomeMilestone(TagKey<Biome> biomes, Identifier research, String messageKey) {
+    public static void bookOpened(Player player) {
+        if (player instanceof ServerPlayer serverPlayer && !serverPlayer.level().isClientSide) {
+            PlayerKnowledge knowledge = TTAttachments.knowledge(serverPlayer);
+            backfillCategoryBases(serverPlayer, knowledge);
+            if (ResearchManager.complete(serverPlayer, BOOK)) {
+                return;
+            }
+            if (!knowledge.isComplete(BOOK)) {
+                knowledge.startResearch(BOOK);
+                knowledge.markResearchComplete(BOOK, 1);
+                TTAttachments.syncKnowledge(serverPlayer);
+            }
+        }
     }
 
     @SubscribeEvent
-    public static void onCrucibleCraft(CrucibleEvent.Crafted event) {
-        serverPlayer(event.getPlayer()).ifPresent(player -> recordCrafted(player, event.getResult()));
+    public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || player instanceof FakePlayer) {
+            return;
+        }
+        backfillCategoryBases(player, TTAttachments.knowledge(player));
+        DiscoveryScans.restoreKnownScans(player);
+    }
+
+    /** If an unlock_* is complete but its base_* sibling was never granted (pre-Wave-5 saves), grant it now. */
+    private static void backfillCategoryBases(ServerPlayer player, PlayerKnowledge knowledge) {
+        boolean changed = false;
+        for (ResourceLocation[] pair : UNLOCK_BASE_PAIRS) {
+            if (knowledge.isComplete(pair[0]) && !knowledge.isComplete(pair[1])) {
+                if (ResearchManager.complete(player, pair[1])) {
+                    changed = true;
+                }
+            }
+        }
+        if (changed) {
+            TTAttachments.syncKnowledge(player);
+        }
     }
 
     @SubscribeEvent
     public static void onItemCrafted(PlayerEvent.ItemCraftedEvent event) {
-        serverPlayer(event.getEntity()).ifPresent(player -> recordCrafted(player, event.getCrafting()));
-    }
-
-    public static void recordCrafted(ServerPlayer player, ItemStack stack) {
-        if (stack.isEmpty() || !CraftReferenceHolder.isReference(player.registryAccess(), stack.getItem())) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || player instanceof FakePlayer) {
             return;
         }
-        Optional<Identifier> craftedKey = BuiltInRegistries.ITEM.getResourceKey(stack.getItem()).map(ResourceKey::identifier).map(ResearchManager::craftedKey);
-        PlayerKnowledge knowledge = knowledgeOf(player);
-        craftedKey.filter(key -> !knowledge.isResearchKnown(key)).ifPresent(key -> {
-            knowledge.addResearch(key);
-            knowledge.sync(player);
-        });
+        recordCrafted(player, event.getCrafting());
     }
 
+    /** CE also credits craft flags when the result is picked up (e.g. crucible eject). */
     @SubscribeEvent
-    public static void onItemPickup(ItemEntityPickupEvent.Post event) {
-        ItemStack stack = event.getOriginalStack();
-        Optional<ServerPlayer> picker = serverPlayer(event.getPlayer());
-        picker.ifPresent(player -> recordCrafted(player, stack));
-        picker.filter(player -> stack.is(TTItems.THAUMONOMICON)).ifPresent(player -> awardIfNew(player, knowledgeOf(player), BOOK));
-        picker.filter(player -> stack.is(TTItems.ESSENTIA_CRYSTAL)).ifPresent(ResearchProgressionEvents::crystalPickup);
-    }
-
-    public static void bookOpened(Entity reader) {
-        serverPlayer(reader).filter(player -> !(player instanceof FakePlayer)).ifPresent(player -> awardIfNew(player, knowledgeOf(player), BOOK));
-    }
-
-    private static boolean dreamUnlocked(ServerPlayer player) {
-        PlayerKnowledge knowledge = knowledgeOf(player);
-        return knowledge.isResearchKnown(CRYSTALS) && !knowledge.isResearchKnown(DREAM);
-    }
-
-    private static void crystalPickup(ServerPlayer player) {
-        PlayerKnowledge knowledge = knowledgeOf(player);
-        if (awardIfNew(player, knowledge, CRYSTALS)) {
-            tell(player, CRYSTALS_MESSAGE);
+    public static void onItemPickup(PlayerEvent.ItemPickupEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || player instanceof FakePlayer) {
+            return;
         }
-        Optional.of(player).filter(online -> ThaumaturgeCommonConfig.NO_SLEEP.get() && !knowledgeOf(online).isResearchKnown(DREAM)).ifPresent(ResearchProgressionEvents::grantDreamJournal);
+        ItemStack stack = event.getStack();
+        recordCrafted(player, stack);
+        if (stack.is(TTItems.THAUMONOMICON.get())) {
+            ResearchManager.complete(player, BOOK);
+        }
+        if (stack.is(TTItems.ESSENTIA_CRYSTAL.get())) {
+            crystalPickup(player);
+        }
     }
 
     @SubscribeEvent
     public static void onWakeUp(PlayerWakeUpEvent event) {
-        serverPlayer(event.getEntity()).filter(ResearchProgressionEvents::dreamUnlocked).ifPresent(ResearchProgressionEvents::grantDreamJournal);
-    }
-
-    @SubscribeEvent
-    public static void onFireDamage(LivingDamageEvent.Post event) {
-        Optional<ServerPlayer> victim = serverPlayer(event.getEntity()).filter(player -> event.getSource().is(DamageTypeTags.IS_FIRE));
-        victim.filter(player -> reached(knowledgeOf(player), BASE_AUROMANCY)).ifPresent(player -> discover(player, knowledgeOf(player), ON_FIRE, ON_FIRE_MESSAGE));
-    }
-
-    @SubscribeEvent
-    public static void onProjectileDamage(LivingDamageEvent.Post event) {
-        Optional<Identifier> research = Optional.ofNullable(projectileResearch(event.getSource()));
-        Optional<ServerPlayer> victim = serverPlayer(event.getEntity()).filter(player -> reached(knowledgeOf(player), FOCUS_PROJECTILE));
-        victim.ifPresent(player -> research.ifPresent(id -> discover(player, knowledgeOf(player), id, PROJECTILE_MESSAGE)));
-    }
-
-    @SubscribeEvent
-    public static void onPlayerTick(PlayerTickEvent.Post event) {
-        Optional<ServerPlayer> online = serverPlayer(event.getEntity()).filter(player -> player.tickCount != 0);
-        if (online.isEmpty()) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || player instanceof FakePlayer) {
             return;
         }
-        ServerPlayer player = online.get();
-        PlayerKnowledge knowledge = knowledgeOf(player);
-        boolean auromancyPending = knowledge.isResearchKnown(UNLOCK_AUROMANCY) && !reached(knowledge, UNLOCK_AUROMANCY) && !knowledge.isResearchComplete(UNLOCK_AUROMANCY);
+        if (dreamUnlocked(player)) {
+            grantDreamJournal(player);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onDamage(LivingDamageEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || event.getAmount() <= 0) {
+            return;
+        }
+        PlayerKnowledge knowledge = TTAttachments.knowledge(player);
+        if (knowledge.isKnown(TTIds.rl("base_auromancy")) && event.getSource().is(DamageTypeTags.IS_FIRE)) {
+            ResearchManager.progressResearch(player, TTIds.rl("f_onfire"));
+        }
+        if (knowledge.isKnown(TTIds.rl("focus_projectile")) && event.getSource().getDirectEntity() != null) {
+            var type = BuiltInRegistries.ENTITY_TYPE.getKey(event.getSource().getDirectEntity().getType());
+            String flag = switch (type.getPath()) {
+                case "arrow", "spectral_arrow", "trident" -> "f_arrow";
+                case "fireball", "small_fireball", "dragon_fireball", "wither_skull" -> "f_fireball";
+                case "llama_spit" -> "f_spit";
+                default -> null;
+            };
+            if (flag != null) {
+                ResearchManager.progressResearch(player, TTIds.rl(flag));
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer player) || player instanceof FakePlayer) {
+            return;
+        }
+        PlayerKnowledge knowledge = TTAttachments.knowledge(player);
+        boolean auromancyPending = knowledge.isKnown(UNLOCK_AUROMANCY) && !knowledge.isComplete(UNLOCK_AUROMANCY);
         if (auromancyPending) {
             checkAltitude(player, knowledge);
         }
-        if (player.tickCount % MILESTONE_INTERVAL_TICKS == 0) {
-            checkBiome(player, knowledge);
-            checkStatistics(player, knowledge);
+        if (player.tickCount % BIOME_CHECK_INTERVAL == 0) {
+            checkBiomes(player, knowledge);
+            com.leclowndu93150.thaumaturge.content.taint.FluxDiscovery.check(player);
         }
     }
 
     private static void checkAltitude(ServerPlayer player, PlayerKnowledge knowledge) {
         Level level = player.level();
         double y = player.getY();
-        if (y < level.getMinY() + DEEP_MARGIN_BLOCKS) {
+        if (y < level.getMinBuildHeight() + DEEP_MARGIN_BLOCKS) {
             discover(player, knowledge, DEEP_DOWN, DEEP_DOWN_MESSAGE);
         }
-        if (y > level.getMaxY() * HIGH_HEIGHT_FACTOR) {
+        if (y > level.getMaxBuildHeight() * HIGH_HEIGHT_FACTOR) {
             discover(player, knowledge, UP_HIGH, UP_HIGH_MESSAGE);
         }
     }
 
-    private static void checkBiome(ServerPlayer player, PlayerKnowledge knowledge) {
-        BlockPos feet = player.blockPosition();
-        Level level = player.level();
-        Optional<Holder<Biome>> biome = level.hasChunkAt(feet) ? Optional.of(level.getBiome(feet)) : Optional.empty();
-        for (BiomeMilestone milestone : BIOME_MILESTONES) {
-            biome.filter(holder -> holder.is(milestone.biomes())).ifPresent(holder -> discover(player, knowledge, milestone.research(), milestone.messageKey()));
+    private static void checkBiomes(ServerPlayer player, PlayerKnowledge knowledge) {
+        if (player.level().getBiome(player.blockPosition()).is(BiomeTags.IS_NETHER)) {
+            discover(player, knowledge, HELL_AND_BACK, HELL_AND_BACK_MESSAGE);
         }
     }
 
-    private static void checkStatistics(ServerPlayer player, PlayerKnowledge knowledge) {
-        for (StatMilestone milestone : STAT_MILESTONES) {
-            if (player.getStats().getValue(Stats.CUSTOM, milestone.stat()) > milestone.threshold()) {
-                awardIfNew(player, knowledge, milestone.research());
+    private static void discover(ServerPlayer player, PlayerKnowledge knowledge, ResourceLocation research, String messageKey) {
+        if (knowledge.isComplete(research)) {
+            return;
+        }
+        if (ResearchManager.progressResearch(player, research)) {
+            player.displayClientMessage(Component.translatable(messageKey).withStyle(ChatFormatting.DARK_PURPLE), true);
+        }
+    }
+
+    /** Records a crafted stack toward research progress; shared by vanilla crafting, crucible, and dust crafting. */
+    public static void recordCrafted(ServerPlayer player, ItemStack stack) {
+        if (stack.isEmpty()) {
+            return;
+        }
+        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        ResourceLocation crafted = ResearchManager.craftedKey(itemId);
+        PlayerKnowledge knowledge = TTAttachments.knowledge(player);
+        if (knowledge.complete(crafted)) {
+            TTAttachments.syncKnowledge(player);
+        }
+        for (ResourceLocation early : EARLY_CRAFTS) {
+            if (early.equals(itemId)) {
+                ResearchManager.advanceStage(player, TTIds.rl("first_steps"));
+                break;
             }
         }
+        ResearchManager.advanceStage(player, TTIds.rl("unlock_alchemy"));
+        ResearchManager.advanceStage(player, TTIds.rl("base_alchemy"));
+        ResearchManager.advanceStage(player, UNLOCK_AUROMANCY);
+        ResearchManager.advanceStage(player, TTIds.rl("base_auromancy"));
     }
 
-    private static @Nullable Identifier projectileResearch(DamageSource source) {
-        Entity direct = source.getDirectEntity();
-        return PROJECTILE_RULES.stream().filter(rule -> rule.type().isInstance(direct)).map(ProjectileRule::research).findFirst().orElse(null);
-    }
-
-    private static void tell(ServerPlayer player, String key) {
-        player.sendSystemMessage(Component.translatable(key).withStyle(ChatFormatting.DARK_PURPLE));
-    }
-
-    private static Optional<ServerPlayer> serverPlayer(@Nullable Entity entity) {
-        return entity instanceof ServerPlayer player ? Optional.of(player) : Optional.empty();
-    }
-
-    private static PlayerKnowledge knowledgeOf(ServerPlayer player) {
-        return (PlayerKnowledge) KnowledgeAccess.of(player);
-    }
-
-    private static boolean reached(PlayerKnowledge knowledge, Identifier research) {
-        return knowledge.isResearchKnown(research, MINIMUM_STAGE) || knowledge.isResearchComplete(research);
-    }
-
-    private static boolean awardIfNew(ServerPlayer player, PlayerKnowledge knowledge, Identifier research) {
-        if (knowledge.isResearchKnown(research)) {
-            return false;
+    private static void crystalPickup(ServerPlayer player) {
+        if (awardIfNew(player, CRYSTALS)) {
+            tell(player, CRYSTALS_MESSAGE);
         }
-        award(player, knowledge, research);
-        return true;
-    }
-
-    private static void discover(ServerPlayer player, PlayerKnowledge knowledge, Identifier research, String messageKey) {
-        if (awardIfNew(player, knowledge, research)) {
-            actionBar(player, messageKey);
+        if (ThaumaturgeCommonConfig.NO_SLEEP.get() && dreamUnlocked(player)) {
+            grantDreamJournal(player);
         }
     }
 
-    private static void award(ServerPlayer player, PlayerKnowledge knowledge, Identifier research) {
-        knowledge.addResearch(research);
-        knowledge.markComplete(research);
-        knowledge.sync(player);
+    private static boolean dreamUnlocked(ServerPlayer player) {
+        PlayerKnowledge knowledge = TTAttachments.knowledge(player);
+        return knowledge.isKnown(CRYSTALS) && !knowledge.isKnown(DREAM);
     }
 
-    private static void actionBar(ServerPlayer player, String key) {
-        player.sendOverlayMessage(Component.translatable(key).withStyle(ChatFormatting.DARK_PURPLE));
-    }
-
-    private static Filterable<Component> page(String key) {
-        Component text = Component.translatable(key);
-        return Filterable.passThrough(text);
+    private static void grantDreamJournal(ServerPlayer player) {
+        ResearchManager.complete(player, DREAM);
+        ItemStack book = writeDreamBook(player);
+        if (!player.getInventory().add(book)) {
+            player.drop(book, false);
+        }
+        tell(player, DREAM_MESSAGE);
     }
 
     private static ItemStack writeDreamBook(ServerPlayer player) {
         ItemStack book = new ItemStack(Items.WRITTEN_BOOK);
-        WrittenBookContent content = dreamContent(player);
-        book.set(DataComponents.WRITTEN_BOOK_CONTENT, content);
+        book.getOrCreateTag().putString("title", Component.translatable(BOOK_TITLE_KEY).getString());
+        book.getOrCreateTag().putString("author", player.getGameProfile().getName());
+        ListTag pages = new ListTag();
+        for (String key : BOOK_PAGE_KEYS) {
+            pages.add(StringTag.valueOf(Component.Serializer.toJson(Component.translatable(key))));
+        }
+        book.getOrCreateTag().put("pages", pages);
         return book;
     }
 
-    private static WrittenBookContent dreamContent(ServerPlayer player) {
-        List<Filterable<Component>> pages = BOOK_PAGE_KEYS.stream().map(ResearchProgressionEvents::page).toList();
-        Filterable<String> title = Filterable.passThrough(Component.translatable(BOOK_TITLE_KEY).getString());
-        return new WrittenBookContent(title, player.getDisplayName().getString(), WrittenBookContent.MAX_GENERATION, pages, false);
+    private static boolean awardIfNew(ServerPlayer player, ResourceLocation research) {
+        if (TTAttachments.knowledge(player).isKnown(research)) {
+            return false;
+        }
+        return ResearchManager.complete(player, research);
     }
 
-    private static void grantDreamJournal(ServerPlayer player) {
-        award(player, knowledgeOf(player), DREAM);
-        ItemStack book = writeDreamBook(player);
-        boolean stored = player.getInventory().add(book);
-        if (!stored) {
-            player.drop(book, false);
-        }
-        tell(player, DREAM_MESSAGE);
+    private static void tell(ServerPlayer player, String key) {
+        player.sendSystemMessage(Component.translatable(key).withStyle(ChatFormatting.DARK_PURPLE));
     }
 }

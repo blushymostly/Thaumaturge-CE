@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:blasting",
+  "category": "misc",
+  "group": "quicksilver",
+  "ingredient": {
+    "item": "thaumaturge:cluster_cinnabar"
+  },
+  "result": {
+    "item": "thaumaturge:quicksilver",
+    "count": 2
+  },
+  "experience": 1,
+  "cookingtime": 100
+}

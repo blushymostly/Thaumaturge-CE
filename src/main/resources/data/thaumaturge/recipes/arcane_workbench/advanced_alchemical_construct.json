@@ -1,0 +1,39 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:essentia_smelter_void@0",
+  "pattern": [
+    "VAV",
+    "APA",
+    "VAV"
+  ],
+  "key": {
+    "V": {
+      "item": "thaumaturge:ingot_void"
+    },
+    "A": {
+      "item": "thaumaturge:alchemical_construct"
+    },
+    "P": {
+      "item": "thaumaturge:primordial_pearl"
+    }
+  },
+  "vis": 50,
+  "crystals": [
+    {
+      "aspect": "thaumaturge:aqua",
+      "amount": 10
+    },
+    {
+      "aspect": "thaumaturge:ordo",
+      "amount": 30
+    },
+    {
+      "aspect": "thaumaturge:terra",
+      "amount": 10
+    }
+  ],
+  "result": {
+    "item": "thaumaturge:advanced_alchemical_construct",
+    "count": 4
+  }
+}

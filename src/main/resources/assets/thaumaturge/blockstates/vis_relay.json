@@ -1,0 +1,30 @@
+{
+  "variants": {
+    "facing=up": {
+      "model": "thaumaturge:block/vis_relay"
+    },
+    "facing=down": {
+      "model": "thaumaturge:block/vis_relay",
+      "x": 180
+    },
+    "facing=north": {
+      "model": "thaumaturge:block/vis_relay",
+      "x": 90
+    },
+    "facing=east": {
+      "model": "thaumaturge:block/vis_relay",
+      "x": 90,
+      "y": 90
+    },
+    "facing=south": {
+      "model": "thaumaturge:block/vis_relay",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west": {
+      "model": "thaumaturge:block/vis_relay",
+      "x": 90,
+      "y": 270
+    }
+  }
+}

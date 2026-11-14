@@ -1,0 +1,4 @@
+{
+  "values": [ "#minecraft:is_forest" ],
+  "remove": [ "minecraft:grove" ]
+}

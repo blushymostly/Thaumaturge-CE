@@ -1,0 +1,15 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:base_artifice",
+  "pattern": [" M ", "TQT", " M "],
+  "key": {
+    "T": { "item": "thaumaturge:plate_thaumium" },
+    "Q": { "item": "minecraft:piston" },
+    "M": { "item": "thaumaturge:mechanism_simple" }
+  },
+  "result": { "item": "thaumaturge:mechanism_complex", "count": 1 },
+  "vis": [
+    { "aspect": "thaumaturge:ignis", "amount": 1 },
+    { "aspect": "thaumaturge:aqua", "amount": 1 }
+  ]
+}

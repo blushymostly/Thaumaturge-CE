@@ -1,0 +1,26 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:first_steps@1",
+  "pattern": [
+    " G ",
+    "GPG",
+    " G "
+  ],
+  "key": {
+    "G": { "tag": "forge:ingots/gold" },
+    "P": { "tag": "forge:glass_panes" }
+  },
+  "result": {
+    "item": "thaumaturge:thaumometer",
+    "count": 1
+  },
+  "vis": 20,
+  "crystals": [
+    { "aspect": "thaumaturge:aer", "amount": 1 },
+    { "aspect": "thaumaturge:ignis", "amount": 1 },
+    { "aspect": "thaumaturge:aqua", "amount": 1 },
+    { "aspect": "thaumaturge:terra", "amount": 1 },
+    { "aspect": "thaumaturge:ordo", "amount": 1 },
+    { "aspect": "thaumaturge:perditio", "amount": 1 }
+  ]
+}

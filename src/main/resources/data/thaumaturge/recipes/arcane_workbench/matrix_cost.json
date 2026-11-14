@@ -1,0 +1,38 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:infusion_boost",
+  "pattern": [
+    "SAS",
+    "AGA",
+    "SAS"
+  ],
+  "key": {
+    "S": {
+      "item": "thaumaturge:arcane_stone"
+    },
+    "A": {
+      "item": "thaumaturge:alumentum"
+    },
+    "G": {
+      "item": "minecraft:diamond_block"
+    }
+  },
+  "vis": 500,
+  "crystals": [
+    {
+      "aspect": "thaumaturge:aer",
+      "amount": 1
+    },
+    {
+      "aspect": "thaumaturge:aqua",
+      "amount": 1
+    },
+    {
+      "aspect": "thaumaturge:perditio",
+      "amount": 1
+    }
+  ],
+  "result": {
+    "item": "thaumaturge:matrix_cost"
+  }
+}

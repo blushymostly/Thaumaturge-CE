@@ -1,0 +1,4 @@
+{
+  "values": [ "#minecraft:is_forest", { "id": "thaumaturge:magical_forest", "required": false }, { "id": "thaumaturge:tainted_lands", "required": false } ],
+  "remove": [ "minecraft:grove" ]
+}

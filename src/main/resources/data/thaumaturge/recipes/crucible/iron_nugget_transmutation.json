@@ -1,0 +1,17 @@
+{
+  "type": "thaumaturge:crucible",
+  "research": "thaumaturge:metal_purification@2",
+  "catalyst": {
+    "tag": "forge:nuggets/iron"
+  },
+  "aspects": [
+    {
+      "aspect": "thaumaturge:metallum",
+      "amount": 2
+    }
+  ],
+  "result": {
+    "item": "minecraft:iron_nugget",
+    "count": 3
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["###", "###", "###"],
+  "key": {
+    "#": { "item": "thaumaturge:ingot_thaumium" }
+  },
+  "result": { "item": "thaumaturge:metal_thaumium", "count": 1 }
+}

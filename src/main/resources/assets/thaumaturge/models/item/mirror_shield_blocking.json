@@ -1,5 +1,5 @@
 {
-  "parent": "thaumaturge:item/mirror_shield",
+  "parent": "thaumaturge:item/shield_geometry",
   "display": {
     "thirdperson_righthand": {
       "rotation": [
@@ -86,5 +86,9 @@
         0.65
       ]
     }
+  },
+  "textures": {
+    "shield": "thaumaturge:item/mirror_shield",
+    "particle": "thaumaturge:item/mirror_shield"
   }
 }

@@ -4,15 +4,17 @@ import com.leclowndu93150.thaumaturge.TTIds;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
 
+/** Forge port of CE ResearchTableTop (parchment stack on the desk). */
 public final class ResearchTableTop {
-    private static final Identifier PARCHMENT_TEXTURE = TTIds.rl("textures/misc/parchment.png");
-    private static final int WHITE = 0xFFFFFFFF;
+    private static final ResourceLocation PARCHMENT_TEXTURE = TTIds.rl("textures/misc/parchment.png");
     private static final float CENTER = 0.5F;
     private static final float FRAME_HEIGHT = 1.0F;
     private static final float HALF_TURN = 180.0F;
@@ -25,8 +27,6 @@ public final class ResearchTableTop {
     private static final float SHEET_STEP = 0.013F;
     private static final float[] SHEET_TILTS = {-6.0F, 8.0F, 14.0F, -3.0F, 11.0F};
     private static final float LAY_FLAT = -90.0F;
-    private static final float SHEET_CENTER_X = SHEET_X + SHEET_WIDTH / 2.0F;
-    private static final float SHEET_CENTER_Z = SHEET_Z - SHEET_LENGTH / 2.0F;
 
     private ResearchTableTop() {}
 
@@ -37,36 +37,32 @@ public final class ResearchTableTop {
         poseStack.mulPose(Axis.XP.rotationDegrees(HALF_TURN));
     }
 
-    public static void turnSheetsAround(PoseStack poseStack) {
-        poseStack.translate(SHEET_CENTER_X, 0.0F, SHEET_CENTER_Z);
-        poseStack.mulPose(Axis.YP.rotationDegrees(HALF_TURN));
-        poseStack.translate(-SHEET_CENTER_X, 0.0F, -SHEET_CENTER_Z);
-    }
-
-    public static void submitSheets(PoseStack poseStack, SubmitNodeCollector collector, int light) {
+    public static void submitSheets(PoseStack poseStack, MultiBufferSource buffers, int light) {
+        VertexConsumer buffer = buffers.getBuffer(RenderType.entityTranslucent(PARCHMENT_TEXTURE));
         for (int sheet = 0; sheet < SHEET_TILTS.length; sheet++) {
-            submitSheet(poseStack, collector, SHEET_BASE_HEIGHT + sheet * SHEET_STEP, SHEET_TILTS[sheet], light);
+            submitSheet(poseStack, buffer, SHEET_BASE_HEIGHT + sheet * SHEET_STEP, SHEET_TILTS[sheet], light);
         }
     }
 
-    static void vertex(PoseStack.Pose pose, VertexConsumer buffer, float x, float y, float z, float u, float v, float nx, float ny, float nz, int light) {
-        buffer.addVertex(pose, x, y, z).setColor(WHITE).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, nx, ny, nz);
+    public static void vertex(PoseStack.Pose pose, VertexConsumer buffer, float x, float y, float z, float u, float v,
+            float nx, float ny, float nz, int light) {
+        Matrix4f matrix = pose.pose();
+        Matrix3f normal = pose.normal();
+        buffer.vertex(matrix, x, y, z).color(1.0F, 1.0F, 1.0F, 1.0F).uv(u, v).overlayCoords(OverlayTexture.NO_OVERLAY)
+                .uv2(light).normal(normal, nx, ny, nz).endVertex();
     }
 
-    private static void submitSheet(PoseStack poseStack, SubmitNodeCollector collector, float heightAboveBase, float tilt, int light) {
+    private static void submitSheet(PoseStack poseStack, VertexConsumer buffer, float heightAboveBase, float tilt, int light) {
         poseStack.pushPose();
         poseStack.translate(SHEET_X, FRAME_HEIGHT - heightAboveBase, SHEET_Z);
         poseStack.mulPose(Axis.YP.rotationDegrees(tilt));
         poseStack.mulPose(Axis.XP.rotationDegrees(LAY_FLAT));
         poseStack.scale(SHEET_WIDTH, SHEET_LENGTH, 1.0F);
-        collector.submitCustomGeometry(poseStack, RenderTypes.entityTranslucent(PARCHMENT_TEXTURE), (pose, buffer) -> sheet(pose, buffer, light));
-        poseStack.popPose();
-    }
-
-    private static void sheet(PoseStack.Pose pose, VertexConsumer buffer, int light) {
+        PoseStack.Pose pose = poseStack.last();
         vertex(pose, buffer, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F, -1.0F, light);
         vertex(pose, buffer, 1.0F, 1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, -1.0F, light);
         vertex(pose, buffer, 1.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 0.0F, -1.0F, light);
         vertex(pose, buffer, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -1.0F, light);
+        poseStack.popPose();
     }
 }

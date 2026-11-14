@@ -1,75 +1,54 @@
 package com.leclowndu93150.thaumaturge.content.item;
 
-import com.leclowndu93150.thaumaturge.api.aspect.Aspects;
-import com.leclowndu93150.thaumaturge.api.aspect.IAspect;
 import com.leclowndu93150.thaumaturge.api.aspect.TTAspects;
 import com.leclowndu93150.thaumaturge.content.research.pool.AspectPools;
-import com.leclowndu93150.thaumaturge.registry.TTDataComponents;
-import com.leclowndu93150.thaumaturge.registry.TTItems;
 import java.util.List;
-import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 
 public final class CelestialNotesItem extends Item {
     private static final int STUDY_POINTS = 2;
 
-    public CelestialNotesItem(Item.Properties properties) {
+    public enum Kind {
+        SUN(List.of(TTAspects.LUX, TTAspects.IGNIS)),
+        MOON(List.of(TTAspects.LUX, TTAspects.TENEBRAE)),
+        STARS(List.of(TTAspects.LUX, TTAspects.VACUOS, TTAspects.ALIENIS));
+
+        private final List<ResourceLocation> aspects;
+
+        Kind(List<ResourceLocation> aspects) {
+            this.aspects = aspects;
+        }
+    }
+
+    private final Kind kind;
+
+    public CelestialNotesItem(Properties properties, Kind kind) {
         super(properties);
-    }
-
-    public static ItemStack stackOf(CelestialBody body) {
-        ItemStack stack = new ItemStack(TTItems.CELESTIAL_NOTES.get());
-        stack.set(TTDataComponents.CELESTIAL_BODY.get(), body);
-        return stack;
-    }
-
-    public static CelestialBody bodyOf(ItemStack stack) {
-        return stack.getOrDefault(TTDataComponents.CELESTIAL_BODY.get(), CelestialBody.SUN);
+        this.kind = kind;
     }
 
     @Override
-    public InteractionResult use(Level level, Player player, InteractionHand hand) {
-        if (player instanceof ServerPlayer serverPlayer) {
-            ItemStack stack = player.getItemInHand(hand);
-            for (ResourceKey<IAspect> key : aspectsFor(bodyOf(stack))) {
-                Holder<IAspect> holder = Aspects.resolve(serverPlayer.registryAccess(), key);
-                if (holder != null) {
-                    AspectPools.grant(serverPlayer, holder, STUDY_POINTS);
-                }
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+        if (player instanceof ServerPlayer server) {
+            for (ResourceLocation aspect : kind.aspects) {
+                AspectPools.grant(server, aspect, STUDY_POINTS);
             }
-            serverPlayer.sendSystemMessage(Component.translatable("message.thaumaturge.celestial.studied").withStyle(ChatFormatting.DARK_PURPLE));
+            server.sendSystemMessage(Component.translatable("message.thaumaturge.celestial.studied")
+                    .withStyle(ChatFormatting.DARK_PURPLE));
             if (!player.getAbilities().instabuild) {
                 stack.shrink(1);
             }
         }
-        return InteractionResult.SUCCESS;
-    }
-
-    private static List<ResourceKey<IAspect>> aspectsFor(CelestialBody body) {
-        String name = body.getSerializedName();
-        if (name.startsWith("moon")) {
-            return List.of(TTAspects.LUX, TTAspects.TENEBRAE);
-        }
-        if (name.startsWith("stars")) {
-            return List.of(TTAspects.LUX, TTAspects.VACUOS, TTAspects.ALIENIS);
-        }
-        return List.of(TTAspects.LUX, TTAspects.IGNIS);
-    }
-
-    @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flag) {
-        tooltip.accept(Component.translatable("item.thaumaturge.celestial_notes." + bodyOf(stack).getSerializedName() + ".text").withStyle(ChatFormatting.AQUA));
+        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
     }
 }

@@ -1,0 +1,87 @@
+{
+  "parent": "minecraft:block/block",
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "particle": "minecraft:block/deepslate",
+    "base": "minecraft:block/deepslate",
+    "ore": "thaumaturge:block/ore_cinnabar_overlay"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#base",
+          "cullface": "north"
+        },
+        "east": {
+          "texture": "#base",
+          "cullface": "east"
+        },
+        "south": {
+          "texture": "#base",
+          "cullface": "south"
+        },
+        "west": {
+          "texture": "#base",
+          "cullface": "west"
+        },
+        "up": {
+          "texture": "#base",
+          "cullface": "up"
+        },
+        "down": {
+          "texture": "#base",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "from": [
+        -0.001,
+        -0.001,
+        -0.001
+      ],
+      "to": [
+        16.001,
+        16.001,
+        16.001
+      ],
+      "faces": {
+        "north": {
+          "texture": "#ore",
+          "cullface": "north"
+        },
+        "east": {
+          "texture": "#ore",
+          "cullface": "east"
+        },
+        "south": {
+          "texture": "#ore",
+          "cullface": "south"
+        },
+        "west": {
+          "texture": "#ore",
+          "cullface": "west"
+        },
+        "up": {
+          "texture": "#ore",
+          "cullface": "up"
+        },
+        "down": {
+          "texture": "#ore",
+          "cullface": "down"
+        }
+      }
+    }
+  ]
+}

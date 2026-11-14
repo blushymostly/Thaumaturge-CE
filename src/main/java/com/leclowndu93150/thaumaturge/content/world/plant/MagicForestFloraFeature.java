@@ -19,7 +19,7 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
 import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 public final class MagicForestFloraFeature extends Feature<MagicForestFloraConfig> {
     private static final int CHUNK_SIZE = 16;
@@ -105,7 +105,7 @@ public final class MagicForestFloraFeature extends Feature<MagicForestFloraConfi
                 BlockPos grass = skipped ? null : findGrass(level, chunkX + random.nextInt(CHUNK_SIZE), chunkZ + random.nextInt(CHUNK_SIZE), GRASS_MIN_HEIGHT);
                 if (grass != null) {
                     BlockPos cell = grass.above();
-                    placed |= plant(level, cell, patch.state().getState(level, random, cell));
+                    placed |= plant(level, cell, patch.state().getState(random, cell));
                 }
             }
         }
@@ -167,7 +167,7 @@ public final class MagicForestFloraFeature extends Feature<MagicForestFloraConfi
 
     private static boolean plantTall(WorldGenLevel level, BlockPos cell, BlockState lower) {
         BlockPos upper = cell.above();
-        boolean fits = hasRoom(level, cell, lower) && upper.getY() <= level.getMaxY() && level.getBlockState(upper).canBeReplaced();
+        boolean fits = hasRoom(level, cell, lower) && upper.getY() <= (level.getMaxBuildHeight() - 1) && level.getBlockState(upper).canBeReplaced();
         if (fits) {
             DoublePlantBlock.placeAt(level, lower, cell, PLACE_FLAGS);
         }

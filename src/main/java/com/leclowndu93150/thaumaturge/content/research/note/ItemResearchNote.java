@@ -1,25 +1,25 @@
 package com.leclowndu93150.thaumaturge.content.research.note;
 
-import com.leclowndu93150.thaumaturge.api.capability.KnowledgeAccess;
 import com.leclowndu93150.thaumaturge.content.research.PlayerKnowledge;
 import com.leclowndu93150.thaumaturge.content.research.ResearchManager;
 import com.leclowndu93150.thaumaturge.content.research.pool.AspectPools;
+import com.leclowndu93150.thaumaturge.registry.TTAttachments;
 import com.leclowndu93150.thaumaturge.registry.TTSounds;
-import java.util.function.Consumer;
+import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 
 public final class ItemResearchNote extends Item {
     public ItemResearchNote(Item.Properties properties) {
@@ -27,29 +27,27 @@ public final class ItemResearchNote extends Item {
     }
 
     @Override
-    public InteractionResult use(Level level, Player player, InteractionHand hand) {
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         ResearchNoteData data = ResearchNotes.dataOf(stack);
         if (data == null || !data.complete()) {
-            return InteractionResult.PASS;
+            return InteractionResultHolder.pass(stack);
         }
-        Identifier learnKey = data.learnKey();
-        if (KnowledgeAccess.of(player).isResearchKnown(learnKey)) {
-            return InteractionResult.PASS;
+        ResourceLocation learnKey = data.learnKey();
+        if (AspectPools.of(player).isKnown(learnKey)) {
+            return InteractionResultHolder.pass(stack);
         }
         if (player instanceof ServerPlayer serverPlayer) {
-            PlayerKnowledge knowledge = (PlayerKnowledge) KnowledgeAccess.of(serverPlayer);
-            knowledge.addResearch(learnKey);
-            knowledge.sync(serverPlayer);
-            AspectPools.data(serverPlayer).incrementCompletedNotes();
-            AspectPools.sync(serverPlayer);
+            PlayerKnowledge knowledge = TTAttachments.knowledge(serverPlayer);
+            knowledge.complete(learnKey);
+            knowledge.incrementCompletedNotes();
+            TTAttachments.syncKnowledge(serverPlayer);
             stack.shrink(1);
             level.playSound(null, player.getX(), player.getY(), player.getZ(), TTSounds.LEARN.get(), SoundSource.PLAYERS, 0.66F, 1.0F);
-            serverPlayer.sendSystemMessage(
-                    Component.translatable("message.thaumaturge.research_note.learned", ResearchNotes.entryName(serverPlayer.registryAccess(), data.entry())).withStyle(ChatFormatting.DARK_PURPLE));
+            serverPlayer.sendSystemMessage(Component.translatable("message.thaumaturge.research_note.learned", ResearchNotes.entryName(data.entry())).withStyle(ChatFormatting.DARK_PURPLE));
             ResearchManager.advanceStage(serverPlayer, data.entry());
         }
-        return InteractionResult.SUCCESS;
+        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
     }
 
     @Override
@@ -62,22 +60,21 @@ public final class ItemResearchNote extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         ResearchNoteData data = ResearchNotes.dataOf(stack);
         if (data == null) {
             return;
         }
-        if (context.registries() != null) {
-            tooltip.accept(Component.translatable("tooltip.thaumaturge.research_note.theory", ResearchNotes.entryName(context.registries(), data.entry())).withStyle(ChatFormatting.DARK_PURPLE));
-        }
+        tooltip.add(Component.translatable("tooltip.thaumaturge.research_note.theory", ResearchNotes.entryName(data.entry())).withStyle(ChatFormatting.DARK_PURPLE));
         if (data.complete()) {
-            tooltip.accept(Component.translatable("tooltip.thaumaturge.research_note.use").withStyle(ChatFormatting.GOLD));
+            tooltip.add(Component.translatable("tooltip.thaumaturge.research_note.use").withStyle(ChatFormatting.GOLD));
         } else {
-            tooltip.accept(Component.translatable("tooltip.thaumaturge.research_note.table").withStyle(ChatFormatting.GRAY));
+            tooltip.add(Component.translatable("tooltip.thaumaturge.research_note.table").withStyle(ChatFormatting.GRAY));
         }
     }
 
-    public static Rarity rarityFor(ItemStack stack) {
+    @Override
+    public Rarity getRarity(ItemStack stack) {
         ResearchNoteData data = ResearchNotes.dataOf(stack);
         return data != null && data.complete() ? Rarity.EPIC : Rarity.RARE;
     }

@@ -1,9 +1,9 @@
 package com.leclowndu93150.thaumaturge.client.screen.research.detail.requirement;
 
-import com.leclowndu93150.thaumaturge.api.capability.KnowledgeType;
-import com.leclowndu93150.thaumaturge.api.research.IResearchStage;
-import com.leclowndu93150.thaumaturge.api.research.KnowledgeReward;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.Rect;
+import com.leclowndu93150.thaumaturge.content.research.KnowledgeReward;
+import com.leclowndu93150.thaumaturge.content.research.KnowledgeType;
+import com.leclowndu93150.thaumaturge.content.research.ResearchStage;
 import java.util.List;
 
 public record RequirementLayout(boolean hasResearch, boolean hasObtain, boolean hasCraft, boolean hasKnowledge, int researchY, int obtainY, int craftY, int knowledgeY, int dividerY) {
@@ -21,7 +21,7 @@ public record RequirementLayout(boolean hasResearch, boolean hasObtain, boolean 
     private static final int ROW_STEP = 18;
     private static final int DIVIDER_GAP = 12;
 
-    public static RequirementLayout of(IResearchStage stage, int top) {
+    public static RequirementLayout of(ResearchStage stage, int top) {
         int cursorY = top + BOTTOM_Y_OFFSET;
         boolean research = !stage.requiredResearch().isEmpty();
         boolean obtain = !stage.obtain().isEmpty();
@@ -42,6 +42,7 @@ public record RequirementLayout(boolean hasResearch, boolean hasObtain, boolean 
         return left + SLOT_INNER_OFFSET_X + SLOT_FIRST_SHIFT + index * spacing;
     }
 
+    /** Slot X for each knowledge reward; observation chips share one slot and expand horizontally. */
     public static int[] knowledgeSlotXs(int left, List<KnowledgeReward> rewards, int spacing, int observationChips) {
         int[] positions = new int[rewards.size()];
         int innerLeft = left + SLOT_INNER_OFFSET_X;

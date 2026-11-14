@@ -1,0 +1,15 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:deconstructor",
+  "pattern": [" S ", "ATP"],
+  "key": {
+    "S": { "item": "thaumaturge:thaumometer" },
+    "A": { "item": "minecraft:golden_axe" },
+    "T": { "item": "thaumaturge:table_wood" },
+    "P": { "item": "minecraft:golden_pickaxe" }
+  },
+  "result": { "item": "thaumaturge:deconstruction_table", "count": 1 },
+  "vis": [
+    { "aspect": "thaumaturge:perditio", "amount": 1 }
+  ]
+}

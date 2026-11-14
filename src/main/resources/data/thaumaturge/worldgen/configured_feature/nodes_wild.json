@@ -1,0 +1,10 @@
+{
+  "type": "thaumaturge:node",
+  "config": {
+    "silverwood": false,
+    "eerie": false,
+    "small": false,
+    "special_rarity": 18,
+    "base_aura": 100
+  }
+}

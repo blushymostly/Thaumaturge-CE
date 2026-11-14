@@ -1,0 +1,11 @@
+{
+  "type": "thaumaturge:crucible",
+  "catalyst": {
+    "item": "minecraft:iron_ingot"
+  },
+  "aspects": [],
+  "result": {
+    "item": "minecraft:gold_nugget",
+    "count": 3
+  }
+}

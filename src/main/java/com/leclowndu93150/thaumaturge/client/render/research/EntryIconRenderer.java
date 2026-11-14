@@ -1,52 +1,36 @@
 package com.leclowndu93150.thaumaturge.client.render.research;
 
-import com.leclowndu93150.thaumaturge.TTIds;
-import com.leclowndu93150.thaumaturge.api.research.IResearchEntry;
-import com.leclowndu93150.thaumaturge.api.research.IResearchStage;
-import com.leclowndu93150.thaumaturge.api.research.ResearchEntryMeta;
-import com.leclowndu93150.thaumaturge.api.research.ResearchIcon;
-import com.leclowndu93150.thaumaturge.api.research.ResearchRequirement;
-import com.leclowndu93150.thaumaturge.api.spell.part.SpellPart;
-import com.leclowndu93150.thaumaturge.client.effect.pipeline.TTRenderPipelines;
-import com.leclowndu93150.thaumaturge.client.item.TintedGuiItems;
 import com.leclowndu93150.thaumaturge.client.screen.TTScreenTextures;
-import com.leclowndu93150.thaumaturge.client.screen.casters.SpellPartIcons;
-import com.mojang.blaze3d.textures.GpuTexture;
+import com.leclowndu93150.thaumaturge.content.research.ResearchEntry;
+import com.leclowndu93150.thaumaturge.content.research.ResearchIcon;
+import com.leclowndu93150.thaumaturge.content.research.ResearchRequirement;
+import com.leclowndu93150.thaumaturge.content.research.ResearchStage;
+import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.systems.RenderSystem;
+import java.io.InputStream;
+import java.util.HashMap;
 import java.util.List;
-import net.minecraft.util.Util;
+import java.util.Map;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.core.HolderSet;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import org.jspecify.annotations.Nullable;
+import net.minecraft.world.item.Items;
 
 public final class EntryIconRenderer {
     public static final int ICON_REFERENCE_SIZE = 16;
-    public static final int HIT_PADDING = 2;
-    public static final Identifier NODE_TEXTURE = TTIds.rl("textures/misc/auranodes.png");
 
-    private static final int OPAQUE = 0xFF;
-    private static final int ALPHA_SHIFT = 24;
-    private static final int RED_SHIFT = 16;
-    private static final int GREEN_SHIFT = 8;
     private static final int COMPLETE_COLOR = 0xFFFFFFFF;
     private static final int UNKNOWN_COLOR = 0xFF4D4D4D;
-    private static final int LOCKED_TEXTURE_TINT = 0xFF333333;
-    private static final int WHITE = 0xFFFFFFFF;
-    private static final int LOCKED_ITEM_TINT = 0xFF808080;
-    private static final int WARP_TINT = 0xE5540070;
+    private static final float LOCKED_TEXTURE_RGB = 0x33 / 255.0F;
+    private static final long TEXTURE_FRAME_MILLIS = 150L;
     private static final long PULSE_PERIOD_MILLIS = 600L;
     private static final float PULSE_BASE = 0.75F;
     private static final float PULSE_AMPLITUDE = 0.25F;
-    private static final float CHANNEL_MAX = 255.0F;
     private static final int FRAME_SIZE = 32;
     private static final int FRAME_OFFSET = 8;
     private static final int FRAME_U_NORMAL = 80;
@@ -61,26 +45,15 @@ public final class EntryIconRenderer {
     private static final int BADGE_V = 16;
     private static final int BADGE_RESEARCH_U = 176;
     private static final int BADGE_PAGE_U = 208;
-    private static final int ICON_CENTER_OFFSET = 8;
-    private static final int AURA_SIZE = 90;
-    private static final int AURA_FRAME = 64;
-    private static final int AURA_SHEET = 2048;
-    private static final int AURA_GRID = 32;
-    private static final int AURA_FIRST_FRAME = 160;
     private static final long ICON_CYCLE_TICKS = 20L;
-    private static final int LOCKED_FOCUS_ALPHA = 50;
-    private static final int FOCUS_ALPHA = 220;
-    private static final int FOCUS_BASE_SIZE = 24;
-    private static final float FOCUS_BACK_SCALE = 0.9F;
-    private static final int FOCUS_GLYPH_DIVISOR = 2;
-    private static final long TEXTURE_FRAME_MILLIS = 150L;
+    private static final int TEX = TTScreenTextures.TEX_SIZE;
 
     public enum Status {
         UNKNOWN, IN_PROGRESS, COMPLETE
     }
 
-    public record FocusIcon(Identifier elementId) {
-    }
+    /** Focus spell icons are stubbed until the focus registry is ported. */
+    public record FocusIcon(ResourceLocation elementId) {}
 
     private EntryIconRenderer() {}
 
@@ -88,38 +61,24 @@ public final class EntryIconRenderer {
         return switch (status) {
             case COMPLETE -> COMPLETE_COLOR;
             case UNKNOWN -> UNKNOWN_COLOR;
-            case IN_PROGRESS -> pulseColor();
+            case IN_PROGRESS -> pulseGrey();
         };
     }
 
-    public static int pulseColor() {
-        int grey = greyLevel(pulsePhase());
-        return grey | grey << GREEN_SHIFT | grey << RED_SHIFT | OPAQUE << ALPHA_SHIFT;
-    }
-
-    private static float pulsePhase() {
-        long elapsed = Util.getMillis() % PULSE_PERIOD_MILLIS;
-        return elapsed / (float) PULSE_PERIOD_MILLIS;
-    }
-
-    private static int greyLevel(float phase) {
+    private static int pulseGrey() {
+        long elapsed = System.currentTimeMillis() % PULSE_PERIOD_MILLIS;
+        float phase = elapsed / (float) PULSE_PERIOD_MILLIS;
         float brightness = PULSE_AMPLITUDE * Mth.sin((float) (2.0 * Math.PI * phase)) + PULSE_BASE;
-        return Mth.clamp(Math.round(brightness * CHANNEL_MAX), 0, OPAQUE);
+        int grey = Mth.clamp(Math.round(brightness * 255.0F), 0, 255);
+        return 0xFF000000 | grey << 16 | grey << 8 | grey;
     }
 
-    public static void render(GuiGraphicsExtractor graphics, int x, int y, IResearchEntry entry, Status status, ItemStack stack, boolean hasWarp, boolean newResearch, boolean newPage, int ticks) {
-        render(graphics, x, y, entry, status, (Object) stack, hasWarp, newResearch, newPage);
-    }
-
-    public static void render(GuiGraphicsExtractor graphics, int x, int y, IResearchEntry entry, Status status, Object icon, boolean hasWarp, boolean newResearch, boolean newPage) {
-        if (hasWarp) {
-            drawForbidden(graphics, x, y);
-        }
+    public static void render(GuiGraphics graphics, int x, int y, ResearchEntry entry, Status status, Object icon, boolean newResearch, boolean newPage) {
         int tint = colorForStatus(status);
-        int frameV = entry.hasMeta(ResearchEntryMeta.HIDDEN) ? FRAME_V_HIDDEN : FRAME_V_VISIBLE;
-        int frameU = entry.hasMeta(ResearchEntryMeta.ROUND) ? FRAME_U_ROUND : entry.hasMeta(ResearchEntryMeta.HEX) ? FRAME_U_HEX : FRAME_U_NORMAL;
+        int frameV = entry.hasMeta("hidden") ? FRAME_V_HIDDEN : FRAME_V_VISIBLE;
+        int frameU = entry.hasMeta("round") ? FRAME_U_ROUND : entry.hasMeta("hex") ? FRAME_U_HEX : FRAME_U_NORMAL;
         blitFrame(graphics, x - FRAME_OFFSET, y - FRAME_OFFSET, frameU, frameV, tint);
-        if (entry.hasMeta(ResearchEntryMeta.SPIKY)) {
+        if (entry.hasMeta("spiky")) {
             blitFrame(graphics, x - FRAME_OFFSET, y - FRAME_OFFSET, FRAME_U_SPIKY, frameV, tint);
         }
         drawResearchIcon(graphics, x, y, icon, status == Status.UNKNOWN);
@@ -131,115 +90,95 @@ public final class EntryIconRenderer {
         }
     }
 
-    public static Object resolveIcon(IResearchEntry entry, long ticks) {
+    public static Object resolveIcon(ResearchEntry entry, long ticks) {
         long cycle = ticks / ICON_CYCLE_TICKS;
-        List<ResearchIcon> icons = entry.icons();
+        List<String> icons = entry.icons();
         if (!icons.isEmpty()) {
-            ResearchIcon icon = icons.get((int) Math.floorMod(cycle, (long) icons.size()));
+            ResearchIcon icon = ResearchIcon.parse(icons.get((int) Math.floorMod(cycle, icons.size())));
             return switch (icon.kind()) {
                 case FOCUS -> new FocusIcon(icon.id());
                 case TEXTURE -> icon.id();
-                case ITEM -> BuiltInRegistries.ITEM.getOptional(icon.id()).map(ItemStack::new).orElse(ItemStack.EMPTY);
+                case ITEM -> {
+                    Item item = BuiltInRegistries.ITEM.get(icon.id());
+                    yield item == Items.AIR ? ItemStack.EMPTY : new ItemStack(item);
+                }
             };
         }
         ResearchRequirement lead = leadingRequirement(entry);
         if (lead == null) {
             return ItemStack.EMPTY;
         }
-        HolderSet<Item> pool = lead.items();
-        if (pool.size() == 0) {
-            return ItemStack.EMPTY;
-        }
-        return new ItemStack(pool.get((int) Math.floorMod(cycle, (long) pool.size())));
+        ItemStack stack = lead.stackAt(cycle);
+        return stack.isEmpty() || stack.getItem() == Items.AIR ? ItemStack.EMPTY : stack;
     }
 
-    public static void drawResearchIcon(GuiGraphicsExtractor graphics, int x, int y, Object icon, boolean locked) {
-        if (icon instanceof FocusIcon focus) {
-            drawFocusIcon(graphics, x, y, focus.elementId(), locked);
+    public static void drawResearchIcon(GuiGraphics graphics, int x, int y, Object icon, boolean locked) {
+        if (icon instanceof FocusIcon) {
+            // Focus registry not ported — leave empty rather than missing texture.
             return;
         }
-        if (icon instanceof Identifier texture) {
+        if (icon instanceof ResourceLocation texture) {
             drawTextureIcon(graphics, x, y, texture, locked);
             return;
         }
         if (icon instanceof ItemStack stack && !stack.isEmpty()) {
-            TintedGuiItems.item(graphics, stack, x, y, locked ? LOCKED_ITEM_TINT : TintedGuiItems.NO_TINT);
-        }
-    }
-
-    public static void drawFocusIcon(GuiGraphicsExtractor graphics, int x, int y, Identifier elementId, boolean locked) {
-        ClientLevel level = Minecraft.getInstance().level;
-        if (level == null) {
-            return;
-        }
-        int back = Math.round(FOCUS_BASE_SIZE * FOCUS_BACK_SCALE);
-        int glyph = Math.round(FOCUS_BASE_SIZE / (float) FOCUS_GLYPH_DIVISOR);
-        float alpha = (locked ? LOCKED_FOCUS_ALPHA : FOCUS_ALPHA) / CHANNEL_MAX;
-        ResourceKey<SpellPart> key = ResourceKey.create(SpellPart.REGISTRY_KEY, elementId);
-        SpellPartIcons.draw(graphics, level.registryAccess(), key, x + ICON_CENTER_OFFSET, y + ICON_CENTER_OFFSET, back, glyph, FOCUS_BASE_SIZE, alpha);
-    }
-
-    public static void drawForbidden(GuiGraphicsExtractor graphics, int x, int y) {
-        Player player = Minecraft.getInstance().player;
-        if (player == null) {
-            return;
-        }
-        int frame = AURA_FIRST_FRAME + player.tickCount % AURA_GRID;
-        float u = (frame % AURA_GRID) * AURA_FRAME;
-        float v = (frame / AURA_GRID) * AURA_FRAME;
-        int half = AURA_SIZE / 2;
-        graphics.blit(TTRenderPipelines.GUI_TEXTURED_ADDITIVE, NODE_TEXTURE, x + ICON_CENTER_OFFSET - half, y + ICON_CENTER_OFFSET - half, u, v, AURA_SIZE, AURA_SIZE, AURA_FRAME, AURA_FRAME,
-                AURA_SHEET, AURA_SHEET, WARP_TINT);
-    }
-
-    private static @Nullable ResearchRequirement leadingRequirement(IResearchEntry entry) {
-        for (IResearchStage stage : entry.stages()) {
-            List<ResearchRequirement> source = stage.obtain().isEmpty() ? stage.craft() : stage.obtain();
-            if (!source.isEmpty()) {
-                return source.get(0);
+            graphics.pose().pushPose();
+            graphics.pose().translate(x, y, 0);
+            if (locked) {
+                RenderSystem.setShaderColor(0.5F, 0.5F, 0.5F, 1.0F);
             }
+            graphics.renderItem(stack, 0, 0);
+            if (locked) {
+                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+            }
+            graphics.pose().popPose();
         }
-        return null;
     }
 
-    private static void blitFrame(GuiGraphicsExtractor graphics, int x, int y, int u, int v, int tint) {
-        graphics.blit(RenderPipelines.GUI_TEXTURED, TTScreenTextures.RESEARCH_BROWSER, x, y, (float) u, (float) v, FRAME_SIZE, FRAME_SIZE, FRAME_SIZE, FRAME_SIZE, TTScreenTextures.TEX_SIZE,
-                TTScreenTextures.TEX_SIZE, tint);
-    }
-
-    private static void blitBadge(GuiGraphicsExtractor graphics, int x, int y, int u) {
-        graphics.pose().pushMatrix();
-        graphics.pose().translate((float) x, (float) y);
-        graphics.pose().scale(BADGE_SCALE, BADGE_SCALE);
-        graphics.blit(RenderPipelines.GUI_TEXTURED, TTScreenTextures.RESEARCH_BROWSER, 0, 0, (float) u, (float) BADGE_V, BADGE_SIZE, BADGE_SIZE, BADGE_SIZE, BADGE_SIZE, TTScreenTextures.TEX_SIZE,
-                TTScreenTextures.TEX_SIZE);
-        graphics.pose().popMatrix();
-    }
-
-    private static void drawTextureIcon(GuiGraphicsExtractor graphics, int x, int y, Identifier texture, boolean locked) {
+    private static void drawTextureIcon(GuiGraphics graphics, int x, int y, ResourceLocation texture, boolean locked) {
         TextureSize size = textureSize(texture);
-        Region region = size.width() > 0 && size.height() > 0 ? Region.animated(size, (int) (Util.getMillis() / TEXTURE_FRAME_MILLIS)) : Region.WHOLE;
-        int tint = locked ? LOCKED_TEXTURE_TINT : WHITE;
-        graphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, region.u, region.v, ICON_REFERENCE_SIZE, ICON_REFERENCE_SIZE, region.w, region.h, region.sheetW, region.sheetH, tint);
+        Region region = Region.animated(size, (int) (Util.getMillis() / TEXTURE_FRAME_MILLIS));
+        float rgb = locked ? LOCKED_TEXTURE_RGB : 1.0F;
+        RenderSystem.setShaderColor(rgb, rgb, rgb, 1.0F);
+        blitRegion(graphics, texture, x, y, ICON_REFERENCE_SIZE, region);
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
     }
 
-    private static TextureSize textureSize(Identifier texture) {
-        GpuTexture gpu;
+    /**
+     * Draws a whole icon texture (first frame when it is an animation strip) scaled to {@code size} pixels.
+     * Used by category tabs, search rows and knowledge rows, whose icons are not necessarily 16x16.
+     */
+    public static void drawStaticTexture(GuiGraphics graphics, ResourceLocation texture, int x, int y, int size) {
+        blitRegion(graphics, texture, x, y, size, Region.animated(textureSize(texture), 0));
+    }
+
+    private static void blitRegion(GuiGraphics graphics, ResourceLocation texture, int x, int y, int drawSize, Region region) {
+        graphics.blit(texture, x, y, drawSize, drawSize, region.u, region.v, region.w, region.h, region.sheetW, region.sheetH);
+    }
+
+    private static final Map<ResourceLocation, TextureSize> TEXTURE_SIZES = new HashMap<>();
+
+    private static TextureSize textureSize(ResourceLocation texture) {
+        return TEXTURE_SIZES.computeIfAbsent(texture, EntryIconRenderer::readTextureSize);
+    }
+
+    private static TextureSize readTextureSize(ResourceLocation texture) {
         try {
-            gpu = Minecraft.getInstance().getTextureManager().getTexture(texture).getTexture();
-        } catch (IllegalStateException notReady) {
-            return TextureSize.NOT_READY;
+            var resource = Minecraft.getInstance().getResourceManager().getResource(texture);
+            if (resource.isPresent()) {
+                try (InputStream in = resource.get().open(); NativeImage image = NativeImage.read(in)) {
+                    return new TextureSize(image.getWidth(), image.getHeight());
+                }
+            }
+        } catch (Exception ignored) {
+            // fall through to the default reference size
         }
-        return new TextureSize(gpu.getWidth(0), gpu.getHeight(0));
+        return new TextureSize(ICON_REFERENCE_SIZE, ICON_REFERENCE_SIZE);
     }
 
-    private record TextureSize(int width, int height) {
-        static final TextureSize NOT_READY = new TextureSize(0, 0);
-    }
+    private record TextureSize(int width, int height) {}
 
     private record Region(float u, float v, int w, int h, int sheetW, int sheetH) {
-        static final Region WHOLE = new Region(0.0F, 0.0F, 1, 1, 1, 1);
-
         static Region animated(TextureSize size, int frameIndex) {
             int shortSide = Math.min(size.width(), size.height());
             int longSide = Math.max(size.width(), size.height());
@@ -251,5 +190,34 @@ public final class EntryIconRenderer {
             boolean vertical = size.height() > size.width();
             return new Region(vertical ? 0.0F : offset, vertical ? offset : 0.0F, shortSide, shortSide, size.width(), size.height());
         }
+    }
+
+    /** CE parity: the node icon falls back to the first obtain requirement, then the first craft requirement. */
+    private static ResearchRequirement leadingRequirement(ResearchEntry entry) {
+        for (ResearchStage stage : entry.stages()) {
+            List<ResearchRequirement> source = stage.obtain().isEmpty() ? stage.craft() : stage.obtain();
+            if (!source.isEmpty()) {
+                return source.get(0);
+            }
+        }
+        return null;
+    }
+
+    private static void blitFrame(GuiGraphics graphics, int x, int y, int u, int v, int color) {
+        float a = (color >> 24 & 255) / 255.0F;
+        float r = (color >> 16 & 255) / 255.0F;
+        float g = (color >> 8 & 255) / 255.0F;
+        float b = (color & 255) / 255.0F;
+        RenderSystem.setShaderColor(r, g, b, a <= 0 ? 1.0F : a);
+        graphics.blit(TTScreenTextures.RESEARCH_BROWSER, x, y, u, v, FRAME_SIZE, FRAME_SIZE, TEX, TEX);
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+    }
+
+    private static void blitBadge(GuiGraphics graphics, int x, int y, int u) {
+        graphics.pose().pushPose();
+        graphics.pose().translate(x, y, 0);
+        graphics.pose().scale(BADGE_SCALE, BADGE_SCALE, 1.0F);
+        graphics.blit(TTScreenTextures.RESEARCH_BROWSER, 0, 0, u, BADGE_V, BADGE_SIZE, BADGE_SIZE, TEX, TEX);
+        graphics.pose().popPose();
     }
 }

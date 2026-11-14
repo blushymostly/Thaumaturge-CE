@@ -1,0 +1,9 @@
+{
+  "type": "thaumaturge:crucible",
+  "catalyst": { "item": "minecraft:snow_block" },
+  "aspects": [
+    { "aspect": "thaumaturge:ordo", "amount": 1 },
+    { "aspect": "thaumaturge:gelum", "amount": 1 }
+  ],
+  "result": { "item": "minecraft:ice", "count": 1 }
+}

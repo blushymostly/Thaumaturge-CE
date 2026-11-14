@@ -1,15 +1,14 @@
 package com.leclowndu93150.thaumaturge.client.particle;
 
 import com.leclowndu93150.thaumaturge.content.particle.BlockRunesParticleOptions;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.ParticleProvider;
-import net.minecraft.client.renderer.state.level.QuadParticleRenderState;
-import net.minecraft.util.LightCoordsUtil;
-import net.minecraft.util.RandomSource;
 import org.joml.Quaternionf;
 
+/** Rune glyph pasted onto a block side while scanning (CE BlockRunesParticle). */
 public final class BlockRunesParticle extends TTParticle {
     private static final int FRAME_COUNT = 16;
     private static final int SIDE_COUNT = 4;
@@ -34,7 +33,9 @@ public final class BlockRunesParticle extends TTParticle {
     private BlockRunesParticle(ClientLevel level, double x, double y, double z, BlockRunesParticleOptions options, ParticleSheet sheet) {
         super(level, x, y, z, 0.0, 0.0, 0.0, sheet);
         float red = options.r() == 0.0F ? 1.0F : options.r();
-        setColor(red, options.g(), options.b());
+        this.rCol = red;
+        this.gCol = options.g();
+        this.bCol = options.b();
         this.lifetime = LIFETIME_FACTOR * Math.max(1, options.duration());
         this.gravity = options.gravity();
         this.alpha = 0.0F;
@@ -62,26 +63,21 @@ public final class BlockRunesParticle extends TTParticle {
     }
 
     @Override
-    public void extract(QuadParticleRenderState state, Camera camera, float partialTick) {
-        extractRotatedQuad(state, camera, this.orientation, partialTick);
+    public void render(VertexConsumer buffer, Camera camera, float partialTick) {
+        renderQuad(buffer, camera, this.orientation, this.offsetX, this.offsetY, this.offsetZ, partialTick);
     }
 
     @Override
-    protected void extractRotatedQuad(QuadParticleRenderState state, Quaternionf rotation, float x, float y, float z, float partialTick) {
-        super.extractRotatedQuad(state, rotation, x + this.offsetX, y + this.offsetY, z + this.offsetZ, partialTick);
-    }
-
-    @Override
-    protected int getLightCoords(float partialTick) {
-        return LightCoordsUtil.FULL_BRIGHT;
+    protected int getLightColor(float partialTick) {
+        return 0xF000F0;
     }
 
     public static final class Provider implements ParticleProvider<BlockRunesParticleOptions> {
-        private static final ParticleSheet SHEET = TTParticleSheets.sheet("block_runes");
+        private final ParticleSheet sheet = ParticleSheet.sheet("block_runes");
 
         @Override
-        public Particle createParticle(BlockRunesParticleOptions options, ClientLevel level, double x, double y, double z, double vx, double vy, double vz, RandomSource random) {
-            return new BlockRunesParticle(level, x, y, z, options, SHEET);
+        public Particle createParticle(BlockRunesParticleOptions options, ClientLevel level, double x, double y, double z, double vx, double vy, double vz) {
+            return new BlockRunesParticle(level, x, y, z, options, sheet);
         }
     }
 }

@@ -1,100 +1,41 @@
 package com.leclowndu93150.thaumaturge;
 
+import com.leclowndu93150.thaumaturge.api.aspect.TTAspects;
+import com.leclowndu93150.thaumaturge.compat.curios.ThaumaturgeCuriosCompat;
+import com.leclowndu93150.thaumaturge.compat.terrablender.TTTerraBlenderCompat;
+import com.leclowndu93150.thaumaturge.config.ThaumaturgeCommonConfig;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import com.leclowndu93150.thaumaturge.content.aura.AuraGenHandler;
+import com.leclowndu93150.thaumaturge.content.aura.AuraTickHandler;
+import com.leclowndu93150.thaumaturge.content.eldritch.labyrinth.LabyrinthBootstrap;
+import com.leclowndu93150.thaumaturge.content.golem.GolemBootstrap;
+import com.leclowndu93150.thaumaturge.content.taint.TaintBootstrap;
+import com.leclowndu93150.thaumaturge.network.TTNetwork;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.config.ModConfig;
 import com.leclowndu93150.thaumaturge.registry.TTAttachments;
-import com.leclowndu93150.thaumaturge.registry.TTAttributes;
 import com.leclowndu93150.thaumaturge.registry.TTBlockEntities;
 import com.leclowndu93150.thaumaturge.registry.TTBlocks;
-import com.leclowndu93150.thaumaturge.registry.TTChunkGenerators;
+import com.leclowndu93150.thaumaturge.registry.TTBulkContent;
+import com.leclowndu93150.thaumaturge.registry.TTBulkItems;
+import com.leclowndu93150.thaumaturge.registry.TTCapabilities;
 import com.leclowndu93150.thaumaturge.registry.TTCreativeTabs;
-import com.leclowndu93150.thaumaturge.registry.TTDamageTypes;
-import com.leclowndu93150.thaumaturge.registry.TTDataComponents;
 import com.leclowndu93150.thaumaturge.registry.TTEntities;
-import com.leclowndu93150.thaumaturge.registry.TTEntityDataSerializers;
 import com.leclowndu93150.thaumaturge.registry.TTFeatures;
-import com.leclowndu93150.thaumaturge.registry.TTFluidTypes;
 import com.leclowndu93150.thaumaturge.registry.TTFluids;
-import com.leclowndu93150.thaumaturge.registry.TTGolemAccessories;
-import com.leclowndu93150.thaumaturge.registry.TTGolemParts;
-import com.leclowndu93150.thaumaturge.registry.TTGolemTraits;
-import com.leclowndu93150.thaumaturge.registry.TTIngredientTypes;
-import com.leclowndu93150.thaumaturge.registry.TTInstabilityEffects;
-import com.leclowndu93150.thaumaturge.registry.TTLabyrinthEncounterTypes;
-import com.leclowndu93150.thaumaturge.registry.TTLabyrinthMarkers;
-import com.leclowndu93150.thaumaturge.registry.TTLootTypes;
+import com.leclowndu93150.thaumaturge.registry.TTItemData;
+import com.leclowndu93150.thaumaturge.registry.TTItems;
 import com.leclowndu93150.thaumaturge.registry.TTMenus;
 import com.leclowndu93150.thaumaturge.registry.TTMobEffects;
-import com.leclowndu93150.thaumaturge.registry.TTObeliskSiteBehaviors;
 import com.leclowndu93150.thaumaturge.registry.TTParticles;
-import com.leclowndu93150.thaumaturge.registry.TTPlacementModifiers;
-import com.leclowndu93150.thaumaturge.registry.TTRecipeSerializers;
 import com.leclowndu93150.thaumaturge.registry.TTRecipeTypes;
-import com.leclowndu93150.thaumaturge.registry.TTSeals;
-import com.leclowndu93150.thaumaturge.registry.TTSounds;
-import com.leclowndu93150.thaumaturge.registry.TTSpellFx;
-import com.leclowndu93150.thaumaturge.registry.TTSpellBehaviors;
-import com.leclowndu93150.thaumaturge.registry.TTSpellActions;
-import com.leclowndu93150.thaumaturge.content.spell.engine.SpellBindings;
-import com.leclowndu93150.thaumaturge.api.spell.Spells;
-import com.leclowndu93150.thaumaturge.api.spell.SpellRegistries;
-import com.leclowndu93150.thaumaturge.api.aspect.AspectIndexAccess;
-import com.leclowndu93150.thaumaturge.api.aura.AuraHelper;
-import com.leclowndu93150.thaumaturge.api.aura.VisRelayHelper;
-import com.leclowndu93150.thaumaturge.api.capability.KnowledgeAccess;
-import com.leclowndu93150.thaumaturge.api.entity.trait.MobTraits;
-import com.leclowndu93150.thaumaturge.api.essentia.EssentiaAccess;
-import com.leclowndu93150.thaumaturge.api.essentia.EssentiaCrystalAccess;
-import com.leclowndu93150.thaumaturge.api.golems.GolemHelper;
-import com.leclowndu93150.thaumaturge.api.items.GogglesAccess;
-import com.leclowndu93150.thaumaturge.content.equipment.GogglesBindings;
-import com.leclowndu93150.thaumaturge.content.equipment.RechargeBindings;
-import com.leclowndu93150.thaumaturge.api.items.RechargeAccess;
-import com.leclowndu93150.thaumaturge.api.labyrinth.LabyrinthHelper;
-import com.leclowndu93150.thaumaturge.api.recipe.ArcaneCraftCost;
-import com.leclowndu93150.thaumaturge.api.recipe.ArcaneCraftingTransaction;
-import com.leclowndu93150.thaumaturge.api.recipe.InfusionCraftingTransaction;
-import com.leclowndu93150.thaumaturge.api.recipe.ResearchGate;
-import com.leclowndu93150.thaumaturge.api.research.pool.AspectPoolAccess;
-import com.leclowndu93150.thaumaturge.api.research.scan.ScanningManager;
-import com.leclowndu93150.thaumaturge.api.taint.TaintApi;
-import com.leclowndu93150.thaumaturge.api.wands.WandAccess;
-import com.leclowndu93150.thaumaturge.api.warp.WarpHelper;
-import com.leclowndu93150.thaumaturge.compat.curio.ThaumaturgeCuriosCompat;
-import com.leclowndu93150.thaumaturge.compat.dynamictrees.DynamicTreesCompat;
-import com.leclowndu93150.thaumaturge.config.ThaumaturgeClientConfig;
-import com.leclowndu93150.thaumaturge.config.ThaumaturgeCommonConfig;
-import com.leclowndu93150.thaumaturge.config.ThaumaturgeServerConfig;
-import com.leclowndu93150.thaumaturge.content.aspect.AspectIndexHolder;
-import com.leclowndu93150.thaumaturge.content.aura.AuraHelperBindings;
-import com.leclowndu93150.thaumaturge.content.aura.relay.VisRelayNetwork;
-import com.leclowndu93150.thaumaturge.content.eldritch.labyrinth.LabyrinthBindings;
-import com.leclowndu93150.thaumaturge.content.entity.trait.MobTraitBindings;
-import com.leclowndu93150.thaumaturge.content.golem.GolemBindings;
-import com.leclowndu93150.thaumaturge.content.infusion.InfusionCraftingTransactions;
-import com.leclowndu93150.thaumaturge.content.legacy.LegacyRegistryAliases;
-import com.leclowndu93150.thaumaturge.content.research.ResearchManager;
-import com.leclowndu93150.thaumaturge.content.research.pool.AspectPoolBindings;
-import com.leclowndu93150.thaumaturge.content.research.scan.ScanBindings;
-import com.leclowndu93150.thaumaturge.content.taint.TaintApiBindings;
-import com.leclowndu93150.thaumaturge.content.wands.WandAccessBindings;
-import com.leclowndu93150.thaumaturge.content.warp.WarpBindings;
-import com.leclowndu93150.thaumaturge.content.workbench.ArcaneCraftingTransactions;
-import com.leclowndu93150.thaumaturge.content.workbench.WorkbenchPayment;
-import com.leclowndu93150.thaumaturge.registry.TTBiomeModifierSerializers;
-import com.leclowndu93150.thaumaturge.registry.TTItems;
-import com.leclowndu93150.thaumaturge.registry.TTMobTraits;
-import com.leclowndu93150.thaumaturge.registry.TTStructureProcessors;
-import com.leclowndu93150.thaumaturge.registry.TTStructures;
-import com.leclowndu93150.thaumaturge.registry.TTTicketTypes;
 import com.leclowndu93150.thaumaturge.registry.TTTreePlacers;
-import com.leclowndu93150.thaumaturge.registry.TTWandParts;
-import java.lang.reflect.Method;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.ModList;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.RegisterGameTestsEvent;
+import com.leclowndu93150.thaumaturge.registry.TTSounds;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,105 +43,59 @@ import org.slf4j.LoggerFactory;
 public final class Thaumaturge {
     public static final Logger LOGGER = LoggerFactory.getLogger(TTIds.MODID);
 
-    public Thaumaturge(IEventBus modBus, ModContainer container) {
-        TTFluidTypes.register(modBus);
+    public Thaumaturge() {
+        IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ThaumaturgeCommonConfig.SPEC);
+        modBus.addListener(this::commonSetup);
+
+        TTAspects.bootstrap();
+        TTBulkContent.bootstrap();
+        TTBulkItems.bootstrap();
+
         TTFluids.register(modBus);
+        TTMobEffects.register(modBus);
         TTBlocks.register(modBus);
         TTItems.register(modBus);
         TTFeatures.register(modBus);
+        com.leclowndu93150.thaumaturge.registry.TTPlacementModifiers.register(modBus);
         TTTreePlacers.register(modBus);
-        TTBiomeModifierSerializers.register(modBus);
-        TTStructures.register(modBus);
         TTBlockEntities.register(modBus);
         TTEntities.register(modBus);
         TTMenus.register(modBus);
         TTRecipeTypes.register(modBus);
-        TTRecipeSerializers.register(modBus);
-        TTDataComponents.register(modBus);
-        TTCreativeTabs.register(modBus);
         TTParticles.register(modBus);
         TTSounds.register(modBus);
+        TTCreativeTabs.register(modBus);
+        TTItemData.bootstrap();
         TTAttachments.register(modBus);
-        TTDamageTypes.register(modBus);
-        TTMobEffects.register(modBus);
-        TTAttributes.register(modBus);
-        TTChunkGenerators.register(modBus);
-        TTPlacementModifiers.register(modBus);
-        TTSpellBehaviors.register(modBus);
-        TTSpellActions.register(modBus);
-        TTSpellFx.register(modBus);
-        TTGolemTraits.register(modBus);
-        TTMobTraits.register(modBus);
-        TTGolemParts.register(modBus);
-        TTWandParts.register(modBus);
-        TTSeals.register(modBus);
-        TTEntityDataSerializers.register(modBus);
-        TTIngredientTypes.register(modBus);
-        TTLabyrinthMarkers.register(modBus);
-        TTLabyrinthEncounterTypes.register(modBus);
-        TTObeliskSiteBehaviors.register(modBus);
-        TTStructureProcessors.register(modBus);
-        TTLootTypes.register(modBus);
-        TTInstabilityEffects.register(modBus);
-        TTTicketTypes.register(modBus);
-        TTGolemAccessories.register();
+        TTCapabilities.register(modBus);
+        TTNetwork.register();
 
-        LegacyRegistryAliases.register(modBus);
+        GolemBootstrap.init(modBus);
+        TaintBootstrap.init(modBus);
+        LabyrinthBootstrap.init(modBus);
 
-        NeoForge.EVENT_BUS.addListener(TTRecipeTypes::registerSynchronizedRecipes);
+        MinecraftForge.EVENT_BUS.register(TTAttachments.class);
+        MinecraftForge.EVENT_BUS.register(TTCapabilities.class);
+        MinecraftForge.EVENT_BUS.register(AuraGenHandler.class);
+        MinecraftForge.EVENT_BUS.register(AuraTickHandler.class);
+        MinecraftForge.EVENT_BUS.register(TaintBootstrap.class);
 
-        container.registerConfig(ModConfig.Type.COMMON, ThaumaturgeCommonConfig.SPEC);
-        container.registerConfig(ModConfig.Type.CLIENT, ThaumaturgeClientConfig.SPEC);
-        container.registerConfig(ModConfig.Type.SERVER, ThaumaturgeServerConfig.SPEC);
-
-        KnowledgeAccess.bind(player -> player.getData(TTAttachments.KNOWLEDGE));
-        AspectIndexAccess.bind(AspectIndexHolder::get);
-        WandAccess.bind(new WandAccessBindings());
-        EssentiaCrystalAccess.bind(TTItems.ESSENTIA_CRYSTAL, TTDataComponents.CRYSTAL_ASPECT);
-        EssentiaAccess.bind(TTDataComponents.ASPECT_FILTER);
-        ArcaneCraftCost.bind(WorkbenchPayment::cost);
-        ArcaneCraftingTransaction.bind(new ArcaneCraftingTransactions());
-        InfusionCraftingTransaction.bind(new InfusionCraftingTransactions());
-        AuraHelper.bind(new AuraHelperBindings());
-        VisRelayHelper.bind(new VisRelayNetwork());
-        TaintApi.bind(new TaintApiBindings());
-        MobTraits.bind(new MobTraitBindings());
-        WarpHelper.bind(new WarpBindings());
-        ScanningManager.bind(new ScanBindings());
-        GolemHelper.bind(new GolemBindings());
-        AspectPoolAccess.bind(new AspectPoolBindings());
-        ResearchGate.bind(ResearchManager::doesPassGate);
-        RechargeAccess.bind(new RechargeBindings());
-        GogglesAccess.bind(new GogglesBindings());
-        SpellRegistries.bind(TTSpellBehaviors.registry(), TTSpellActions.registry(), TTSpellFx.registry());
-        Spells.bind(new SpellBindings());
-        LabyrinthHelper.bind(new LabyrinthBindings());
-
-        if (ModList.get().isLoaded(TTIds.CURIOS))
+        if (ModList.get().isLoaded(TTIds.CURIOS)) {
             ThaumaturgeCuriosCompat.init(modBus);
-        if (ModList.get().isLoaded(TTIds.DYNAMIC_TREES))
-            DynamicTreesCompat.init(modBus);
+        }
 
-        wireGameTests(modBus);
+        LOGGER.info("Thaumaturge Forge 1.20.1 port loaded ({} aspects, bulk content online)", TTAspects.all().size());
     }
 
-    private static void wireGameTests(IEventBus modBus) {
-        if (!Boolean.getBoolean("thaumaturge.gametest")) {
-            return;
-        }
-        try {
-            Class<?> registration = Class.forName("com.leclowndu93150.thaumaturge.gametest.TTGameTestRegistration");
-            Method handler = registration.getMethod("registerTests", RegisterGameTestsEvent.class);
-            modBus.addListener(RegisterGameTestsEvent.class, event -> {
-                try {
-                    handler.invoke(null, event);
-                } catch (ReflectiveOperationException e) {
-                    LOGGER.error("Failed to invoke TTGameTestRegistration.registerTests", e);
-                }
-            });
-        } catch (ClassNotFoundException expected) {
-        } catch (ReflectiveOperationException e) {
-            LOGGER.error("Failed to wire gametest hooks", e);
-        }
+    private void commonSetup(FMLCommonSetupEvent event) {
+        event.enqueueWork(() -> {
+            if (ModList.get().isLoaded("terrablender")) {
+                TTTerraBlenderCompat.init();
+                LOGGER.info("Thaumaturge TerraBlender regions registered (magical forest / tainted lands)");
+            } else {
+                LOGGER.warn("TerraBlender missing — magical_forest/tainted_lands will not place; trees still use forge biome modifiers");
+            }
+        });
     }
 }

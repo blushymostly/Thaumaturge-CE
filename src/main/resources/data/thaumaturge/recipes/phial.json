@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [" C ", "P P", " P "],
+  "key": {
+    "C": { "item": "minecraft:clay_ball" },
+    "P": { "tag": "forge:glass" }
+  },
+  "result": { "item": "thaumaturge:phial", "count": 8 }
+}

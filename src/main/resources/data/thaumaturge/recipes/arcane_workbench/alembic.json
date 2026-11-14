@@ -1,0 +1,34 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:essentia_smelter@4",
+  "pattern": [
+    "GFG",
+    "PBP",
+    "GFG"
+  ],
+  "key": {
+    "G": {
+      "item": "thaumaturge:plank_greatwood"
+    },
+    "F": {
+      "item": "thaumaturge:filter"
+    },
+    "P": {
+      "item": "thaumaturge:plate_brass"
+    },
+    "B": {
+      "item": "minecraft:bucket"
+    }
+  },
+  "result": {
+    "item": "thaumaturge:alembic",
+    "count": 1
+  },
+  "vis": 50,
+  "crystals": [
+    {
+      "aspect": "thaumaturge:aqua",
+      "amount": 1
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/wall_inventory",
+  "textures": {
+    "wall": "thaumaturge:block/ancient_rock_stone_2"
+  }
+}

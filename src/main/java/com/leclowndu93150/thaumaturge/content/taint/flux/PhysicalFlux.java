@@ -1,7 +1,7 @@
 package com.leclowndu93150.thaumaturge.content.taint.flux;
 
-import com.leclowndu93150.thaumaturge.registry.TTBlockTags;
-import com.leclowndu93150.thaumaturge.registry.TTBlocks;
+import com.leclowndu93150.thaumaturge.registry.TTBulkContent;
+import net.minecraft.util.Mth;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.FluidTags;
@@ -22,11 +22,7 @@ public final class PhysicalFlux {
     private PhysicalFlux() {}
 
     public static boolean isPhysicalFlux(BlockState state) {
-        return state.is(TTBlockTags.PHYSICAL_FLUX);
-    }
-
-    public static boolean isScrubbable(BlockState state) {
-        return state.is(TTBlockTags.FLUX_SCRUBBABLE);
+        return state.getBlock() instanceof PhysicalFluxBlock;
     }
 
     public static int amount(BlockGetter level, BlockPos pos) {
@@ -35,6 +31,7 @@ public final class PhysicalFlux {
     }
 
     public static int reduce(ServerLevel level, BlockPos pos, int amount) {
+        if (!level.hasChunkAt(pos)) return 0;
         BlockState state = level.getBlockState(pos);
         if (amount <= 0 || !(state.getBlock() instanceof PhysicalFluxBlock flux)) {
             return 0;
@@ -55,11 +52,11 @@ public final class PhysicalFlux {
     }
 
     public static boolean placeGoo(ServerLevel level, BlockPos pos, int amount) {
-        return place(level, pos, TTBlocks.FLUX_GOO.get(), amount);
+        return place(level, pos, (PhysicalFluxBlock) TTBulkContent.BLOCKS.get("flux_goo").get(), amount);
     }
 
     public static boolean placeGas(ServerLevel level, BlockPos pos, int amount) {
-        return place(level, pos, TTBlocks.FLUX_GAS.get(), amount);
+        return place(level, pos, (PhysicalFluxBlock) TTBulkContent.BLOCKS.get("flux_gas").get(), amount);
     }
 
     public static boolean spill(ServerLevel level, BlockPos origin, RandomSource random) {
@@ -82,11 +79,12 @@ public final class PhysicalFlux {
     }
 
     private static boolean place(ServerLevel level, BlockPos pos, PhysicalFluxBlock kind, int amount) {
-        int incoming = Math.clamp(amount, 1, MAX_QUANTA);
+        if (amount <= 0 || level.isOutsideBuildHeight(pos) || !level.hasChunkAt(pos)) return false;
+        int incoming = Mth.clamp(amount, 1, MAX_QUANTA);
         BlockState existing = level.getBlockState(pos);
         if (existing.getBlock() == kind) {
             int current = kind.fluxAmount(existing);
-            if (current >= MAX_QUANTA) {
+            if (current + incoming > MAX_QUANTA) {
                 return false;
             }
             level.setBlock(pos, kind.withFluxAmount(Math.min(MAX_QUANTA, current + incoming)), Block.UPDATE_ALL);
@@ -96,7 +94,7 @@ public final class PhysicalFlux {
         if (!canReplace(existing)) {
             return false;
         }
-        level.setBlock(pos, kind.withFluxAmount(incoming), Block.UPDATE_ALL);
+        if (!level.setBlock(pos, kind.withFluxAmount(incoming), Block.UPDATE_ALL)) return false;
         kind.scheduleFluxTick(level, pos);
         return true;
     }

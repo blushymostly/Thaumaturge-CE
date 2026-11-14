@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:blasting",
+  "category": "misc",
+  "group": "quicksilver",
+  "ingredient": {
+    "tag": "forge:ores/cinnabar"
+  },
+  "result": "thaumaturge:quicksilver",
+  "experience": 1,
+  "cookingtime": 100
+}

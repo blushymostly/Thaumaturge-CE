@@ -1,0 +1,6 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["###","###","###"],
+  "key": { "#": { "item": "thaumaturge:nugget_quartz" } },
+  "result": { "item": "minecraft:quartz", "count": 1 }
+}

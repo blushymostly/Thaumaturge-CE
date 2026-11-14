@@ -1,12 +1,12 @@
 package com.leclowndu93150.thaumaturge.content.device.levitator;
 
-import com.mojang.serialization.Codec;
 import net.minecraft.util.StringRepresentable;
 
 public enum LevitatorReach implements StringRepresentable {
-    SHORT("short", 4), MEDIUM("medium", 8), LONG("long", 16), FAR("far", 32);
-
-    public static final Codec<LevitatorReach> CODEC = StringRepresentable.fromEnum(LevitatorReach::values);
+    SHORT("short", 4),
+    MEDIUM("medium", 8),
+    LONG("long", 16),
+    FAR("far", 32);
 
     private static final int VIS_COST_PER_BLOCK = 2;
 
@@ -29,6 +29,15 @@ public enum LevitatorReach implements StringRepresentable {
     public LevitatorReach next() {
         LevitatorReach[] all = values();
         return all[(ordinal() + 1) % all.length];
+    }
+
+    public static LevitatorReach byName(String name) {
+        for (LevitatorReach reach : values()) {
+            if (reach.name.equals(name)) {
+                return reach;
+            }
+        }
+        return MEDIUM;
     }
 
     @Override

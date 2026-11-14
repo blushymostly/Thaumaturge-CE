@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "filled=false,lit=false": {
+      "model": "thaumaturge:block/advanced_alchemical_furnace"
+    },
+    "filled=true,lit=false": {
+      "model": "thaumaturge:block/advanced_alchemical_furnace_filled"
+    },
+    "filled=false,lit=true": {
+      "model": "thaumaturge:block/advanced_alchemical_furnace_lit"
+    },
+    "filled=true,lit=true": {
+      "model": "thaumaturge:block/advanced_alchemical_furnace_lit_filled"
+    }
+  }
+}

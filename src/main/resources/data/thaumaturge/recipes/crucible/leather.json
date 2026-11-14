@@ -1,0 +1,9 @@
+{
+  "type": "thaumaturge:crucible",
+  "catalyst": { "item": "minecraft:rotten_flesh" },
+  "aspects": [
+    { "aspect": "thaumaturge:aer", "amount": 3 },
+    { "aspect": "thaumaturge:bestia", "amount": 3 }
+  ],
+  "result": { "item": "minecraft:leather", "count": 1 }
+}

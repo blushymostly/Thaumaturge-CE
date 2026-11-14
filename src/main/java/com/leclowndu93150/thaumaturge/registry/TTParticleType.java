@@ -1,28 +1,20 @@
 package com.leclowndu93150.thaumaturge.registry;
 
-import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.Codec;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleType;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
 
+/** Particle type carrying custom {@link ParticleOptions} (Forge 1.20.1 stand-in for CE's TTParticleType). */
 public final class TTParticleType<T extends ParticleOptions> extends ParticleType<T> {
-    private final MapCodec<T> codec;
-    private final StreamCodec<? super RegistryFriendlyByteBuf, T> streamCodec;
+    private final Codec<T> codec;
 
-    public TTParticleType(MapCodec<T> codec, StreamCodec<? super RegistryFriendlyByteBuf, T> streamCodec) {
-        super(false);
+    public TTParticleType(ParticleOptions.Deserializer<T> deserializer, Codec<T> codec) {
+        super(false, deserializer);
         this.codec = codec;
-        this.streamCodec = streamCodec;
     }
 
     @Override
-    public MapCodec<T> codec() {
+    public Codec<T> codec() {
         return codec;
-    }
-
-    @Override
-    public StreamCodec<? super RegistryFriendlyByteBuf, T> streamCodec() {
-        return streamCodec;
     }
 }

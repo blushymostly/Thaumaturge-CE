@@ -1,0 +1,39 @@
+{
+  "type": "thaumaturge:infusion",
+  "research": "thaumaturge:focus_greater@0",
+  "central": {
+    "item": "thaumaturge:focus_2"
+  },
+  "components": [
+    {
+      "item": "thaumaturge:quicksilver"
+    },
+    {
+      "item": "thaumaturge:primordial_pearl"
+    },
+    {
+      "item": "thaumaturge:quicksilver"
+    },
+    {
+      "item": "minecraft:nether_star"
+    }
+  ],
+  "aspects": [
+    {
+      "aspect": "thaumaturge:praecantatio",
+      "amount": 25
+    },
+    {
+      "aspect": "thaumaturge:ordo",
+      "amount": 50
+    },
+    {
+      "aspect": "thaumaturge:vacuos",
+      "amount": 100
+    }
+  ],
+  "instability": 5,
+  "result": {
+    "item": "thaumaturge:focus_3"
+  }
+}

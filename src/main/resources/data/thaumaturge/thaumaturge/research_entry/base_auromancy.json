@@ -18,13 +18,12 @@
       "text": "research.thaumaturge.base_auromancy.stage_0",
       "recipes": [
         "thaumaturge:arcane_workbench/vis_resonator",
-        "thaumaturge:wand/assembly/iron_wood",
-        "thaumaturge:crucible/focus_1"
+        "thaumaturge:wand/assembly/iron_wood"
       ],
       "craft": [
         {
           "items": [
-            "thaumaturge:focus_1"
+            "thaumaturge:vis_resonator"
           ],
           "amount": 1
         }
@@ -35,14 +34,15 @@
       "recipes": [
         "thaumaturge:arcane_workbench/vis_resonator",
         "thaumaturge:wand/assembly/iron_wood",
-        "thaumaturge:crucible/focus_1",
-        "thaumaturge:table_stone",
-        "thaumaturge:arcane_workbench/focal_manipulator"
+        "thaumaturge:arcane_workbench/dioptra",
+        "thaumaturge:arcane_workbench/recharge_pedestal",
+        "thaumaturge:arcane_workbench/focal_manipulator",
+        "thaumaturge:crucible/focus_1"
       ],
       "craft": [
         {
           "items": [
-            "thaumaturge:focal_manipulator"
+            "thaumaturge:dioptra"
           ],
           "amount": 1
         }
@@ -56,9 +56,10 @@
       "recipes": [
         "thaumaturge:arcane_workbench/vis_resonator",
         "thaumaturge:wand/assembly/iron_wood",
-        "thaumaturge:crucible/focus_1",
-        "thaumaturge:table_stone",
-        "thaumaturge:arcane_workbench/focal_manipulator"
+        "thaumaturge:arcane_workbench/dioptra",
+        "thaumaturge:arcane_workbench/recharge_pedestal",
+        "thaumaturge:arcane_workbench/focal_manipulator",
+        "thaumaturge:crucible/focus_1"
       ]
     }
   ],

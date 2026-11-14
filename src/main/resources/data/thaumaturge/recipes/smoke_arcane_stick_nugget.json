@@ -1,0 +1,22 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "pattern": [
+    "S",
+    "S"
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:stick"
+    }
+  },
+  "result": {
+    "item": "minecraft:gold_nugget",
+    "count": 1
+  },
+  "vis": [
+    {
+      "aspect": "thaumaturge:ordo",
+      "amount": 5
+    }
+  ]
+}

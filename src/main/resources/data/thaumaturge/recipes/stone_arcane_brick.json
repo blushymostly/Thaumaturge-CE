@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SS",
+    "SS"
+  ],
+  "key": {
+    "S": { "item": "thaumaturge:arcane_stone" }
+  },
+  "result": {
+    "item": "thaumaturge:arcane_stone_brick",
+    "count": 4
+  }
+}

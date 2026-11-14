@@ -1,0 +1,27 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "thaumaturge:block/bellows"
+    },
+    "facing=east": {
+      "model": "thaumaturge:block/bellows",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "thaumaturge:block/bellows",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "thaumaturge:block/bellows",
+      "y": 270
+    },
+    "facing=down": {
+      "model": "thaumaturge:block/bellows",
+      "x": 90
+    },
+    "facing=up": {
+      "model": "thaumaturge:block/bellows",
+      "x": 270
+    }
+  }
+}

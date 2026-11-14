@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "side": "thaumaturge:block/smelter_basic_side",
+    "front": "thaumaturge:block/smelter_basic_front_off",
+    "top": "thaumaturge:block/smelter_top"
+  }
+}

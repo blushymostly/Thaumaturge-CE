@@ -1,0 +1,6 @@
+{
+  "type": "forge:add_features",
+  "biomes": "#thaumaturge:has_silverwood_abundant",
+  "features": "thaumaturge:silverwood_abundant",
+  "step": "vegetal_decoration"
+}

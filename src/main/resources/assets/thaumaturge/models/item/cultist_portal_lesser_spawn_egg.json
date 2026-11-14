@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "thaumaturge:item/cultist_portal_lesser_spawn_egg"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "type": "thaumaturge:crucible",
+  "research": "thaumaturge:metal_purification@2",
+  "catalyst": {
+    "tag": "forge:ores/silver"
+  },
+  "aspects": [
+    {
+      "aspect": "thaumaturge:metallum",
+      "amount": 5
+    },
+    {
+      "aspect": "thaumaturge:ordo",
+      "amount": 5
+    }
+  ],
+  "result": {
+    "item": "thaumaturge:cluster_silver",
+    "count": 1
+  },
+  "conditions": [
+    {
+      "type": "forge:not",
+      "value": {
+        "type": "forge:tag_empty",
+        "tag": "forge:ores/silver"
+      }
+    }
+  ]
+}

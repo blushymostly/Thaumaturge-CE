@@ -1,0 +1,9 @@
+{
+  "type": "forge:add_features",
+  "biomes": "thaumaturge:magical_forest_caves",
+  "features": [
+    "thaumaturge:magical_cave_pond",
+    "thaumaturge:magical_cave_bush"
+  ],
+  "step": "vegetal_decoration"
+}

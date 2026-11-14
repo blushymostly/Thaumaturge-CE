@@ -2,7 +2,7 @@ package com.leclowndu93150.thaumaturge.content.world.objects;
 
 import com.leclowndu93150.thaumaturge.registry.TTBlockTags;
 import com.leclowndu93150.thaumaturge.registry.TTPlacementModifiers;
-import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.Codec;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -18,7 +18,7 @@ import net.minecraft.world.level.levelgen.placement.PlacementModifierType;
 
 public final class MagicalCaveFloorPlacement extends PlacementModifier {
     public static final MagicalCaveFloorPlacement INSTANCE = new MagicalCaveFloorPlacement();
-    public static final MapCodec<MagicalCaveFloorPlacement> CODEC = MapCodec.unit(INSTANCE);
+    public static final Codec<MagicalCaveFloorPlacement> CODEC = Codec.unit(INSTANCE);
 
     private MagicalCaveFloorPlacement() {}
 
@@ -26,11 +26,11 @@ public final class MagicalCaveFloorPlacement extends PlacementModifier {
     public Stream<BlockPos> getPositions(PlacementContext context, RandomSource random, BlockPos origin) {
         ChunkAccess chunk = context.getLevel().getChunk(origin);
         int top = context.getHeight(Heightmap.Types.WORLD_SURFACE_WG, origin.getX(), origin.getZ());
-        int bottom = Math.max(chunk.getMinY(), top - chunk.getHeight());
+        int bottom = Math.max(chunk.getMinBuildHeight(), top - chunk.getHeight());
         if (top <= bottom)
             return Stream.empty();
 
-        int minGroundY = Math.max(chunk.getMinY(), bottom - 1);
+        int minGroundY = Math.max(chunk.getMinBuildHeight(), bottom - 1);
         int localX = origin.getX() & 15;
         int localZ = origin.getZ() & 15;
         boolean airAbove = context.getBlockState(origin.atY(top - 1)).isAir();

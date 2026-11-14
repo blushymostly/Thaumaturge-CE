@@ -1,0 +1,14 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:redstone_relay",
+  "pattern": ["TGT", "SSS"],
+  "key": {
+    "T": { "item": "minecraft:redstone_torch" },
+    "G": { "item": "thaumaturge:mechanism_simple" },
+    "S": { "item": "minecraft:stone_slab" }
+  },
+  "result": { "item": "thaumaturge:redstone_relay", "count": 1 },
+  "vis": [
+    { "aspect": "thaumaturge:ordo", "amount": 1 }
+  ]
+}

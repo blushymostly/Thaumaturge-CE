@@ -1,7 +1,7 @@
 package com.leclowndu93150.thaumaturge.content.world.objects;
 
 import com.leclowndu93150.thaumaturge.registry.TTPlacementModifiers;
-import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.Codec;
 import java.util.Optional;
 import java.util.stream.Stream;
 import net.minecraft.core.BlockPos;
@@ -16,7 +16,7 @@ import net.minecraft.world.level.levelgen.placement.PlacementModifierType;
 
 public final class SurfaceBiomeSearch extends PlacementModifier {
     public static final SurfaceBiomeSearch INSTANCE = new SurfaceBiomeSearch();
-    public static final MapCodec<SurfaceBiomeSearch> CODEC = MapCodec.unit(INSTANCE);
+    public static final Codec<SurfaceBiomeSearch> CODEC = Codec.unit(INSTANCE);
     private static final int CELL_CENTER = QuartPos.SIZE / 2;
 
     private SurfaceBiomeSearch() {}

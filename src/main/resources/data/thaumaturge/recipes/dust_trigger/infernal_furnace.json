@@ -1,0 +1,192 @@
+{
+  "type": "thaumaturge:dust_structure",
+  "research": "thaumaturge:infernal_furnace",
+  "result": {
+    "item": "thaumaturge:infernal_furnace"
+  },
+  "rotate": true,
+  "cells": [
+    {
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "source": "minecraft:nether_bricks",
+      "replacement": "thaumaturge:placeholder_nether_bricks"
+    },
+    {
+      "x": 0,
+      "y": -1,
+      "z": -1,
+      "source": "minecraft:obsidian",
+      "replacement": "thaumaturge:placeholder_obsidian"
+    },
+    {
+      "x": 1,
+      "y": -1,
+      "z": -1,
+      "source": "minecraft:nether_bricks",
+      "replacement": "thaumaturge:placeholder_nether_bricks"
+    },
+    {
+      "x": -1,
+      "y": -1,
+      "z": 0,
+      "source": "minecraft:obsidian",
+      "replacement": "thaumaturge:placeholder_obsidian"
+    },
+    {
+      "x": 0,
+      "y": -1,
+      "z": 0,
+      "source": "minecraft:obsidian",
+      "replacement": "thaumaturge:placeholder_obsidian"
+    },
+    {
+      "x": 1,
+      "y": -1,
+      "z": 0,
+      "source": "minecraft:obsidian",
+      "replacement": "thaumaturge:placeholder_obsidian"
+    },
+    {
+      "x": -1,
+      "y": -1,
+      "z": 1,
+      "source": "minecraft:nether_bricks",
+      "replacement": "thaumaturge:placeholder_nether_bricks"
+    },
+    {
+      "x": 0,
+      "y": -1,
+      "z": 1,
+      "source": "minecraft:obsidian",
+      "replacement": "thaumaturge:placeholder_obsidian"
+    },
+    {
+      "x": 1,
+      "y": -1,
+      "z": 1,
+      "source": "minecraft:nether_bricks",
+      "replacement": "thaumaturge:placeholder_nether_bricks"
+    },
+    {
+      "x": -1,
+      "y": 0,
+      "z": -1,
+      "source": "minecraft:nether_bricks",
+      "replacement": "thaumaturge:placeholder_nether_bricks"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": -1,
+      "source": "minecraft:obsidian",
+      "replacement": "thaumaturge:placeholder_obsidian"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "z": -1,
+      "source": "minecraft:nether_bricks",
+      "replacement": "thaumaturge:placeholder_nether_bricks"
+    },
+    {
+      "x": -1,
+      "y": 0,
+      "z": 0,
+      "source": "minecraft:obsidian",
+      "replacement": "thaumaturge:placeholder_obsidian"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "z": 0,
+      "source": "minecraft:obsidian",
+      "replacement": "thaumaturge:placeholder_obsidian"
+    },
+    {
+      "x": -1,
+      "y": 0,
+      "z": 1,
+      "source": "minecraft:nether_bricks",
+      "replacement": "thaumaturge:placeholder_nether_bricks"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": 1,
+      "source": "minecraft:iron_bars",
+      "replacement": "minecraft:air"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "z": 1,
+      "source": "minecraft:nether_bricks",
+      "replacement": "thaumaturge:placeholder_nether_bricks"
+    },
+    {
+      "x": -1,
+      "y": 1,
+      "z": -1,
+      "source": "minecraft:nether_bricks",
+      "replacement": "thaumaturge:placeholder_nether_bricks"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "z": -1,
+      "source": "minecraft:obsidian",
+      "replacement": "thaumaturge:placeholder_obsidian"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "z": -1,
+      "source": "minecraft:nether_bricks",
+      "replacement": "thaumaturge:placeholder_nether_bricks"
+    },
+    {
+      "x": -1,
+      "y": 1,
+      "z": 0,
+      "source": "minecraft:obsidian",
+      "replacement": "thaumaturge:placeholder_obsidian"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "z": 0,
+      "source": "minecraft:obsidian",
+      "replacement": "thaumaturge:placeholder_obsidian"
+    },
+    {
+      "x": -1,
+      "y": 1,
+      "z": 1,
+      "source": "minecraft:nether_bricks",
+      "replacement": "thaumaturge:placeholder_nether_bricks"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "z": 1,
+      "source": "minecraft:obsidian",
+      "replacement": "thaumaturge:placeholder_obsidian"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "z": 1,
+      "source": "minecraft:nether_bricks",
+      "replacement": "thaumaturge:placeholder_nether_bricks"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "source": "minecraft:lava",
+      "replacement": "thaumaturge:infernal_furnace"
+    }
+  ]
+}

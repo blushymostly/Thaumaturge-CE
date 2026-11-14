@@ -5,6 +5,9 @@
     "thaumaturge:crimson_rites",
     "thaumaturge:unlock_auromancy"
   ],
+  "siblings": [
+    "thaumaturge:base_eldritch"
+  ],
   "column": -4,
   "row": 6,
   "meta": [

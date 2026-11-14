@@ -7,7 +7,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.GsonHelper;
 import org.joml.Vector3f;
@@ -23,7 +23,7 @@ public final class TTMeshLoader {
 
     private TTMeshLoader() {}
 
-    public static TTMesh load(ResourceManager resources, Identifier location) throws IOException {
+    public static TTMesh load(ResourceManager resources, ResourceLocation location) throws IOException {
         JsonObject root;
         try (BufferedReader reader = resources.openAsReader(location)) {
             root = GsonHelper.parse(reader);

@@ -1,0 +1,48 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:infusion_stable",
+  "pattern": [
+    "SRS",
+    "BVB",
+    "IMI"
+  ],
+  "key": {
+    "S": {
+      "item": "thaumaturge:slab_arcane_stone"
+    },
+    "R": {
+      "item": "minecraft:redstone_block"
+    },
+    "B": {
+      "item": "thaumaturge:arcane_stone"
+    },
+    "V": {
+      "item": "thaumaturge:vis_resonator"
+    },
+    "I": {
+      "item": "thaumaturge:plate_iron"
+    },
+    "M": {
+      "item": "thaumaturge:mechanism_complex"
+    }
+  },
+  "result": {
+    "item": "thaumaturge:stabilizer",
+    "count": 1
+  },
+  "vis": 250,
+  "crystals": [
+    {
+      "aspect": "thaumaturge:terra",
+      "amount": 1
+    },
+    {
+      "aspect": "thaumaturge:aqua",
+      "amount": 1
+    },
+    {
+      "aspect": "thaumaturge:perditio",
+      "amount": 1
+    }
+  ]
+}

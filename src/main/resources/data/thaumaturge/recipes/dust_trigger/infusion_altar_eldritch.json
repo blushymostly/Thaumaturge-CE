@@ -1,0 +1,77 @@
+{
+  "type": "thaumaturge:dust_structure",
+  "research": "thaumaturge:infusion_eldritch",
+  "result": {
+    "item": "thaumaturge:infusion_matrix"
+  },
+  "cells": [
+    {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "source": "thaumaturge:infusion_matrix"
+    },
+    {
+      "x": 0,
+      "y": -2,
+      "z": 0,
+      "source": "thaumaturge:pedestal_eldritch"
+    },
+    {
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "source": "thaumaturge:stone_eldritch_tile",
+      "replacement": "minecraft:air"
+    },
+    {
+      "x": -1,
+      "y": -2,
+      "z": -1,
+      "source": "thaumaturge:stone_eldritch_tile",
+      "replacement": "thaumaturge:pillar_eldritch"
+    },
+    {
+      "x": -1,
+      "y": -1,
+      "z": 1,
+      "source": "thaumaturge:stone_eldritch_tile",
+      "replacement": "minecraft:air"
+    },
+    {
+      "x": -1,
+      "y": -2,
+      "z": 1,
+      "source": "thaumaturge:stone_eldritch_tile",
+      "replacement": "thaumaturge:pillar_eldritch"
+    },
+    {
+      "x": 1,
+      "y": -1,
+      "z": -1,
+      "source": "thaumaturge:stone_eldritch_tile",
+      "replacement": "minecraft:air"
+    },
+    {
+      "x": 1,
+      "y": -2,
+      "z": -1,
+      "source": "thaumaturge:stone_eldritch_tile",
+      "replacement": "thaumaturge:pillar_eldritch"
+    },
+    {
+      "x": 1,
+      "y": -1,
+      "z": 1,
+      "source": "thaumaturge:stone_eldritch_tile",
+      "replacement": "minecraft:air"
+    },
+    {
+      "x": 1,
+      "y": -2,
+      "z": 1,
+      "source": "thaumaturge:stone_eldritch_tile",
+      "replacement": "thaumaturge:pillar_eldritch"
+    }
+  ]
+}

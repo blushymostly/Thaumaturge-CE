@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "stage=0": { "model": "thaumaturge:block/sapling_greatwood" },
+    "stage=1": { "model": "thaumaturge:block/sapling_greatwood" }
+  }
+}

@@ -4958,6 +4958,7 @@
                 "amount": 1
             }
         ],
+        "minecraft:grass": [{"aspect":"thaumaturge:herba","amount":2},{"aspect":"thaumaturge:aer","amount":1}],
         "minecraft:short_grass": [
             {
                 "aspect": "thaumaturge:herba",

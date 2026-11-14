@@ -1,0 +1,34 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:essentia_smelter_void",
+  "pattern": [
+    "PRP",
+    "CFC",
+    "CCC"
+  ],
+  "key": {
+    "P": {
+      "item": "thaumaturge:plate_brass"
+    },
+    "R": {
+      "item": "thaumaturge:smelter_thaumium"
+    },
+    "C": {
+      "item": "thaumaturge:plate_void"
+    },
+    "F": {
+      "item": "thaumaturge:advanced_alchemical_construct"
+    }
+  },
+  "vis": 750,
+  "crystals": [
+    {
+      "aspect": "thaumaturge:ignis",
+      "amount": 3
+    }
+  ],
+  "result": {
+    "item": "thaumaturge:smelter_void",
+    "count": 1
+  }
+}

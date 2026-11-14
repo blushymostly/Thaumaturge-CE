@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/slab",
+  "textures": {
+    "side": "thaumaturge:block/plank_greatwood",
+    "bottom": "thaumaturge:block/plank_greatwood",
+    "top": "thaumaturge:block/plank_greatwood"
+  }
+}

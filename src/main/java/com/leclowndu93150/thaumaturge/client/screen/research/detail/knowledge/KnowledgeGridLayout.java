@@ -10,7 +10,7 @@ public enum KnowledgeGridLayout {
     INSERT(28) {
         @Override
         public int columnStride(int categoryCount) {
-            return (int) (INSERT_COLUMN_SPAN / (float) categoryCount);
+            return (int) (INSERT_COLUMN_SPAN / (float) Math.max(1, categoryCount));
         }
     };
 

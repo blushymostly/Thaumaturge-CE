@@ -3,7 +3,6 @@ package com.leclowndu93150.thaumaturge.content.decor;
 import com.leclowndu93150.thaumaturge.content.aura.node.BlockEntityNode;
 import com.leclowndu93150.thaumaturge.registry.TTBlockEntities;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.EntityBlock;
@@ -11,7 +10,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 public final class BlockObsidianTotemCharged extends BlockObsidianTotem implements EntityBlock {
     public BlockObsidianTotemCharged(Properties properties) {
@@ -28,17 +27,12 @@ public final class BlockObsidianTotemCharged extends BlockObsidianTotem implemen
         if (type != TTBlockEntities.NODE.get()) {
             return null;
         }
-        if (level.isClientSide()) {
-            return (tickLevel, pos, tickState, node) -> ((BlockEntityNode) node).clientTick(tickLevel, pos);
-        }
-        return (tickLevel, pos, tickState, node) -> ((BlockEntityNode) node).serverTick(tickLevel, pos);
+        return level.isClientSide ? null : (world, at, block, node) -> ((BlockEntityNode) node).serverTick(world, at);
     }
 
     @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (level instanceof ServerLevel serverLevel && level.getBlockEntity(pos) instanceof BlockEntityNode node) {
-            node.burstIntoOrbs(serverLevel, pos);
-        }
-        return super.playerWillDestroy(level, pos, state, player);
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        if (!level.isClientSide && level.getBlockEntity(pos) instanceof BlockEntityNode node) node.burstAndClear(player);
+        super.playerWillDestroy(level, pos, state, player);
     }
 }

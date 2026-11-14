@@ -1,0 +1,6 @@
+{
+  "type": "forge:add_features",
+  "biomes": "#thaumaturge:has_cinderpearl",
+  "features": "thaumaturge:cinderpearl",
+  "step": "vegetal_decoration"
+}

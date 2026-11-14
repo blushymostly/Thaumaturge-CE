@@ -1,0 +1,55 @@
+{
+  "type": "thaumaturge:infusion",
+  "research": "thaumaturge:node_stabilizer_advanced",
+  "central": {
+    "item": "thaumaturge:node_stabilizer"
+  },
+  "components": [
+    {
+      "tag": "thaumaturge:nitors"
+    },
+    {
+      "item": "minecraft:redstone_block"
+    },
+    {
+      "item": "thaumaturge:alumentum"
+    },
+    {
+      "item": "minecraft:redstone_block"
+    },
+    {
+      "tag": "thaumaturge:nitors"
+    },
+    {
+      "item": "minecraft:redstone_block"
+    },
+    {
+      "item": "thaumaturge:alumentum"
+    },
+    {
+      "item": "minecraft:redstone_block"
+    }
+  ],
+  "aspects": [
+    {
+      "aspect": "thaumaturge:auram",
+      "amount": 32
+    },
+    {
+      "aspect": "thaumaturge:praecantatio",
+      "amount": 16
+    },
+    {
+      "aspect": "thaumaturge:ordo",
+      "amount": 16
+    },
+    {
+      "aspect": "thaumaturge:potentia",
+      "amount": 16
+    }
+  ],
+  "instability": 10,
+  "result": {
+    "item": "thaumaturge:node_stabilizer_advanced"
+  }
+}

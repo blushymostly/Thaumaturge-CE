@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    { "item": "thaumaturge:phial" },
+    { "tag": "forge:dyes/black" },
+    { "tag": "forge:feathers" }
+  ],
+  "result": {
+    "item": "thaumaturge:scribing_tools",
+    "count": 1
+  }
+}

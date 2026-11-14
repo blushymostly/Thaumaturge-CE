@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/outer_stairs",
+  "textures": {
+    "bottom": "thaumaturge:block/eldritch_rock",
+    "side": "thaumaturge:block/eldritch_rock",
+    "top": "thaumaturge:block/eldritch_rock"
+  }
+}

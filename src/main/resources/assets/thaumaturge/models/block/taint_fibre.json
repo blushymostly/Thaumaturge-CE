@@ -1,5 +1,6 @@
 {
     "ambientocclusion": false,
+    "render_type": "minecraft:cutout",
     "textures": {
         "particle": "thaumaturge:block/taint_fibre",
         "fibre": "thaumaturge:block/taint_fibre"

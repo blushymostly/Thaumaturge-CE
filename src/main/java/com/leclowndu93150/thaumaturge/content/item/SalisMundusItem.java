@@ -1,18 +1,13 @@
 package com.leclowndu93150.thaumaturge.content.item;
 
 import com.leclowndu93150.thaumaturge.TTIds;
-import com.leclowndu93150.thaumaturge.Thaumaturge;
 import com.leclowndu93150.thaumaturge.api.recipe.DustTrigger;
 import com.leclowndu93150.thaumaturge.api.recipe.DustTriggerInput;
 import com.leclowndu93150.thaumaturge.api.recipe.DustTriggerPlacement;
-import com.leclowndu93150.thaumaturge.content.misc.TTActionBar;
 import com.leclowndu93150.thaumaturge.content.recipe.dust.DustTriggerFx;
-import com.leclowndu93150.thaumaturge.content.recipe.dust.DustTriggerSwapQueue;
-import com.leclowndu93150.thaumaturge.content.research.ResearchProgressionEvents;
 import com.leclowndu93150.thaumaturge.registry.TTItems;
 import com.leclowndu93150.thaumaturge.registry.TTRecipeTypes;
 import com.leclowndu93150.thaumaturge.registry.TTSounds;
-import java.util.List;
 import java.util.Optional;
 import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
@@ -24,49 +19,70 @@ import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
-import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.player.UseItemOnBlockEvent;
-import org.jspecify.annotations.Nullable;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
-@EventBusSubscriber(modid = TTIds.MODID)
+/** Salis Mundus: right-click a valid block to trigger in-world dust transformations. */
+@Mod.EventBusSubscriber(modid = TTIds.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class SalisMundusItem extends Item {
-    private static final int SWAP_DELAY_TICKS = 50;
     private static final float SOUND_VOLUME = 0.33F;
     private static final float SOUND_PITCH_BASE = 1.0F;
     private static final float SOUND_PITCH_DEVIATION = 0.05F;
-    private static final int CONSUMED_COUNT = 1;
-    private static final String NO_RESEARCH_KEY = "message.thaumaturge.salis_mundus.no_research";
 
     public SalisMundusItem(Item.Properties properties) {
         super(properties);
     }
 
-    @SubscribeEvent
-    public static void allowUseOnCraftingTable(UseItemOnBlockEvent event) {
-        if (event.getUsePhase() != UseItemOnBlockEvent.UsePhase.BLOCK) {
-            return;
-        }
-        if (!event.getItemStack().is(TTItems.SALIS_MUNDUS)) {
-            return;
-        }
-        Player player = event.getPlayer();
-        if (player != null && player.isCrouching()) {
-            event.cancelWithResult(InteractionResult.PASS);
-        }
+    /**
+     * Crafting tables (and other interactive blocks) eat the click before {@link #useOn}.
+     * Run the trigger first via {@link #onItemUseFirst}; deny the block when we matched.
+     */
+    @Override
+    public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
+        InteractionResult result = tryTrigger(context);
+        return result == InteractionResult.PASS ? InteractionResult.PASS : result;
     }
 
     @Override
     public InteractionResult useOn(UseOnContext context) {
+        return tryTrigger(context);
+    }
+
+    /**
+     * Crafting tables otherwise open their GUI and swallow the click before {@link #useOn}.
+     * Only deny the block when a dust trigger matches — otherwise crucibles (and similar) keep RMB.
+     */
+    @SubscribeEvent
+    public static void preferDustOverBlock(PlayerInteractEvent.RightClickBlock event) {
+        if (!event.getItemStack().is(TTItems.SALIS_MUNDUS.get())) {
+            return;
+        }
+        Level level = event.getLevel();
+        BlockPos pos = event.getPos();
+        DustTriggerInput input = new DustTriggerInput(event.getItemStack(), level, pos, level.getBlockState(pos));
+        boolean matches = level.getRecipeManager().getAllRecipesFor(TTRecipeTypes.DUST_TRIGGER.get()).stream()
+                .anyMatch(recipe -> recipe.matches(input, level));
+        if (matches) {
+            event.setUseBlock(Event.Result.DENY);
+        }
+    }
+
+    @Override
+    public boolean doesSneakBypassUse(ItemStack stack, LevelReader level, BlockPos pos, Player player) {
+        return true;
+    }
+
+    private InteractionResult tryTrigger(UseOnContext context) {
         Player player = context.getPlayer();
         if (player == null) {
             return InteractionResult.PASS;
@@ -78,74 +94,52 @@ public final class SalisMundusItem extends Item {
         if (!player.mayUseItemAt(pos, face, held)) {
             return InteractionResult.FAIL;
         }
+
+        BlockState clicked = level.getBlockState(pos);
+        DustTriggerInput input = new DustTriggerInput(held, level, pos, clicked);
+        Optional<DustTrigger> match = findTrigger(level.getRecipeManager(), input, level);
+        if (match.isEmpty()) {
+            if (clicked.is(com.leclowndu93150.thaumaturge.registry.TTBlocks.INFUSION_MATRIX.get())) {
+                if (level instanceof ServerLevel) {
+                    player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.thaumaturge.infusion.invalid_structure"), true);
+                }
+                return InteractionResult.FAIL;
+            }
+            return InteractionResult.PASS;
+        }
+
         InteractionHand hand = context.getHand();
         player.swing(hand);
         if (!(level instanceof ServerLevel serverLevel) || !(player instanceof ServerPlayer serverPlayer)) {
             return InteractionResult.SUCCESS;
         }
-        return applyOnServer(context, serverLevel, serverPlayer, held, pos, face, hand);
+        return applyOnServer(serverLevel, serverPlayer, held, match.get(), input, pos, face);
     }
 
-    @Override
-    public boolean doesSneakBypassUse(ItemStack stack, LevelReader level, BlockPos pos, Player player) {
-        return true;
-    }
-
-    private static InteractionResult applyOnServer(UseOnContext context, ServerLevel level, ServerPlayer player, ItemStack held, BlockPos pos, Direction face, InteractionHand hand) {
-        BlockState clicked = level.getBlockState(pos);
-        DustTriggerInput input = new DustTriggerInput(held, level, pos, clicked);
-        Optional<RecipeHolder<DustTrigger>> match = level.recipeAccess().getRecipeFor(TTRecipeTypes.DUST_TRIGGER.get(), input, level);
-        if (match.isEmpty()) {
-            return InteractionResult.PASS;
-        }
-        RecipeHolder<DustTrigger> holder = match.get();
-        DustTrigger trigger = holder.value();
+    private static InteractionResult applyOnServer(ServerLevel level, ServerPlayer player, ItemStack held, DustTrigger trigger,
+            DustTriggerInput input, BlockPos pos, Direction face) {
         if (!trigger.doesPassGate(player)) {
-            Thaumaturge.LOGGER.debug("Salis Mundus trigger {} blocked by research gate {}", holder.id(), trigger.researchGate().orElse(null));
-            TTActionBar.sendPurple(player, NO_RESEARCH_KEY);
-            return InteractionResult.PASS;
+            player.displayClientMessage(net.minecraft.network.chat.Component.translatable("message.thaumaturge.salis_mundus.no_research"), true);
+            return InteractionResult.FAIL;
         }
-        ItemStack result = trigger.assemble(input);
-        if (result.isEmpty()) {
-            return InteractionResult.PASS;
+        DustTriggerPlacement placement = trigger.findPlacement(input);
+        trigger.execute(input, player, placement, face);
+        Vec3 handPos = player.getEyePosition().add(player.getLookAngle().scale(0.3));
+        DustTriggerFx.emitTriggerSparkles(level, player, pos, trigger, handPos, placement);
+        level.playSound(null, pos, TTSounds.DUST.get(), SoundSource.PLAYERS, SOUND_VOLUME,
+                SOUND_PITCH_BASE + level.random.nextFloat() * SOUND_PITCH_DEVIATION);
+        CriteriaTriggers.ITEM_USED_ON_BLOCK.trigger(player, pos, held);
+        player.awardStat(Stats.ITEM_USED.get(held.getItem()));
+        if (!player.getAbilities().instabuild) {
+            held.shrink(1);
         }
-        ItemStack consumed = held.copyWithCount(CONSUMED_COUNT);
-        if (!player.hasInfiniteMaterials()) {
-            held.shrink(CONSUMED_COUNT);
-        }
-        DustTriggerPlacement placement = null;
-        if (trigger.isMultiblock()) {
-            placement = trigger.findPlacement(input);
-            if (placement == null) {
-                return InteractionResult.PASS;
-            }
-            trigger.execute(input, player, placement, face);
-        } else {
-            queueSwap(level, pos, clicked, result);
-        }
-        emitEffects(level, player, hand, pos, context.getClickLocation(), trigger, placement);
-        recordProgress(player, holder, result, consumed);
         return InteractionResult.SUCCESS;
     }
 
-    private static void queueSwap(ServerLevel level, BlockPos pos, BlockState original, ItemStack result) {
-        if (result.getItem() instanceof BlockItem blockItem) {
-            DustTriggerSwapQueue.enqueuePlace(level, pos, original, blockItem.getBlock().defaultBlockState(), SWAP_DELAY_TICKS);
-        } else {
-            DustTriggerSwapQueue.enqueueDrop(level, pos, original, result, SWAP_DELAY_TICKS);
-        }
-    }
-
-    private static void emitEffects(ServerLevel level, ServerPlayer player, InteractionHand hand, BlockPos pos, Vec3 start, DustTrigger trigger, @Nullable DustTriggerPlacement placement) {
-        DustTriggerFx.emitUseBurst(level, player, hand, pos);
-        DustTriggerFx.emitTriggerSparkles(level, player, pos, trigger, start, placement);
-        float pitch = SOUND_PITCH_BASE + (float) level.getRandom().nextGaussian() * SOUND_PITCH_DEVIATION;
-        level.playSound(null, pos, TTSounds.DUST.get(), SoundSource.PLAYERS, SOUND_VOLUME, pitch);
-    }
-
-    private static void recordProgress(ServerPlayer player, RecipeHolder<DustTrigger> holder, ItemStack result, ItemStack consumed) {
-        player.awardStat(Stats.ITEM_CRAFTED.get(result.getItem()), result.getCount());
-        ResearchProgressionEvents.recordCrafted(player, result);
-        CriteriaTriggers.RECIPE_CRAFTED.trigger(player, holder.id(), List.of(consumed));
+    private static Optional<DustTrigger> findTrigger(RecipeManager recipes, DustTriggerInput input, Level level) {
+        return recipes.getAllRecipesFor(TTRecipeTypes.DUST_TRIGGER.get()).stream()
+                .filter(recipe -> recipe.matches(input, level))
+                .map(recipe -> (DustTrigger) recipe)
+                .findFirst();
     }
 }

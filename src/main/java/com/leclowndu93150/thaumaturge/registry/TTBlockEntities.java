@@ -1,326 +1,120 @@
 package com.leclowndu93150.thaumaturge.registry;
 
+import com.leclowndu93150.thaumaturge.content.taint.EtherealBloom;
 import com.leclowndu93150.thaumaturge.TTIds;
 import com.leclowndu93150.thaumaturge.content.aura.BlockEntityRechargePedestal;
-import com.leclowndu93150.thaumaturge.content.aura.node.BlockEntityJarNode;
 import com.leclowndu93150.thaumaturge.content.aura.node.BlockEntityNode;
-import com.leclowndu93150.thaumaturge.content.aura.node.BlockEntityNodeStabilizer;
-import com.leclowndu93150.thaumaturge.content.aura.node.BlockEntityNodeTransducer;
-import com.leclowndu93150.thaumaturge.content.aura.relay.BlockEntityVisRelay;
-import com.leclowndu93150.thaumaturge.content.spell.manipulator.BlockEntityFocalManipulator;
-import com.leclowndu93150.thaumaturge.content.crucible.BlockEntityCrucible;
-import com.leclowndu93150.thaumaturge.content.decor.BlockEntityBarrierStone;
-import com.leclowndu93150.thaumaturge.content.decor.banner.BlockEntityBanner;
-import com.leclowndu93150.thaumaturge.content.device.BlockEntityArcaneEar;
-import com.leclowndu93150.thaumaturge.content.device.BlockEntityCondenser;
 import com.leclowndu93150.thaumaturge.content.device.BlockEntityDioptra;
-import com.leclowndu93150.thaumaturge.content.device.BlockEntityEverfullUrn;
-import com.leclowndu93150.thaumaturge.content.device.BlockEntityHungryChest;
-import com.leclowndu93150.thaumaturge.content.device.BlockEntityLampArcane;
-import com.leclowndu93150.thaumaturge.content.device.BlockEntityLampFertility;
-import com.leclowndu93150.thaumaturge.content.device.BlockEntityLampGrowth;
-import com.leclowndu93150.thaumaturge.content.device.levitator.BlockEntityLevitator;
-import com.leclowndu93150.thaumaturge.content.device.BlockEntityRedstoneRelay;
-import com.leclowndu93150.thaumaturge.content.device.BlockEntityStabilizer;
-import com.leclowndu93150.thaumaturge.content.device.BlockEntityVisGenerator;
-import com.leclowndu93150.thaumaturge.content.device.BlockEntityVoidSiphon;
-import com.leclowndu93150.thaumaturge.content.device.bore.BlockEntityArcaneBore;
-import com.leclowndu93150.thaumaturge.content.device.fluxscrubber.BlockEntityFluxScrubber;
-import com.leclowndu93150.thaumaturge.content.device.grate.BlockEntityItemGrate;
-import com.leclowndu93150.thaumaturge.content.device.mirror.BlockEntityMirror;
-import com.leclowndu93150.thaumaturge.content.device.mirror.BlockEntityMirrorEssentia;
-import com.leclowndu93150.thaumaturge.content.device.patterncrafter.BlockEntityPatternCrafter;
-import com.leclowndu93150.thaumaturge.content.device.sprayer.BlockEntityPotionSprayer;
-import com.leclowndu93150.thaumaturge.content.eldritch.altar.BlockEntityEldritchAltar;
-import com.leclowndu93150.thaumaturge.content.eldritch.block.BlockEntityEldritchCap;
-import com.leclowndu93150.thaumaturge.content.eldritch.block.BlockEntityEldritchCrabSpawner;
-import com.leclowndu93150.thaumaturge.content.eldritch.block.BlockEntityEldritchNothing;
-import com.leclowndu93150.thaumaturge.content.eldritch.block.BlockEntityEldritchObelisk;
-import com.leclowndu93150.thaumaturge.content.eldritch.block.BlockEntityEldritchTrap;
-import com.leclowndu93150.thaumaturge.content.eldritch.lock.BlockEntityEldritchLock;
-import com.leclowndu93150.thaumaturge.content.eldritch.portal.BlockEntityEldritchPortal;
-import com.leclowndu93150.thaumaturge.content.eldritch.reliquary.BlockEntityEldritchReliquary;
-import com.leclowndu93150.thaumaturge.content.essentia.BlockEntityCentrifuge;
-import com.leclowndu93150.thaumaturge.content.essentia.BlockEntityEssentiaPort;
-import com.leclowndu93150.thaumaturge.content.essentia.advancedfurnace.BlockEntityAdvancedAlchemicalFurnace;
-import com.leclowndu93150.thaumaturge.content.essentia.bellows.BlockEntityBellows;
-import com.leclowndu93150.thaumaturge.content.essentia.crystalizer.BlockEntityEssentiaCrystalizer;
-import com.leclowndu93150.thaumaturge.content.essentia.jar.AbstractBlockEntityJar;
-import com.leclowndu93150.thaumaturge.content.essentia.jar.BlockEntityJar;
-import com.leclowndu93150.thaumaturge.content.essentia.jar.BlockEntityJarBrain;
-import com.leclowndu93150.thaumaturge.content.essentia.jar.BlockEntityJarCreative;
-import com.leclowndu93150.thaumaturge.content.essentia.jar.BlockEntityJarVoid;
-import com.leclowndu93150.thaumaturge.content.essentia.jar.BlockJar;
-import com.leclowndu93150.thaumaturge.content.essentia.reservoir.BlockEntityEssentiaReservoir;
-import com.leclowndu93150.thaumaturge.content.essentia.smeltery.BlockEntityAlembic;
-import com.leclowndu93150.thaumaturge.content.essentia.smeltery.BlockEntitySmelter;
-import com.leclowndu93150.thaumaturge.content.essentia.thaumatorium.BlockEntityThaumatorium;
-import com.leclowndu93150.thaumaturge.content.essentia.thaumatorium.BlockEntityThaumatoriumTop;
-import com.leclowndu93150.thaumaturge.content.essentia.tube.BlockEntityTube;
-import com.leclowndu93150.thaumaturge.content.essentia.tube.BlockEntityTubeBuffer;
-import com.leclowndu93150.thaumaturge.content.essentia.tube.BlockEntityTubeFilter;
-import com.leclowndu93150.thaumaturge.content.essentia.tube.BlockEntityTubeOneway;
-import com.leclowndu93150.thaumaturge.content.essentia.tube.BlockEntityTubeRestrict;
-import com.leclowndu93150.thaumaturge.content.essentia.tube.BlockEntityTubeValve;
-import com.leclowndu93150.thaumaturge.content.spell.block.BlockEntityHole;
-import com.leclowndu93150.thaumaturge.content.golem.press.BlockEntityGolemBuilder;
-import com.leclowndu93150.thaumaturge.content.infernalfurnace.BlockEntityInfernalFurnace;
-import com.leclowndu93150.thaumaturge.content.infusion.BlockEntityInfusionMatrix;
-import com.leclowndu93150.thaumaturge.content.infusion.BlockEntityPedestal;
-import com.leclowndu93150.thaumaturge.content.manabean.BlockEntityManaPod;
+import com.leclowndu93150.thaumaturge.content.essentia.jar.EssentiaJarBlockEntity;
+import com.leclowndu93150.thaumaturge.content.essentia.jar.BrainJarBlockEntity;
+import com.leclowndu93150.thaumaturge.content.essentia.smeltery.AlembicBlockEntity;
+import com.leclowndu93150.thaumaturge.content.essentia.smeltery.SmelterBlockEntity;
+import com.leclowndu93150.thaumaturge.content.essentia.tube.TubeBlockEntity;
+import com.leclowndu93150.thaumaturge.content.crucible.CrucibleBlockEntity;
 import com.leclowndu93150.thaumaturge.content.misc.nitor.BlockEntityNitor;
+import com.leclowndu93150.thaumaturge.content.device.BlockEntityArcaneEar;
+import com.leclowndu93150.thaumaturge.content.device.BlockEntityHungryChest;
+import com.leclowndu93150.thaumaturge.content.device.levitator.BlockEntityLevitator;
 import com.leclowndu93150.thaumaturge.content.research.decon.BlockEntityDeconstructionTable;
 import com.leclowndu93150.thaumaturge.content.research.table.BlockEntityResearchTable;
-import com.leclowndu93150.thaumaturge.content.spa.BlockEntitySpa;
-import com.leclowndu93150.thaumaturge.content.taint.ecology.BlockEntityEtherealBloom;
-import com.leclowndu93150.thaumaturge.content.workbench.BlockEntityArcaneWorkbench;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.world.item.DyeColor;
+import com.leclowndu93150.thaumaturge.content.workbench.ArcaneWorkbenchBlockEntity;
 import net.minecraft.world.level.block.Block;
+import com.leclowndu93150.thaumaturge.content.essentia.bellows.BlockEntityBellows;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
 
 public final class TTBlockEntities {
-    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES = DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, TTIds.MODID);
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityBanner>> BANNER = BLOCK_ENTITIES.register("banner",
-            () -> new BlockEntityType<>(BlockEntityBanner::new, bannerBlocks()));
-
-    private static Set<Block> bannerBlocks() {
-        Set<Block> blocks = new HashSet<>();
-        for (DyeColor dye : DyeColor.values()) {
-            blocks.add(TTBlocks.BANNERS.get(dye).get());
-            blocks.add(TTBlocks.WALL_BANNERS.get(dye).get());
-        }
-        blocks.add(TTBlocks.BANNER_CRIMSON_CULT.get());
-        blocks.add(TTBlocks.WALL_BANNER_CRIMSON_CULT.get());
-        return blocks;
-    }
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityNode>> NODE = BLOCK_ENTITIES.register("node",
-            () -> new BlockEntityType<>(BlockEntityNode::new, Set.of(TTBlocks.NODE.get(), TTBlocks.OBSIDIAN_TOTEM_CHARGED.get(), TTBlocks.SILVERWOOD_NODE_LOG.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityVisRelay>> VIS_RELAY = BLOCK_ENTITIES.register("vis_relay",
-            () -> new BlockEntityType<>(BlockEntityVisRelay::new, Set.of(TTBlocks.VIS_RELAY.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityNodeStabilizer>> NODE_STABILIZER = BLOCK_ENTITIES.register("node_stabilizer",
-            () -> new BlockEntityType<>(BlockEntityNodeStabilizer::new, Set.of(TTBlocks.NODE_STABILIZER.get(), TTBlocks.NODE_STABILIZER_ADVANCED.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityNodeTransducer>> NODE_TRANSDUCER = BLOCK_ENTITIES.register("node_transducer",
-            () -> new BlockEntityType<>(BlockEntityNodeTransducer::new, Set.of(TTBlocks.NODE_TRANSDUCER.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityJarNode>> JAR_NODE = BLOCK_ENTITIES.register("jar_node",
-            () -> new BlockEntityType<>(BlockEntityJarNode::new, Set.of(TTBlocks.JAR_NODE.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityFocalManipulator>> FOCAL_MANIPULATOR = BLOCK_ENTITIES.register("focal_manipulator",
-            () -> new BlockEntityType<>(BlockEntityFocalManipulator::new, Set.of(TTBlocks.FOCAL_MANIPULATOR.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityManaPod>> MANA_POD = BLOCK_ENTITIES.register("mana_pod",
-            () -> new BlockEntityType<>(BlockEntityManaPod::new, Set.of(TTBlocks.MANA_POD.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityResearchTable>> RESEARCH_TABLE = BLOCK_ENTITIES.register("research_table",
-            () -> new BlockEntityType<>(BlockEntityResearchTable::new, Set.of(TTBlocks.RESEARCH_TABLE.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityDeconstructionTable>> DECONSTRUCTION_TABLE = BLOCK_ENTITIES.register("deconstruction_table",
-            () -> new BlockEntityType<>(BlockEntityDeconstructionTable::new, Set.of(TTBlocks.DECONSTRUCTION_TABLE.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityArcaneWorkbench>> ARCANE_WORKBENCH = BLOCK_ENTITIES.register("arcane_workbench",
-            () -> new BlockEntityType<>(BlockEntityArcaneWorkbench::new, Set.of(TTBlocks.ARCANE_WORKBENCH.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityCrucible>> CRUCIBLE = BLOCK_ENTITIES.register("crucible",
-            () -> new BlockEntityType<>(BlockEntityCrucible::new, Set.of(TTBlocks.CRUCIBLE.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntitySpa>> SPA = BLOCK_ENTITIES.register("spa",
-            () -> new BlockEntityType<>(BlockEntitySpa::new, Set.of(TTBlocks.SPA.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntitySmelter>> SMELTER = BLOCK_ENTITIES.register("smelter",
-            () -> new BlockEntityType<>(BlockEntitySmelter::new, Set.of(TTBlocks.SMELTER_BASIC.get(), TTBlocks.SMELTER_THAUMIUM.get(), TTBlocks.SMELTER_VOID.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityAdvancedAlchemicalFurnace>> ADVANCED_ALCHEMICAL_FURNACE = BLOCK_ENTITIES.register("advanced_alchemical_furnace",
-            () -> new BlockEntityType<>(BlockEntityAdvancedAlchemicalFurnace::new, Set.of(TTBlocks.ADVANCED_ALCHEMICAL_FURNACE.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityEssentiaCrystalizer>> ESSENTIA_CRYSTALIZER = BLOCK_ENTITIES.register("essentia_crystalizer",
-            () -> new BlockEntityType<>(BlockEntityEssentiaCrystalizer::new, Set.of(TTBlocks.ESSENTIA_CRYSTALIZER.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityEtherealBloom>> ETHEREAL_BLOOM = BLOCK_ENTITIES.register("ethereal_bloom",
-            () -> new BlockEntityType<>(BlockEntityEtherealBloom::new, Set.of(TTBlocks.ETHEREAL_BLOOM.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityEssentiaReservoir>> ESSENTIA_RESERVOIR = BLOCK_ENTITIES.register("essentia_reservoir",
-            () -> new BlockEntityType<>(BlockEntityEssentiaReservoir::new, Set.of(TTBlocks.ESSENTIA_RESERVOIR.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityFluxScrubber>> FLUX_SCRUBBER = BLOCK_ENTITIES.register("flux_scrubber",
-            () -> new BlockEntityType<>(BlockEntityFluxScrubber::new, Set.of(TTBlocks.FLUX_SCRUBBER.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityAlembic>> ALEMBIC = BLOCK_ENTITIES.register("alembic",
-            () -> new BlockEntityType<>(BlockEntityAlembic::new, Set.of(TTBlocks.ALEMBIC.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityBellows>> BELLOWS = BLOCK_ENTITIES.register("bellows",
-            () -> new BlockEntityType<>(BlockEntityBellows::new, Set.of(TTBlocks.BELLOWS.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityJar>> JAR = BLOCK_ENTITIES.register("jar",
-            () -> new BlockEntityType<>(BlockEntityJar::new, BuiltInRegistries.BLOCK.stream().filter(BlockJar.class::isInstance).collect(Collectors.toUnmodifiableSet())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityJarBrain>> JAR_BRAIN = BLOCK_ENTITIES.register("jar_brain",
-            () -> new BlockEntityType<>(BlockEntityJarBrain::new, Set.of(TTBlocks.JAR_BRAIN.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityThaumatorium>> THAUMATORIUM = BLOCK_ENTITIES.register("thaumatorium",
-            () -> new BlockEntityType<>(BlockEntityThaumatorium::new, Set.of(TTBlocks.THAUMATORIUM.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityThaumatoriumTop>> THAUMATORIUM_TOP = BLOCK_ENTITIES.register("thaumatorium_top",
-            () -> new BlockEntityType<>(BlockEntityThaumatoriumTop::new, Set.of(TTBlocks.THAUMATORIUM_TOP.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityCondenser>> CONDENSER = BLOCK_ENTITIES.register("condenser",
-            () -> new BlockEntityType<>(BlockEntityCondenser::new, Set.of(TTBlocks.CONDENSER.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityStabilizer>> STABILIZER = BLOCK_ENTITIES.register("stabilizer",
-            () -> new BlockEntityType<>(BlockEntityStabilizer::new, Set.of(TTBlocks.STABILIZER.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityRedstoneRelay>> REDSTONE_RELAY = BLOCK_ENTITIES.register("redstone_relay",
-            () -> new BlockEntityType<>(BlockEntityRedstoneRelay::new, Set.of(TTBlocks.REDSTONE_RELAY.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityVoidSiphon>> VOID_SIPHON = BLOCK_ENTITIES.register("void_siphon",
-            () -> new BlockEntityType<>(BlockEntityVoidSiphon::new, Set.of(TTBlocks.VOID_SIPHON.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityEverfullUrn>> EVERFULL_URN = BLOCK_ENTITIES.register("everfull_urn",
-            () -> new BlockEntityType<>(BlockEntityEverfullUrn::new, Set.of(TTBlocks.EVERFULL_URN.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityVisGenerator>> VIS_GENERATOR = BLOCK_ENTITIES.register("vis_generator",
-            () -> new BlockEntityType<>(BlockEntityVisGenerator::new, Set.of(TTBlocks.VIS_GENERATOR.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityEssentiaPort>> ESSENTIA_PORT = BLOCK_ENTITIES.register("essentia_port",
-            () -> new BlockEntityType<>(BlockEntityEssentiaPort::new, Set.of(TTBlocks.ESSENTIA_INPUT.get(), TTBlocks.ESSENTIA_OUTPUT.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityArcaneEar>> ARCANE_EAR = BLOCK_ENTITIES.register("arcane_ear",
-            () -> new BlockEntityType<>(BlockEntityArcaneEar::new, Set.of(TTBlocks.ARCANE_EAR.get(), TTBlocks.ARCANE_EAR_TOGGLE.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityLampArcane>> LAMP_ARCANE = BLOCK_ENTITIES.register("lamp_arcane",
-            () -> new BlockEntityType<>(BlockEntityLampArcane::new, Set.of(TTBlocks.LAMP_ARCANE.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityLampGrowth>> LAMP_GROWTH = BLOCK_ENTITIES.register("lamp_growth",
-            () -> new BlockEntityType<>(BlockEntityLampGrowth::new, Set.of(TTBlocks.LAMP_GROWTH.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityLampFertility>> LAMP_FERTILITY = BLOCK_ENTITIES.register("lamp_fertility",
-            () -> new BlockEntityType<>(BlockEntityLampFertility::new, Set.of(TTBlocks.LAMP_FERTILITY.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityCentrifuge>> CENTRIFUGE = BLOCK_ENTITIES.register("centrifuge",
-            () -> new BlockEntityType<>(BlockEntityCentrifuge::new, Set.of(TTBlocks.CENTRIFUGE.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityHungryChest>> HUNGRY_CHEST = BLOCK_ENTITIES.register("hungry_chest",
-            () -> new BlockEntityType<>(BlockEntityHungryChest::new, Set.of(TTBlocks.HUNGRY_CHEST.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityEldritchAltar>> ELDRITCH_ALTAR = BLOCK_ENTITIES.register("eldritch_altar",
-            () -> new BlockEntityType<>(BlockEntityEldritchAltar::new, Set.of(TTBlocks.ELDRITCH_ALTAR.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityEldritchObelisk>> ELDRITCH_OBELISK = BLOCK_ENTITIES.register("eldritch_obelisk",
-            () -> new BlockEntityType<>(BlockEntityEldritchObelisk::new, Set.of(TTBlocks.ELDRITCH_OBELISK.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityEldritchReliquary>> ELDRITCH_RELIQUARY = BLOCK_ENTITIES.register("eldritch_reliquary",
-            () -> new BlockEntityType<>(BlockEntityEldritchReliquary::new, Set.of(TTBlocks.ELDRITCH_RELIQUARY.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityEldritchLock>> ELDRITCH_LOCK = BLOCK_ENTITIES.register("eldritch_lock",
-            () -> new BlockEntityType<>(BlockEntityEldritchLock::new, Set.of(TTBlocks.ELDRITCH_LOCK.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityEldritchCrabSpawner>> ELDRITCH_CRAB_SPAWNER = BLOCK_ENTITIES.register("eldritch_crab_spawner",
-            () -> new BlockEntityType<>(BlockEntityEldritchCrabSpawner::new, Set.of(TTBlocks.ELDRITCH_CRAB_SPAWNER.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityEldritchTrap>> ELDRITCH_TRAP = BLOCK_ENTITIES.register("eldritch_trap",
-            () -> new BlockEntityType<>(BlockEntityEldritchTrap::new, Set.of(TTBlocks.ELDRITCH_TRAP.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityEldritchPortal>> ELDRITCH_PORTAL = BLOCK_ENTITIES.register("eldritch_portal",
-            () -> new BlockEntityType<>(BlockEntityEldritchPortal::new, Set.of(TTBlocks.ELDRITCH_PORTAL.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityEldritchCap>> ELDRITCH_CAP = BLOCK_ENTITIES.register("eldritch_cap",
-            () -> new BlockEntityType<>(BlockEntityEldritchCap::new, Set.of(TTBlocks.ELDRITCH_CAPSTONE.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityEldritchNothing>> ELDRITCH_NOTHING = BLOCK_ENTITIES.register("eldritch_nothing",
-            () -> new BlockEntityType<>(BlockEntityEldritchNothing::new, Set.of(TTBlocks.ELDRITCH_NOTHING.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityMirror>> MIRROR = BLOCK_ENTITIES.register("mirror",
-            () -> new BlockEntityType<>(BlockEntityMirror::new, Set.of(TTBlocks.MIRROR.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityMirrorEssentia>> MIRROR_ESSENTIA = BLOCK_ENTITIES.register("mirror_essentia",
-            () -> new BlockEntityType<>(BlockEntityMirrorEssentia::new, Set.of(TTBlocks.MIRROR_ESSENTIA.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityBarrierStone>> BARRIER_STONE = BLOCK_ENTITIES.register("barrier_stone",
-            () -> new BlockEntityType<>(BlockEntityBarrierStone::new, Set.of(TTBlocks.PAVING_STONE_BARRIER.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityDioptra>> DIOPTRA = BLOCK_ENTITIES.register("dioptra",
-            () -> new BlockEntityType<>(BlockEntityDioptra::new, Set.of(TTBlocks.DIOPTRA.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityJarVoid>> JAR_VOID = BLOCK_ENTITIES.register("jar_void",
-            () -> new BlockEntityType<>(BlockEntityJarVoid::new, Set.of(TTBlocks.JAR_VOID.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityJarCreative>> JAR_CREATIVE = BLOCK_ENTITIES.register("jar_creative",
-            () -> new BlockEntityType<>(BlockEntityJarCreative::new, Set.of(TTBlocks.JAR_CREATIVE.get())));
-
-    public static List<BlockEntityType<? extends AbstractBlockEntityJar>> essentiaJars() {
-        return List.of(JAR.get(), JAR_VOID.get(), JAR_CREATIVE.get());
-    }
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityTube>> TUBE = BLOCK_ENTITIES.register("tube",
-            () -> new BlockEntityType<>(BlockEntityTube::new, Set.of(TTBlocks.TUBE.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityTubeValve>> TUBE_VALVE = BLOCK_ENTITIES.register("tube_valve",
-            () -> new BlockEntityType<>(BlockEntityTubeValve::new, Set.of(TTBlocks.TUBE_VALVE.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityTubeRestrict>> TUBE_RESTRICT = BLOCK_ENTITIES.register("tube_restrict",
-            () -> new BlockEntityType<>(BlockEntityTubeRestrict::new, Set.of(TTBlocks.TUBE_RESTRICT.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityTubeFilter>> TUBE_FILTER = BLOCK_ENTITIES.register("tube_filter",
-            () -> new BlockEntityType<>(BlockEntityTubeFilter::new, Set.of(TTBlocks.TUBE_FILTER.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityTubeOneway>> TUBE_ONEWAY = BLOCK_ENTITIES.register("tube_oneway",
-            () -> new BlockEntityType<>(BlockEntityTubeOneway::new, Set.of(TTBlocks.TUBE_ONEWAY.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityTubeBuffer>> TUBE_BUFFER = BLOCK_ENTITIES.register("tube_buffer",
-            () -> new BlockEntityType<>(BlockEntityTubeBuffer::new, Set.of(TTBlocks.TUBE_BUFFER.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityNitor>> NITOR = BLOCK_ENTITIES.register("nitor",
-            () -> new BlockEntityType<>(BlockEntityNitor::new, TTBlocks.NITORS.values().stream().map(b -> (Block) b.get()).collect(Collectors.toSet())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityInfernalFurnace>> INFERNAL_FURNACE = BLOCK_ENTITIES.register("infernal_furnace",
-            () -> new BlockEntityType<>(BlockEntityInfernalFurnace::new, Set.of(TTBlocks.INFERNAL_FURNACE.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityInfusionMatrix>> INFUSION_MATRIX = BLOCK_ENTITIES.register("infusion_matrix",
-            () -> new BlockEntityType<>(BlockEntityInfusionMatrix::new, Set.of(TTBlocks.INFUSION_MATRIX.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityPedestal>> PEDESTAL = BLOCK_ENTITIES.register("pedestal",
-            () -> new BlockEntityType<>(BlockEntityPedestal::new, Set.of(TTBlocks.PEDESTAL_ARCANE.get(), TTBlocks.PEDESTAL_ANCIENT.get(), TTBlocks.PEDESTAL_ELDRITCH.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityRechargePedestal>> RECHARGE_PEDESTAL = BLOCK_ENTITIES.register("recharge_pedestal",
-            () -> new BlockEntityType<>(BlockEntityRechargePedestal::new, Set.of(TTBlocks.RECHARGE_PEDESTAL.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityPatternCrafter>> PATTERN_CRAFTER = BLOCK_ENTITIES.register("pattern_crafter",
-            () -> new BlockEntityType<>(BlockEntityPatternCrafter::new, Set.of(TTBlocks.PATTERN_CRAFTER.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityPotionSprayer>> POTION_SPRAYER = BLOCK_ENTITIES.register("potion_sprayer",
-            () -> new BlockEntityType<>(BlockEntityPotionSprayer::new, Set.of(TTBlocks.POTION_SPRAYER.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityLevitator>> LEVITATOR = BLOCK_ENTITIES.register("levitator",
-            () -> new BlockEntityType<>(BlockEntityLevitator::new, Set.of(TTBlocks.LEVITATOR.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityItemGrate>> ITEM_GRATE = BLOCK_ENTITIES.register("item_grate",
-            () -> new BlockEntityType<>(BlockEntityItemGrate::new, Set.of(TTBlocks.ITEM_GRATE.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityGolemBuilder>> GOLEM_BUILDER = BLOCK_ENTITIES.register("golem_builder",
-            () -> new BlockEntityType<>(BlockEntityGolemBuilder::new, Set.of(TTBlocks.GOLEM_BUILDER.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityArcaneBore>> ARCANE_BORE = BLOCK_ENTITIES.register("arcane_bore",
-            () -> new BlockEntityType<>(BlockEntityArcaneBore::new, Set.of(TTBlocks.ARCANE_BORE.get())));
-
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BlockEntityHole>> HOLE = BLOCK_ENTITIES.register("hole",
-            () -> new BlockEntityType<>(BlockEntityHole::new, Set.of(TTBlocks.HOLE.get())));
+    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES = DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, TTIds.MODID);
+
+    public static final RegistryObject<BlockEntityType<CrucibleBlockEntity>> CRUCIBLE = BLOCK_ENTITIES.register("crucible",
+            () -> BlockEntityType.Builder.of(CrucibleBlockEntity::new, TTBlocks.CRUCIBLE.get()).build(null));
+    public static final RegistryObject<BlockEntityType<EssentiaJarBlockEntity>> ESSENTIA_JAR = BLOCK_ENTITIES.register("jar_normal",
+            () -> BlockEntityType.Builder.of(EssentiaJarBlockEntity::new, TTBlocks.JAR_NORMAL.get()).build(null));
+    public static final RegistryObject<BlockEntityType<BrainJarBlockEntity>> BRAIN_JAR = BLOCK_ENTITIES.register("jar_brain",
+            () -> BlockEntityType.Builder.of(BrainJarBlockEntity::new, TTBulkContent.BLOCKS.get("jar_brain").get()).build(null));
+    public static final RegistryObject<BlockEntityType<TubeBlockEntity>> TUBE = BLOCK_ENTITIES.register("tube",
+            () -> BlockEntityType.Builder.of(TubeBlockEntity::new, TTBlocks.TUBE.get()).build(null));
+    public static final RegistryObject<BlockEntityType<SmelterBlockEntity>> SMELTER = BLOCK_ENTITIES.register("smelter_basic",
+            () -> BlockEntityType.Builder.of(SmelterBlockEntity::new, TTBlocks.SMELTER_BASIC.get(), TTBulkContent.BLOCKS.get("smelter_thaumium").get(),
+                    TTBulkContent.BLOCKS.get("smelter_void").get()).build(null));
+    public static final RegistryObject<BlockEntityType<AlembicBlockEntity>> ALEMBIC = BLOCK_ENTITIES.register("alembic",
+            () -> BlockEntityType.Builder.of(AlembicBlockEntity::new, TTBlocks.ALEMBIC.get()).build(null));
+    public static final RegistryObject<BlockEntityType<ArcaneWorkbenchBlockEntity>> ARCANE_WORKBENCH = BLOCK_ENTITIES.register("arcane_workbench",
+            () -> BlockEntityType.Builder.of(ArcaneWorkbenchBlockEntity::new, TTBlocks.ARCANE_WORKBENCH.get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<BlockEntityResearchTable>> RESEARCH_TABLE = BLOCK_ENTITIES.register("research_table",
+            () -> BlockEntityType.Builder.of(BlockEntityResearchTable::new, TTBlocks.RESEARCH_TABLE.get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<BlockEntityNitor>> NITOR = BLOCK_ENTITIES.register("nitor",
+            () -> BlockEntityType.Builder.of(BlockEntityNitor::new, TTBlocks.NITORS.values().stream().map(RegistryObject::get).toArray(Block[]::new)).build(null));
+
+    public static final RegistryObject<BlockEntityType<BlockEntityNode>> NODE = BLOCK_ENTITIES.register("node",
+            () -> BlockEntityType.Builder.of(BlockEntityNode::new, TTBlocks.NODE.get(), TTBlocks.SILVERWOOD_NODE_LOG.get(), TTBulkContent.BLOCKS.get("obsidian_totem_charged").get()).build(null));
+    public static final RegistryObject<BlockEntityType<BlockEntityDioptra>> DIOPTRA = BLOCK_ENTITIES.register("dioptra",
+            () -> BlockEntityType.Builder.of(BlockEntityDioptra::new, TTBlocks.DIOPTRA.get()).build(null));
+    public static final RegistryObject<BlockEntityType<BlockEntityBellows>> BELLOWS = BLOCK_ENTITIES.register("bellows",
+            () -> BlockEntityType.Builder.of(BlockEntityBellows::new, TTBulkContent.BLOCKS.get("bellows").get()).build(null));
+    public static final RegistryObject<BlockEntityType<BlockEntityRechargePedestal>> RECHARGE_PEDESTAL = BLOCK_ENTITIES.register("recharge_pedestal",
+            () -> BlockEntityType.Builder.of(BlockEntityRechargePedestal::new, TTBlocks.RECHARGE_PEDESTAL.get()).build(null));
+    public static final RegistryObject<BlockEntityType<BlockEntityDeconstructionTable>> DECONSTRUCTION_TABLE = BLOCK_ENTITIES.register("deconstruction_table",
+            () -> BlockEntityType.Builder.of(BlockEntityDeconstructionTable::new, TTBlocks.DECONSTRUCTION_TABLE.get()).build(null));
+    public static final RegistryObject<BlockEntityType<BlockEntityHungryChest>> HUNGRY_CHEST = BLOCK_ENTITIES.register("hungry_chest",
+            () -> BlockEntityType.Builder.of(BlockEntityHungryChest::new, TTBlocks.HUNGRY_CHEST.get()).build(null));
+    public static final RegistryObject<BlockEntityType<BlockEntityLevitator>> LEVITATOR = BLOCK_ENTITIES.register("levitator",
+            () -> BlockEntityType.Builder.of(BlockEntityLevitator::new, TTBlocks.LEVITATOR.get()).build(null));
+    public static final RegistryObject<BlockEntityType<BlockEntityArcaneEar>> ARCANE_EAR = BLOCK_ENTITIES.register("arcane_ear",
+            () -> BlockEntityType.Builder.of(BlockEntityArcaneEar::new, TTBlocks.ARCANE_EAR.get(), TTBlocks.ARCANE_EAR_TOGGLE.get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<com.leclowndu93150.thaumaturge.content.infusion.InfusionMatrix>> INFUSION_MATRIX =
+            BLOCK_ENTITIES.register("infusion_matrix", () -> BlockEntityType.Builder.of(
+                    com.leclowndu93150.thaumaturge.content.infusion.InfusionMatrix::new, TTBlocks.INFUSION_MATRIX.get()).build(null));
+    public static final RegistryObject<BlockEntityType<com.leclowndu93150.thaumaturge.content.infusion.InfusionPedestal>> INFUSION_PEDESTAL =
+            BLOCK_ENTITIES.register("infusion_pedestal", () -> BlockEntityType.Builder.of(
+                    com.leclowndu93150.thaumaturge.content.infusion.InfusionPedestal::new, TTBulkContent.BLOCKS.get("pedestal_arcane").get(),
+                    TTBulkContent.BLOCKS.get("pedestal_ancient").get(), TTBulkContent.BLOCKS.get("pedestal_eldritch").get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<com.leclowndu93150.thaumaturge.content.essentia.advancedfurnace.AdvancedFurnace>> ADVANCED_FURNACE =
+            BLOCK_ENTITIES.register("advanced_alchemical_furnace", () -> BlockEntityType.Builder.of(
+                    com.leclowndu93150.thaumaturge.content.essentia.advancedfurnace.AdvancedFurnace::new,
+                    TTBulkContent.BLOCKS.get("advanced_alchemical_furnace").get()).build(null));
+    public static final RegistryObject<BlockEntityType<com.leclowndu93150.thaumaturge.content.essentia.advancedfurnace.FurnaceNozzle>> FURNACE_NOZZLE =
+            BLOCK_ENTITIES.register("advanced_alchemical_furnace_nozzle", () -> BlockEntityType.Builder.of(
+                    com.leclowndu93150.thaumaturge.content.essentia.advancedfurnace.FurnaceNozzle::new,
+                    TTBulkContent.BLOCKS.get("advanced_alchemical_furnace_nozzle").get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<com.leclowndu93150.thaumaturge.content.infernalfurnace.InfernalFurnace>> INFERNAL_FURNACE =
+            BLOCK_ENTITIES.register("infernal_furnace", () -> BlockEntityType.Builder.of(
+                    com.leclowndu93150.thaumaturge.content.infernalfurnace.InfernalFurnace::new,
+                    TTBulkContent.BLOCKS.get("infernal_furnace").get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<EtherealBloom>> ETHEREAL_BLOOM = BLOCK_ENTITIES.register("ethereal_bloom",
+            () -> BlockEntityType.Builder.of(EtherealBloom::new, TTBulkContent.BLOCKS.get("ethereal_bloom").get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<com.leclowndu93150.thaumaturge.content.infusion.InfusionStabilizer.BlockEntity>> INFUSION_STABILIZER =
+            BLOCK_ENTITIES.register("stabilizer", () -> BlockEntityType.Builder.of(
+                    com.leclowndu93150.thaumaturge.content.infusion.InfusionStabilizer.BlockEntity::new,
+                    TTBulkContent.BLOCKS.get("stabilizer").get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<com.leclowndu93150.thaumaturge.content.aura.node.NodeTransducer.BlockEntity>> NODE_TRANSDUCER =
+            BLOCK_ENTITIES.register("node_transducer", () -> BlockEntityType.Builder.of(
+                    com.leclowndu93150.thaumaturge.content.aura.node.NodeTransducer.BlockEntity::new,
+                    TTBulkContent.BLOCKS.get("node_transducer").get()).build(null));
+    public static final RegistryObject<BlockEntityType<com.leclowndu93150.thaumaturge.content.aura.relay.VisRelayBlockEntity>> VIS_RELAY =
+            BLOCK_ENTITIES.register("vis_relay", () -> BlockEntityType.Builder.of(
+                    com.leclowndu93150.thaumaturge.content.aura.relay.VisRelayBlockEntity::new,
+                    TTBulkContent.BLOCKS.get("vis_relay").get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<com.leclowndu93150.thaumaturge.content.device.EverfullUrnBlockEntity>> EVERFULL_URN =
+            BLOCK_ENTITIES.register("everfull_urn", () -> BlockEntityType.Builder.of(
+                    com.leclowndu93150.thaumaturge.content.device.EverfullUrnBlockEntity::new,
+                    TTBulkContent.BLOCKS.get("everfull_urn").get()).build(null));
 
     private TTBlockEntities() {}
 
-    public static void register(IEventBus modBus) {
-        BLOCK_ENTITIES.register(modBus);
+    public static void register(IEventBus bus) {
+        BLOCK_ENTITIES.register(bus);
     }
 }

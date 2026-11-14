@@ -2,7 +2,7 @@ package com.leclowndu93150.thaumaturge.content.world.objects;
 
 import com.leclowndu93150.thaumaturge.content.aura.node.NodeGenerator;
 import com.leclowndu93150.thaumaturge.content.decor.BlockObsidianTotem;
-import com.leclowndu93150.thaumaturge.registry.TTBlocks;
+import com.leclowndu93150.thaumaturge.registry.TTBulkContent;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -38,7 +38,7 @@ public final class ObsidianTotemFeature extends Feature<NoneFeatureConfiguration
             }
         }
         BlockState groundState = level.getBlockState(ground);
-        if (groundState.is(Blocks.SNOW) || groundState.is(Blocks.SHORT_GRASS)) {
+        if (groundState.is(Blocks.SNOW) || groundState.is(Blocks.GRASS)) {
             ground.move(Direction.DOWN);
             groundState = level.getBlockState(ground);
         }
@@ -52,8 +52,8 @@ public final class ObsidianTotemFeature extends Feature<NoneFeatureConfiguration
         if (clearance < MIN_CLEARANCE) {
             return false;
         }
-        BlockState shaft = TTBlocks.OBSIDIAN_TOTEM.get().defaultBlockState();
-        level.setBlock(ground, TTBlocks.OBSIDIAN_TILE.get().defaultBlockState(), PLACE_FLAGS);
+        BlockState shaft = TTBulkContent.BLOCKS.get("obsidian_totem").get().defaultBlockState();
+        level.setBlock(ground, TTBulkContent.BLOCKS.get("obsidian_tile").get().defaultBlockState(), PLACE_FLAGS);
         int count = 1;
         boolean capped = false;
         while (!capped && count < MAX_HEIGHT && isClear(level, ground.above(count))) {
@@ -63,7 +63,7 @@ public final class ObsidianTotemFeature extends Feature<NoneFeatureConfiguration
                 capped = true;
             }
             count++;
-            if (count >= MAX_HEIGHT && !capped) {
+            if (count >= MAX_HEIGHT && !capped && isClear(level, ground.above(MAX_HEIGHT))) {
                 placeCapNode(level, ground.above(MAX_HEIGHT), random);
                 capped = true;
             }
@@ -84,11 +84,11 @@ public final class ObsidianTotemFeature extends Feature<NoneFeatureConfiguration
 
     private static boolean isClear(WorldGenLevel level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
-        return state.isAir() || state.is(Blocks.SNOW) || state.is(Blocks.SHORT_GRASS);
+        return state.isAir() || state.is(Blocks.SNOW) || state.is(Blocks.GRASS);
     }
 
     private static void placeCapNode(WorldGenLevel level, BlockPos pos, RandomSource random) {
-        level.setBlock(pos, TTBlocks.OBSIDIAN_TOTEM_CHARGED.get().defaultBlockState(), PLACE_FLAGS);
+        level.setBlock(pos, TTBulkContent.BLOCKS.get("obsidian_totem_charged").get().defaultBlockState(), PLACE_FLAGS);
         NodeGenerator.createRandomNodeAt(level, pos, random, false, true, false, NodeGenerator.DEFAULT_SPECIAL_RARITY, NodeGenerator.DEFAULT_BASE_AURA);
     }
 }

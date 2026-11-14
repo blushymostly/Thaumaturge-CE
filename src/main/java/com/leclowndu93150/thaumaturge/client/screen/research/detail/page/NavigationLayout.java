@@ -24,10 +24,6 @@ public final class NavigationLayout {
     private static final int STAGE_HIT_ROW_OFFSET = 184;
     private static final int STAGE_HIT_SIZE = 12;
     private static final int STAGE_HIT_INSET = 1;
-    private static final int PAGER_LEFT_HIT_OFFSET = 38;
-    private static final int PAGER_RIGHT_HIT_OFFSET = 205;
-    private static final int PAGER_HIT_ROW_OFFSET = 192;
-    private static final int PAGER_HIT_SIZE = 14;
 
     private NavigationLayout() {}
 
@@ -73,19 +69,5 @@ public final class NavigationLayout {
 
     public static Rect stageRightHit(DetailFrame frame) {
         return new Rect(stageRightDrawX(frame) - STAGE_HIT_INSET, frame.top() + STAGE_HIT_ROW_OFFSET, STAGE_HIT_SIZE, STAGE_HIT_SIZE);
-    }
-
-    public static Rect stageStripHit(DetailFrame frame) {
-        Rect left = stageLeftHit(frame);
-        Rect right = stageRightHit(frame);
-        return new Rect(left.x(), left.y(), right.x() + right.width() - left.x(), left.height());
-    }
-
-    public static Rect pagerLeftHit(DetailFrame frame) {
-        return new Rect(frame.left() + PAGER_LEFT_HIT_OFFSET, frame.top() + PAGER_HIT_ROW_OFFSET, PAGER_HIT_SIZE, PAGER_HIT_SIZE);
-    }
-
-    public static Rect pagerRightHit(DetailFrame frame) {
-        return new Rect(frame.left() + PAGER_RIGHT_HIT_OFFSET, frame.top() + PAGER_HIT_ROW_OFFSET, PAGER_HIT_SIZE, PAGER_HIT_SIZE);
     }
 }

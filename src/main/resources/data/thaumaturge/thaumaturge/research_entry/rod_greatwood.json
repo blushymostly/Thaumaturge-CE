@@ -24,7 +24,8 @@
       "text": "research.thaumaturge.rod_greatwood.stage_0",
       "recipes": [
         "thaumaturge:wand/part/wand_rod_greatwood",
-        "thaumaturge:wand/assembly/gold_greatwood"
+        "thaumaturge:wand/assembly/gold_greatwood",
+        "thaumaturge:wand/assembly/iron_greatwood"
       ]
     }
   ],

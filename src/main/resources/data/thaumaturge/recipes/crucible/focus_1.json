@@ -1,0 +1,32 @@
+{
+  "type": "thaumaturge:crucible",
+  "research": "thaumaturge:unlock_auromancy",
+  "catalyst": {
+    "type": "forge:partial_nbt",
+    "item": "thaumaturge:essentia_crystal",
+    "nbt": {
+      "Thaumaturge": {
+        "CrystalAspect": {
+          "aspect": "thaumaturge:ordo"
+        }
+      }
+    }
+  },
+  "aspects": [
+    {
+      "aspect": "thaumaturge:vitreus",
+      "amount": 20
+    },
+    {
+      "aspect": "thaumaturge:praecantatio",
+      "amount": 10
+    },
+    {
+      "aspect": "thaumaturge:auram",
+      "amount": 5
+    }
+  ],
+  "result": {
+    "item": "thaumaturge:focus_1"
+  }
+}

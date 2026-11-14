@@ -1,0 +1,42 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:tubes",
+  "pattern": [
+    "IAI",
+    "VPV",
+    "IAI"
+  ],
+  "key": {
+    "I": {
+      "item": "thaumaturge:plate_iron"
+    },
+    "A": {
+      "item": "thaumaturge:tube_valve"
+    },
+    "V": {
+      "item": "thaumaturge:tube"
+    },
+    "P": {
+      "item": "thaumaturge:plank_greatwood"
+    }
+  },
+  "vis": 75,
+  "crystals": [
+    {
+      "aspect": "thaumaturge:aqua",
+      "amount": 1
+    },
+    {
+      "aspect": "thaumaturge:perditio",
+      "amount": 1
+    },
+    {
+      "aspect": "thaumaturge:ordo",
+      "amount": 1
+    }
+  ],
+  "result": {
+    "item": "thaumaturge:alchemical_construct",
+    "count": 2
+  }
+}

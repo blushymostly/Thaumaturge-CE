@@ -1,0 +1,15 @@
+{
+  "category": "thaumaturge:basics",
+  "name": "research.thaumaturge.gotthaumonomicon.title",
+  "parents": [],
+  "column": -1,
+  "row": -1,
+  "meta": ["hidden", "auto"],
+  "icons": ["thaumaturge:thaumonomicon"],
+  "stages": [
+    {
+      "text": "research.thaumaturge.gotthaumonomicon.stage_0"
+    }
+  ],
+  "complexity": 1
+}

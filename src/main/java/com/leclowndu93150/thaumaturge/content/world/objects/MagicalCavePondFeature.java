@@ -103,7 +103,7 @@ public final class MagicalCavePondFeature extends Feature<NoneFeatureConfigurati
                         continue;
                     }
                     edge.setWithOffset(surface, nx, 0, nz);
-                    if (level.getBlockState(edge).liquid()) {
+                    if (!level.getBlockState(edge).getFluidState().isEmpty()) {
                         return false;
                     }
                     edge.move(Direction.DOWN);

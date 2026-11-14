@@ -1,0 +1,11 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:warded_jars@1",
+  "pattern": ["PRP", "P P", "PPP"],
+  "key": {
+    "P": { "tag": "forge:glass_panes" },
+    "R": { "tag": "minecraft:wooden_slabs" }
+  },
+  "result": { "item": "thaumaturge:jar_normal", "count": 1 },
+  "vis": 5
+}

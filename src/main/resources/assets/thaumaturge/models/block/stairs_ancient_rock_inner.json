@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/inner_stairs",
+  "textures": {
+    "bottom": "thaumaturge:block/ancient_rock_stone_2",
+    "side": "thaumaturge:block/ancient_rock_stone_2",
+    "top": "thaumaturge:block/ancient_rock_stone_2"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "down=false,up=false": {
+      "model": "thaumaturge:block/obsidian_totem_1"
+    },
+    "down=false,up=true": {
+      "model": "thaumaturge:block/obsidian_totem_2"
+    },
+    "down=true,up=true": {
+      "model": "thaumaturge:block/obsidian_totem_3"
+    },
+    "down=true,up=false": {
+      "model": "thaumaturge:block/obsidian_totem_4"
+    }
+  }
+}

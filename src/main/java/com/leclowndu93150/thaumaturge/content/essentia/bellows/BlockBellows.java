@@ -2,7 +2,6 @@ package com.leclowndu93150.thaumaturge.content.essentia.bellows;
 
 import com.leclowndu93150.thaumaturge.content.device.DeviceShapes;
 import com.leclowndu93150.thaumaturge.registry.TTBlockEntities;
-import com.mojang.serialization.MapCodec;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -11,6 +10,9 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -23,13 +25,12 @@ import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 public class BlockBellows extends BaseEntityBlock {
     public static final EnumProperty<Direction> FACING = BlockStateProperties.FACING;
     public static final BooleanProperty ENABLED = BlockStateProperties.ENABLED;
 
-    private static final MapCodec<BlockBellows> CODEC = simpleCodec(BlockBellows::new);
     private static final VoxelShape NORTH_SHAPE = Shapes.or(Block.box(2.0, 2.0, 2.0, 14.0, 4.0, 14.0), Block.box(2.0, 7.0, 2.0, 14.0, 9.0, 14.0), Block.box(2.0, 12.0, 2.0, 14.0, 14.0, 14.0),
             Block.box(3.0, 5.0, 3.0, 13.0, 7.0, 13.0), Block.box(3.0, 9.0, 3.0, 13.0, 11.0, 13.0), Block.box(5.0, 4.0, 5.0, 11.0, 5.0, 11.0), Block.box(5.0, 11.0, 5.0, 11.0, 12.0, 11.0),
             Block.box(6.0, 6.0, 1.0, 10.0, 10.0, 2.0), Block.box(7.0, 7.0, 0.0, 9.0, 9.0, 1.0));
@@ -41,22 +42,40 @@ public class BlockBellows extends BaseEntityBlock {
     }
 
     @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
-
-    @Override
     public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new BlockEntityBellows(pos, state);
     }
 
     @Override
     public @Nullable BlockState getStateForPlacement(BlockPlaceContext context) {
-        return defaultBlockState().setValue(FACING, context.getClickedFace().getOpposite()).setValue(ENABLED, true);
+        return defaultBlockState().setValue(FACING, context.getClickedFace().getOpposite())
+                .setValue(ENABLED, !context.getLevel().hasNeighborSignal(context.getClickedPos()));
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public RenderShape getRenderShape(BlockState state) {
+        return RenderShape.ENTITYBLOCK_ANIMATED;
+    }
+
+    @Override
+    public BlockState rotate(BlockState state, Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
+    }
+
+    @Override
+    public BlockState mirror(BlockState state, Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
+    }
+
+    @Override
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos neighbor, boolean moving) {
+        if (!level.isClientSide && state.getValue(ENABLED) == level.hasNeighborSignal(pos)) {
+            level.setBlock(pos, state.cycle(ENABLED), Block.UPDATE_CLIENTS);
+        }
+    }
+
+    @Override
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return SHAPES.get(state.getValue(FACING));
     }
 

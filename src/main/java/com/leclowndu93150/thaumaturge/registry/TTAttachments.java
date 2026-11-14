@@ -1,149 +1,179 @@
 package com.leclowndu93150.thaumaturge.registry;
 
-import com.leclowndu93150.thaumaturge.content.spell.casting.ChannelSummaryCache;
-import com.leclowndu93150.thaumaturge.content.spell.engine.DelayedSpells;
-import com.leclowndu93150.thaumaturge.content.spell.engine.CastBudgets;
 import com.leclowndu93150.thaumaturge.TTIds;
 import com.leclowndu93150.thaumaturge.content.aura.AuraData;
-import com.leclowndu93150.thaumaturge.content.aura.pressure.FluxPressureState;
-import com.leclowndu93150.thaumaturge.content.casters.BlockWorkQueues;
-import com.leclowndu93150.thaumaturge.content.eldritch.encounter.LabyrinthBinding;
-import com.leclowndu93150.thaumaturge.content.eldritch.labyrinth.world.MazeStamp;
-import com.leclowndu93150.thaumaturge.content.eldritch.portal.TransitState;
-import com.leclowndu93150.thaumaturge.content.entity.trait.MobTraitRuntime;
-import com.leclowndu93150.thaumaturge.content.entity.trait.MobTraitState;
-import com.leclowndu93150.thaumaturge.content.equipment.runic.RunicShieldState;
-import com.leclowndu93150.thaumaturge.content.golem.seals.SealWorldIndex;
-import com.leclowndu93150.thaumaturge.content.golem.seals.SealsChunkData;
-import com.leclowndu93150.thaumaturge.content.golem.tasks.TaskBoard;
 import com.leclowndu93150.thaumaturge.content.recipe.dust.DustTriggerSwapQueue;
 import com.leclowndu93150.thaumaturge.content.research.PlayerKnowledge;
-import com.leclowndu93150.thaumaturge.content.research.pool.AspectPoolData;
-import com.leclowndu93150.thaumaturge.content.taint.ecology.TaintBloomIndex;
-import com.leclowndu93150.thaumaturge.content.taint.ecology.TaintColumns;
-import com.leclowndu93150.thaumaturge.content.taint.ecology.TaintPressure;
-import com.leclowndu93150.thaumaturge.content.taint.flux.PhysicalFluxSamples;
-import com.leclowndu93150.thaumaturge.content.warding.ArcaneLockChunkData;
-import com.leclowndu93150.thaumaturge.content.warding.WardChunkData;
+import com.leclowndu93150.thaumaturge.content.research.pool.AspectPools;
 import com.leclowndu93150.thaumaturge.content.warp.PlayerWarpState;
-import com.mojang.serialization.Codec;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Supplier;
-import net.minecraft.core.BlockPos;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.attachment.AttachmentType;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
+import com.leclowndu93150.thaumaturge.network.TTNetwork;
+import com.leclowndu93150.thaumaturge.network.packet.ClientboundKnowledgeSyncPacket;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.CapabilityManager;
+import net.minecraftforge.common.capabilities.CapabilityToken;
+import net.minecraftforge.common.capabilities.ICapabilityProvider;
+import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
+import net.minecraftforge.common.util.INBTSerializable;
+import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.event.AttachCapabilitiesEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+/**
+ * Forge replacement for NeoForge Attachments: player knowledge/warp + chunk aura/dust queue via capabilities.
+ */
 public final class TTAttachments {
-    public static final DeferredRegister<AttachmentType<?>> ATTACHMENTS = DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, TTIds.MODID);
+    public static final ResourceLocation PLAYER_CAPS = TTIds.rl("player_data");
+    public static final ResourceLocation CHUNK_CAPS = TTIds.rl("chunk_data");
 
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerKnowledge>> KNOWLEDGE = register("knowledge",
-            () -> AttachmentType.builder(PlayerKnowledge::new).serialize(PlayerKnowledge.CODEC).sync((holder, to) -> holder == to, PlayerKnowledge.STREAM_CODEC).copyOnDeath().build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<AuraData>> AURA = register("aura", () -> AttachmentType.builder(AuraData::new).serialize(AuraData.CODEC).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<AspectPoolData>> ASPECT_POOL = register("aspect_pool",
-            () -> AttachmentType.builder(AspectPoolData::new).serialize(AspectPoolData.CODEC).sync((holder, to) -> holder == to, AspectPoolData.STREAM_CODEC).copyOnDeath().build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerWarpState>> WARP = register("warp",
-            () -> AttachmentType.builder(PlayerWarpState::new).serialize(PlayerWarpState.CODEC).sync((holder, to) -> holder == to, PlayerWarpState.STREAM_CODEC).copyOnDeath().build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<DustTriggerSwapQueue>> DUST_TRIGGER_QUEUE = register("dust_trigger_queue",
-            () -> AttachmentType.builder(DustTriggerSwapQueue::new).serialize(DustTriggerSwapQueue.CODEC).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<MazeStamp>> LABYRINTH_STAMP = register("labyrinth_stamp",
-            () -> AttachmentType.builder(() -> MazeStamp.NONE).serialize(MazeStamp.CODEC, MazeStamp::present).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<BlockPos>> OBELISK_SITE_MEMBER = register("obelisk_site_member",
-            () -> AttachmentType.builder(() -> BlockPos.ZERO).serialize(BlockPos.CODEC.fieldOf("altar")).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<LabyrinthBinding>> LABYRINTH_BINDING = register("labyrinth_binding",
-            () -> AttachmentType.builder(() -> LabyrinthBinding.NONE).serialize(LabyrinthBinding.CODEC, LabyrinthBinding::bound).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<TransitState>> LABYRINTH_TRANSIT = register("labyrinth_transit", () -> AttachmentType.builder(TransitState::new).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> GRAPPLE_ID = register("grapple_id", () -> AttachmentType.builder(() -> -1).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> DONATOR_CAPE = register("donator_cape",
-            () -> AttachmentType.builder(() -> false).serialize(Codec.BOOL.fieldOf("visible")).sync(ByteBufCodecs.BOOL).copyOnDeath().build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> DONATOR_WELCOMED = register("donator_welcomed",
-            () -> AttachmentType.builder(() -> false).serialize(Codec.BOOL.fieldOf("welcomed")).copyOnDeath().build());
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Long>> WAYFINDING_PULSE = register("wayfinding_pulse", () -> AttachmentType.builder(() -> 0L).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Long>> CASTER_COOLDOWN = register("caster_cooldown", () -> AttachmentType.builder(() -> 0L).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<ChannelSummaryCache>> CHANNEL_SUMMARY = register("channel_summary",
-            () -> AttachmentType.builder(ChannelSummaryCache::new).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Long>> SLOT_SCAN_TIME = register("slot_scan_time", () -> AttachmentType.builder(() -> 0L).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Long>> CLOUD_JUMP_TIME = register("cloud_jump_time", () -> AttachmentType.builder(() -> 0L).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<RunicShieldState>> RUNIC_SHIELD = register("runic_shield", () -> AttachmentType.builder(RunicShieldState::new).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<CastBudgets>> SPELL_BUDGETS = register("spell_budgets", () -> AttachmentType.builder(CastBudgets::new).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<DelayedSpells>> DELAYED_SPELLS = register("delayed_spells", () -> AttachmentType.builder(DelayedSpells::new).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<BlockWorkQueues>> BLOCK_WORK_QUEUES = register("block_work_queues",
-            () -> AttachmentType.builder(BlockWorkQueues::new).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<PhysicalFluxSamples>> PHYSICAL_FLUX_SAMPLES = register("physical_flux_samples",
-            () -> AttachmentType.builder(PhysicalFluxSamples::new).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SealsChunkData>> SEALS = register("seals",
-            () -> AttachmentType.builder(SealsChunkData::new).serialize(SealsChunkData.CODEC).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SealWorldIndex>> SEAL_INDEX = register("seal_index", () -> AttachmentType.builder(SealWorldIndex::new).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<WardChunkData>> WARDS = register("wards",
-            () -> AttachmentType.builder(WardChunkData::new).serialize(WardChunkData.CODEC).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<TaintPressure>> TAINT_PRESSURE = register("taint_pressure",
-            () -> AttachmentType.builder(TaintPressure::new).serialize(TaintPressure.CODEC).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<TaintColumns>> TAINT_COLUMNS = register("taint_columns",
-            () -> AttachmentType.builder(TaintColumns::new).serialize(TaintColumns.CODEC).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<FluxPressureState>> FLUX_PRESSURE = register("flux_pressure", () -> AttachmentType.builder(FluxPressureState::new).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<TaintBloomIndex>> TAINT_BLOOMS = register("taint_blooms", () -> AttachmentType.builder(TaintBloomIndex::new).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<ArcaneLockChunkData>> ARCANE_LOCKS = register("arcane_locks",
-            () -> AttachmentType.builder(ArcaneLockChunkData::new).serialize(ArcaneLockChunkData.CODEC).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<TaskBoard>> GOLEM_TASKS = register("golem_tasks", () -> AttachmentType.builder(TaskBoard::new).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Set<BlockPos>>> EAR_INDEX = register("ear_index",
-            () -> AttachmentType.<Set<BlockPos>>builder(() -> ConcurrentHashMap.newKeySet()).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<MobTraitState>> MOB_TRAITS = register("mob_traits",
-            () -> AttachmentType.builder(() -> MobTraitState.EMPTY).serialize(MobTraitState.CODEC, state -> !state.isEmpty()).sync(MobTraitState.STREAM_CODEC).copyOnDeath().build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<MobTraitRuntime>> MOB_TRAIT_RUNTIME = register("mob_trait_runtime",
-            () -> AttachmentType.builder(MobTraitRuntime::new).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> CHAMPION_ROLLED = register("champion_rolled",
-            () -> AttachmentType.builder(() -> false).serialize(Codec.BOOL.fieldOf("rolled")).copyOnDeath().build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> HOVERING = register("hovering",
-            () -> AttachmentType.builder(() -> false).serialize(Codec.BOOL.fieldOf("hovering"), hovering -> hovering).sync(ByteBufCodecs.BOOL).build());
-
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> HOVER_CHARGE = register("hover_charge",
-            () -> AttachmentType.builder(() -> 0).serialize(Codec.INT.fieldOf("charge"), charge -> charge > 0).build());
+    public static final Capability<PlayerKnowledge> KNOWLEDGE = CapabilityManager.get(new CapabilityToken<>() {});
+    public static final Capability<PlayerWarpState> WARP = CapabilityManager.get(new CapabilityToken<>() {});
+    public static final Capability<AuraData> AURA = CapabilityManager.get(new CapabilityToken<>() {});
+    public static final Capability<DustTriggerSwapQueue> DUST_QUEUE = CapabilityManager.get(new CapabilityToken<>() {});
 
     private TTAttachments() {}
 
-    private static <T> DeferredHolder<AttachmentType<?>, AttachmentType<T>> register(String name, Supplier<AttachmentType<T>> supplier) {
-        return ATTACHMENTS.register(name, supplier);
+    public static void register(IEventBus modBus) {
+        modBus.addListener(TTAttachments::onRegisterCapabilities);
     }
 
-    public static void register(IEventBus modBus) {
-        ATTACHMENTS.register(modBus);
+    private static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
+        event.register(PlayerKnowledge.class);
+        event.register(PlayerWarpState.class);
+        event.register(AuraData.class);
+        event.register(DustTriggerSwapQueue.class);
+    }
+
+    @SubscribeEvent
+    public static void attachEntity(AttachCapabilitiesEvent<Entity> event) {
+        if (event.getObject() instanceof Player) {
+            event.addCapability(PLAYER_CAPS, new PlayerCapabilityProvider());
+        }
+    }
+
+    @SubscribeEvent
+    public static void attachChunk(AttachCapabilitiesEvent<LevelChunk> event) {
+        event.addCapability(CHUNK_CAPS, new ChunkCapabilityProvider());
+    }
+
+    @SubscribeEvent
+    public static void clonePlayer(PlayerEvent.Clone event) {
+        if (!event.isWasDeath()) {
+            return;
+        }
+        event.getOriginal().reviveCaps();
+        event.getOriginal().getCapability(KNOWLEDGE).ifPresent(oldKnowledge -> event.getEntity().getCapability(KNOWLEDGE).ifPresent(fresh -> fresh.copyFrom(oldKnowledge)));
+        event.getOriginal().getCapability(WARP).ifPresent(oldWarp -> event.getEntity().getCapability(WARP).ifPresent(fresh -> fresh.copyFrom(oldWarp)));
+        event.getOriginal().invalidateCaps();
+    }
+
+    @SubscribeEvent
+    public static void syncOnLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+            AspectPools.seedIfNew(serverPlayer);
+            syncKnowledge(serverPlayer);
+        }
+    }
+
+    public static void syncKnowledge(ServerPlayer player) {
+        player.getCapability(KNOWLEDGE).ifPresent(knowledge -> TTNetwork.sendToPlayer(new ClientboundKnowledgeSyncPacket(knowledge), player));
+    }
+
+    public static PlayerKnowledge knowledge(Player player) {
+        return player.getCapability(KNOWLEDGE).orElseGet(PlayerKnowledge::new);
+    }
+
+    public static PlayerWarpState warp(Player player) {
+        return player.getCapability(WARP).orElseGet(PlayerWarpState::new);
+    }
+
+    public static AuraData aura(LevelChunk chunk) {
+        return chunk.getCapability(AURA).orElseGet(AuraData::new);
+    }
+
+    /** Pending Salis Mundus block swaps stored on the chunk. */
+    public static DustTriggerSwapQueue dustQueue(LevelChunk chunk) {
+        return chunk.getCapability(DUST_QUEUE).orElseGet(DustTriggerSwapQueue::new);
+    }
+
+    private static final class PlayerCapabilityProvider implements ICapabilityProvider, INBTSerializable<CompoundTag> {
+        private final PlayerKnowledge knowledge = new PlayerKnowledge();
+        private final PlayerWarpState warp = new PlayerWarpState();
+        private final LazyOptional<PlayerKnowledge> knowledgeOpt = LazyOptional.of(() -> knowledge);
+        private final LazyOptional<PlayerWarpState> warpOpt = LazyOptional.of(() -> warp);
+
+        @Override
+        public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
+            if (cap == KNOWLEDGE) {
+                return knowledgeOpt.cast();
+            }
+            if (cap == WARP) {
+                return warpOpt.cast();
+            }
+            return LazyOptional.empty();
+        }
+
+        @Override
+        public CompoundTag serializeNBT() {
+            CompoundTag tag = new CompoundTag();
+            tag.put("Knowledge", knowledge.save());
+            tag.put("Warp", warp.save());
+            return tag;
+        }
+
+        @Override
+        public void deserializeNBT(CompoundTag nbt) {
+            knowledge.load(nbt.getCompound("Knowledge"));
+            warp.load(nbt.getCompound("Warp"));
+        }
+    }
+
+    private static final class ChunkCapabilityProvider implements ICapabilityProvider, INBTSerializable<CompoundTag> {
+        private final AuraData aura = new AuraData();
+        private final DustTriggerSwapQueue dustQueue = new DustTriggerSwapQueue();
+        private final LazyOptional<AuraData> auraOpt = LazyOptional.of(() -> aura);
+        private final LazyOptional<DustTriggerSwapQueue> dustOpt = LazyOptional.of(() -> dustQueue);
+
+        @Override
+        public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
+            if (cap == AURA) {
+                return auraOpt.cast();
+            }
+            if (cap == DUST_QUEUE) {
+                return dustOpt.cast();
+            }
+            return LazyOptional.empty();
+        }
+
+        @Override
+        public CompoundTag serializeNBT() {
+            CompoundTag tag = new CompoundTag();
+            tag.put("Aura", aura.save());
+            tag.put("DustQueue", dustQueue.save());
+            return tag;
+        }
+
+        @Override
+        public void deserializeNBT(CompoundTag nbt) {
+            if (nbt.contains("Aura")) {
+                aura.load(nbt.getCompound("Aura"));
+            } else {
+                // Legacy single-compound aura save
+                aura.load(nbt);
+            }
+            if (nbt.contains("DustQueue")) {
+                dustQueue.load(nbt.getCompound("DustQueue"));
+            }
+        }
     }
 }

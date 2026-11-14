@@ -1,0 +1,19 @@
+{
+  "values": [
+    "thaumaturge:arcane_workbench",
+    "thaumaturge:table_wood",
+    "thaumaturge:research_table",
+    "thaumaturge:log_greatwood",
+    "thaumaturge:log_silverwood",
+    "thaumaturge:plank_greatwood",
+    "thaumaturge:plank_silverwood",
+    "thaumaturge:door_greatwood",
+    "thaumaturge:door_silverwood",
+    "thaumaturge:trapdoor_greatwood",
+    "thaumaturge:trapdoor_silverwood",
+    "thaumaturge:slab_greatwood",
+    "thaumaturge:slab_silverwood",
+    "thaumaturge:stairs_greatwood",
+    "thaumaturge:stairs_silverwood"
+  ]
+}

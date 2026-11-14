@@ -1,0 +1,9 @@
+{
+  "type": "thaumaturge:crucible",
+  "catalyst": { "item": "minecraft:ink_sac" },
+  "aspects": [
+    { "aspect": "thaumaturge:aqua", "amount": 2 },
+    { "aspect": "thaumaturge:bestia", "amount": 2 }
+  ],
+  "result": { "item": "minecraft:ink_sac", "count": 2 }
+}

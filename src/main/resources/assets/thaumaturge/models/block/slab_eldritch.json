@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/slab",
+  "textures": {
+    "side": "thaumaturge:block/eldritch_stone_1",
+    "bottom": "thaumaturge:block/eldritch_stone_1",
+    "top": "thaumaturge:block/eldritch_stone_3"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "thaumaturge:block/pillar_arcane"
+    },
+    "facing=east": {
+      "model": "thaumaturge:block/pillar_arcane",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "thaumaturge:block/pillar_arcane",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "thaumaturge:block/pillar_arcane",
+      "y": 270
+    }
+  }
+}

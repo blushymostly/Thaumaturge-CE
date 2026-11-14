@@ -100,7 +100,6 @@
         "thaumaturge:crucible/mossy_cobblestone",
         "thaumaturge:crucible/mossy_stone_bricks",
         "thaumaturge:crucible/ice",
-        "thaumaturge:crucible/cracked_stone_bricks",
         "thaumaturge:crucible/bone_meal"
       ],
       "craft": [
@@ -154,7 +153,6 @@
         "thaumaturge:crucible/mossy_cobblestone",
         "thaumaturge:crucible/mossy_stone_bricks",
         "thaumaturge:crucible/ice",
-        "thaumaturge:crucible/cracked_stone_bricks",
         "thaumaturge:crucible/bone_meal"
       ]
     }

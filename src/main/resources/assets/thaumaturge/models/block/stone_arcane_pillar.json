@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "thaumaturge:block/arcane_stone_1",
+    "side": "thaumaturge:block/stone_arcane_pillar_side"
+  }
+}

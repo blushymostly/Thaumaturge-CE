@@ -1,0 +1,36 @@
+{
+  "multipart": [
+    {
+      "when": { "part": "main", "facing": "north" },
+      "apply": { "model": "thaumaturge:block/research_table_main" }
+    },
+    {
+      "when": { "part": "main", "facing": "south" },
+      "apply": { "model": "thaumaturge:block/research_table_main", "y": 180 }
+    },
+    {
+      "when": { "part": "main", "facing": "west" },
+      "apply": { "model": "thaumaturge:block/research_table_main", "y": 270 }
+    },
+    {
+      "when": { "part": "main", "facing": "east" },
+      "apply": { "model": "thaumaturge:block/research_table_main", "y": 90 }
+    },
+    {
+      "when": { "part": "ext", "facing": "north" },
+      "apply": { "model": "thaumaturge:block/research_table_ext" }
+    },
+    {
+      "when": { "part": "ext", "facing": "south" },
+      "apply": { "model": "thaumaturge:block/research_table_ext", "y": 180 }
+    },
+    {
+      "when": { "part": "ext", "facing": "west" },
+      "apply": { "model": "thaumaturge:block/research_table_ext", "y": 270 }
+    },
+    {
+      "when": { "part": "ext", "facing": "east" },
+      "apply": { "model": "thaumaturge:block/research_table_ext", "y": 90 }
+    }
+  ]
+}

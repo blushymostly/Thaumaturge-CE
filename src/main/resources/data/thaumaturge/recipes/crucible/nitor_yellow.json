@@ -1,0 +1,15 @@
+{
+  "type": "thaumaturge:crucible",
+  "catalyst": {
+    "item": "minecraft:glowstone_dust"
+  },
+  "aspects": [
+    { "aspect": "thaumaturge:potentia", "amount": 10 },
+    { "aspect": "thaumaturge:ignis", "amount": 10 },
+    { "aspect": "thaumaturge:lux", "amount": 10 }
+  ],
+  "result": {
+    "item": "thaumaturge:nitor_yellow",
+    "count": 1
+  }
+}

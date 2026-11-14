@@ -1,51 +1,48 @@
 package com.leclowndu93150.thaumaturge.api.recipe;
 
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
-import java.util.Optional;
-import java.util.function.BiPredicate;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.resources.Identifier;
+import com.leclowndu93150.thaumaturge.content.research.PlayerKnowledge;
+import com.leclowndu93150.thaumaturge.registry.TTAttachments;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
-public record ResearchGate(Identifier entry, Optional<Integer> stage, boolean negate) {
-    public static final Codec<ResearchGate> CODEC = RecordCodecBuilder.create(i -> i.group(Identifier.CODEC.fieldOf("entry").forGetter(ResearchGate::entry),
-            Codec.INT.optionalFieldOf("stage").forGetter(ResearchGate::stage), Codec.BOOL.optionalFieldOf("negate", false).forGetter(ResearchGate::negate)).apply(i, ResearchGate::new));
+/** Optional research requirement on recipes: id or id@minStage. */
+public final class ResearchGate {
+    private ResearchGate() {}
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, ResearchGate> STREAM_CODEC = StreamCodec.composite(Identifier.STREAM_CODEC, ResearchGate::entry,
-            ByteBufCodecs.optional(ByteBufCodecs.VAR_INT), ResearchGate::stage, ByteBufCodecs.BOOL, ResearchGate::negate, ResearchGate::new);
-
-    private static BiPredicate<Player, ResearchGate> binding;
-
-    /**
-     * Binds the gate check implementation. Called by Thaumaturge during mod init; addons must
-     * not call this.
-     *
-     * @param impl the implementation, receiving a null gate for "ungated"
-     * @throws IllegalStateException when already bound
-     */
-    public static void bind(BiPredicate<Player, ResearchGate> impl) {
-        if (binding != null) {
-            throw new IllegalStateException("ResearchGate already bound");
+    public static boolean isOpen(Player player, @Nullable ResourceLocation research) {
+        if (research == null) {
+            return true;
         }
-        binding = impl;
+        return isOpen(TTAttachments.knowledge(player), research, 0);
     }
 
-    /**
-     * Tests whether the player satisfies the given gate.
-     *
-     * @param player the player to test
-     * @param gate   the gate, or null when ungated
-     * @return {@code true} when the player passes, always {@code true} for a null gate
-     * @throws IllegalStateException when accessed before the implementation has bound
-     */
-    public static boolean passes(Player player, @Nullable ResearchGate gate) {
-        if (binding == null) {
-            throw new IllegalStateException("ResearchGate accessed before binding");
+    public static boolean isOpen(PlayerKnowledge knowledge, @Nullable String raw) {
+        if (raw == null || raw.isBlank()) {
+            return true;
         }
-        return binding.test(player, gate);
+        int stage = 0;
+        String body = raw;
+        int at = raw.lastIndexOf('@');
+        if (at >= 0) {
+            try {
+                stage = Integer.parseInt(raw.substring(at + 1));
+                body = raw.substring(0, at);
+            } catch (NumberFormatException ignored) {
+                body = raw;
+            }
+        }
+        ResourceLocation id = ResourceLocation.tryParse(body);
+        if (id == null) {
+            return true;
+        }
+        return isOpen(knowledge, id, stage);
+    }
+
+    public static boolean isOpen(PlayerKnowledge knowledge, ResourceLocation id, int minStage) {
+        if (knowledge.isComplete(id)) {
+            return true;
+        }
+        return knowledge.isKnown(id) && knowledge.stage(id) >= minStage;
     }
 }

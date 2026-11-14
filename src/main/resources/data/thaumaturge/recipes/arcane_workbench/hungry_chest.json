@@ -1,0 +1,14 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:hungry_chest",
+  "pattern": ["WTW", "W W", "WWW"],
+  "key": {
+    "W": { "item": "thaumaturge:plank_greatwood" },
+    "T": { "tag": "minecraft:wooden_trapdoors" }
+  },
+  "result": { "item": "thaumaturge:hungry_chest", "count": 1 },
+  "vis": [
+    { "aspect": "thaumaturge:terra", "amount": 1 },
+    { "aspect": "thaumaturge:aqua", "amount": 1 }
+  ]
+}

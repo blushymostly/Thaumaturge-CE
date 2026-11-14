@@ -4,7 +4,7 @@ import com.leclowndu93150.thaumaturge.client.screen.research.detail.draw.BookSpr
 import net.minecraft.client.gui.Font;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 public record DetailFrame(Font font, Player player, @Nullable Level level, int left, int top, int screenWidth, int screenHeight) {
     public long gameTime() {

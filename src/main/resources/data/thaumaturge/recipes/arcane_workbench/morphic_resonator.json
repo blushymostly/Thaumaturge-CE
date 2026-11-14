@@ -1,0 +1,15 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:base_alchemy",
+  "pattern": [" G ", "BSB", " G "],
+  "key": {
+    "G": { "tag": "forge:glass_panes" },
+    "B": { "item": "thaumaturge:plate_brass" },
+    "S": { "item": "thaumaturge:nugget_quicksilver" }
+  },
+  "result": { "item": "thaumaturge:morphic_resonator", "count": 1 },
+  "vis": [
+    { "aspect": "thaumaturge:aer", "amount": 1 },
+    { "aspect": "thaumaturge:ignis", "amount": 1 }
+  ]
+}

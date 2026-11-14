@@ -1,0 +1,37 @@
+{
+  "type": "thaumaturge:infusion",
+  "research": "thaumaturge:oculus",
+  "central": {
+    "item": "minecraft:ender_eye"
+  },
+  "components": [
+    {
+      "item": "thaumaturge:void_seed"
+    },
+    {
+      "tag": "forge:ingots/gold"
+    }
+  ],
+  "aspects": [
+    {
+      "aspect": "thaumaturge:alienis",
+      "amount": 64
+    },
+    {
+      "aspect": "thaumaturge:vacuos",
+      "amount": 16
+    },
+    {
+      "aspect": "thaumaturge:tenebrae",
+      "amount": 16
+    },
+    {
+      "aspect": "thaumaturge:motus",
+      "amount": 16
+    }
+  ],
+  "instability": 5,
+  "result": {
+    "item": "thaumaturge:eldritch_eye"
+  }
+}

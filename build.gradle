@@ -1,0 +1,170 @@
+plugins {
+    id 'net.neoforged.moddev.legacyforge'
+    id 'maven-publish'
+}
+
+version = "${mc_version}-${mod_version}"
+group = mod_group_id
+base {
+    archivesName = "${mod_id}-forge"
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+sourceSets.main.resources {
+    srcDir 'src/generated/resources'
+}
+
+tasks.withType(ProcessResources).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 17
+    options.compilerArgs << '-Xmaxerrs' << '9999'
+}
+
+repositories {
+    flatDir { dirs 'libs' }
+    mavenCentral()
+    maven { url = 'https://maven.theillusivec4.top/' }
+    maven {
+        name = 'BlameJared'
+        url = 'https://maven.blamejared.com/'
+    }
+    maven {
+        name = 'MinecraftForge'
+        url = 'https://maven.minecraftforge.net/'
+    }
+    maven {
+        name = 'ModMaven'
+        url = 'https://modmaven.dev/'
+        content { includeGroup 'mezz.jei' }
+    }
+    maven {
+        name = 'CurseMaven'
+        url = 'https://www.cursemaven.com'
+        content { includeGroup 'curse.maven' }
+    }
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'Modrinth'
+                url = 'https://api.modrinth.com/maven'
+            }
+        }
+        filter { includeGroup 'maven.modrinth' }
+    }
+}
+
+dependencies {
+    modImplementation "top.theillusivec4.curios:curios-forge:${curios_version}"
+    modImplementation "curse.maven:lithostitched-936015:${lithostitched_file_id}"
+    modImplementation "com.github.glitchfiend:TerraBlender-forge:${mc_version}-${terrablender_version}"
+
+    modCompileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"
+    modCompileOnly "mezz.jei:jei-${mc_version}-forge-api:${jei_version}"
+    modCompileOnly "mezz.jei:jei-${mc_version}-forge:${jei_version}"
+    modRuntimeOnly "mezz.jei:jei-${mc_version}-forge:${jei_version}"
+
+    compileOnly 'org.jetbrains:annotations:24.1.0'
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+}
+
+legacyForge {
+    version = "${mc_version}-${forge_version}"
+    parchment {
+        minecraftVersion = mc_version
+        mappingsVersion = mapping_version
+    }
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.test
+        }
+    }
+    runs {
+        configureEach {
+            gameDirectory = project.file('run')
+            systemProperty 'forge.logging.console.level', 'debug'
+            systemProperty 'forge.enabledGameTestNamespaces', mod_id
+        }
+        client {
+            client()
+        }
+        server {
+            server()
+            programArgument '--nogui'
+        }
+        data {
+            data()
+            programArguments.addAll(
+                    '--mod', mod_id,
+                    '--all',
+                    '--output', file('src/generated/resources').absolutePath,
+                    '--existing', file('src/main/resources').absolutePath
+            )
+        }
+        gameTestServer {
+            type = 'gameTestServer'
+            gameDirectory = project.file('run/gametest')
+            systemProperty 'forge.enabledGameTestNamespaces', mod_id
+        }
+    }
+}
+
+mixin {
+    def refmap = add(sourceSets.main, "${mod_id}.refmap.json")
+    jar.from refmap
+    config "${mod_id}.mixins.json"
+}
+
+jar {
+    manifest {
+        attributes(['MixinConfigs': "${mod_id}.mixins.json"])
+    }
+    exclude 'com/leclowndu93150/thaumaturge/debug/**'
+}
+
+def expansionVariables = [
+        'minecraft_version'  : mc_version,
+        'mc_range'           : mc_range,
+        'forge_version'      : forge_version,
+        'forge_version_range': forge_version_range,
+        'loader_range'       : loader_version_range,
+        'mod_id'             : mod_id,
+        'mod_name'           : mod_name,
+        'mod_license'        : mod_license,
+        'mod_version'        : mod_version,
+        'mod_authors'        : mod_authors,
+        'mod_description'    : mod_description,
+        'version'            : project.version
+]
+
+processResources {
+    inputs.properties expansionVariables
+    filesMatching('META-INF/mods.toml') {
+        expand expansionVariables
+    }
+}
+
+tasks.register('checkPortGaps', Exec) {
+    group = 'verification'
+    description = 'Static research→recipe→model port gap checks (scripts/check_port_gaps.ps1)'
+    workingDir = project.projectDir
+    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+        commandLine 'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'scripts/check_port_gaps.ps1'
+    } else {
+        commandLine 'pwsh', '-NoProfile', '-File', 'scripts/check_port_gaps.ps1'
+    }
+}
+
+check.dependsOn checkPortGaps
+
+// GameTest classpath (Forge): run with ./gradlew runGameTestServer
+sourceSets {
+    test {
+        compileClasspath += sourceSets.main.output + configurations.compileClasspath
+    }
+}

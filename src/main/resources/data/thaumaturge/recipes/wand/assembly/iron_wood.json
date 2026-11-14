@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["  I", " S ", "I  "],
+  "key": {
+    "I": { "item": "thaumaturge:wand_cap_iron" },
+    "S": { "tag": "forge:rods/wooden" }
+  },
+  "result": { "item": "thaumaturge:wand", "count": 1 }
+}

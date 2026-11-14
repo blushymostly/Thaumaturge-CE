@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/slab_top",
+  "textures": {
+    "side": "thaumaturge:block/ancient_stone_1",
+    "bottom": "thaumaturge:block/ancient_stone_0",
+    "top": "thaumaturge:block/ancient_stone_3"
+  }
+}

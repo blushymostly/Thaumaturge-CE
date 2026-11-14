@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "thaumaturge:magical_forest",
+    "thaumaturge:magical_forest_caves",
+    "thaumaturge:tainted_lands"
+  ]
+}

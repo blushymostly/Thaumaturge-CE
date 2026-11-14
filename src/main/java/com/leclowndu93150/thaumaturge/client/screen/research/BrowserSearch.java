@@ -1,27 +1,20 @@
 package com.leclowndu93150.thaumaturge.client.screen.research;
 
-import com.leclowndu93150.thaumaturge.api.capability.IPlayerKnowledge;
-import com.leclowndu93150.thaumaturge.api.research.IResearchCategory;
-import com.leclowndu93150.thaumaturge.api.research.IResearchStage;
-import com.leclowndu93150.thaumaturge.api.research.ResearchRequirement;
 import com.leclowndu93150.thaumaturge.client.render.research.EntryIconRenderer;
 import com.leclowndu93150.thaumaturge.client.screen.TTScreenTextures;
-import com.leclowndu93150.thaumaturge.client.screen.TTTooltips;
 import com.leclowndu93150.thaumaturge.client.screen.research.BrowserModel.CategoryRef;
 import com.leclowndu93150.thaumaturge.client.screen.research.BrowserModel.EntryNode;
+import com.leclowndu93150.thaumaturge.content.research.PlayerKnowledge;
+import com.leclowndu93150.thaumaturge.content.research.ResearchRequirement;
+import com.leclowndu93150.thaumaturge.content.research.ResearchStage;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.core.Holder;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.item.Item;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
 final class BrowserSearch {
@@ -40,9 +33,7 @@ final class BrowserSearch {
     private static final int MORE_COLOR = 0xFFAAAAAA;
     private static final int RECIPE_ICON_U = 224;
     private static final int RECIPE_ICON_V = 48;
-    private static final int SOURCE_ICON_SIZE = 16;
     private static final int CATEGORY_ICON_TINT = 0xCCA8A8A8;
-    private static final int RECIPE_STAGE_LOOKAHEAD = 2;
 
     private final BrowserModel model;
     private final List<Result> results = new ArrayList<>();
@@ -61,8 +52,11 @@ final class BrowserSearch {
 
     void rebuild(String query) {
         results.clear();
-        IPlayerKnowledge knowledge = model.knowledge();
+        PlayerKnowledge knowledge = model.knowledge();
         String needle = query.toLowerCase(Locale.ROOT);
+        if (needle.isEmpty()) {
+            return;
+        }
         for (CategoryRef category : model.shownBuiltIn()) {
             addCategory(category, needle);
         }
@@ -70,22 +64,20 @@ final class BrowserSearch {
             addCategory(category, needle);
         }
         for (EntryNode node : model.allEntries()) {
-            if (!knowledge.isResearchKnown(node.id())) {
+            if (!knowledge.isKnown(node.id())) {
                 continue;
             }
             add(Kind.ENTRY, Component.translatable(node.value().nameKey()).getString(), node.id(), needle);
-            List<IResearchStage> stages = node.value().stages();
-            int index = Math.min(stages.size() - 1, knowledge.researchStage(node.id()) + RECIPE_STAGE_LOOKAHEAD);
-            if (index < 0 || index >= stages.size()) {
-                continue;
-            }
-            for (ResearchRequirement requirement : stages.get(index).craft()) {
-                Optional<Holder<Item>> first = requirement.items().stream().findFirst();
-                if (first.isPresent()) {
-                    ItemStack stack = new ItemStack(first.get());
-                    stack.applyComponents(requirement.components());
-                    if (!stack.isEmpty()) {
-                        add(Kind.RECIPE, stack.getHoverName().getString(), node.id(), needle);
+            // CE RECIPE_STAGE_LOOKAHEAD: search current and following craft requirements.
+            List<ResearchStage> stages = node.value().stages();
+            int current = Math.max(0, knowledge.stage(node.id()));
+            for (int index = current; index < stages.size(); index++) {
+                for (ResearchRequirement requirement : stages.get(index).craft()) {
+                    for (int i = 0; i < Math.min(8, requirement.candidateIds().size()); i++) {
+                        ItemStack lead = requirement.stackAt(i);
+                        if (!lead.isEmpty()) {
+                            add(Kind.RECIPE, lead.getHoverName().getString(), node.id(), needle);
+                        }
                     }
                 }
             }
@@ -102,17 +94,17 @@ final class BrowserSearch {
         return inside && row < visibleRows(viewHeight) && row < results.size() ? row : -1;
     }
 
-    void draw(GuiGraphicsExtractor graphics, Font font, int mouseX, int mouseY, int viewWidth, int viewHeight, long tick) {
+    void draw(GuiGraphics graphics, Font font, int mouseX, int mouseY, int viewWidth, int viewHeight, long tick) {
         int rows = visibleRows(viewHeight);
         int hoveredRow = rowAt(mouseX, mouseY, viewWidth, viewHeight);
         for (int i = 0; i < results.size() && i < rows; i++) {
             Result result = results.get(i);
             int y = FIRST_ROW_Y + ROW_PITCH * i;
-            graphics.text(font, result.text(), TEXT_X, y, i == hoveredRow ? result.kind().hoverColor() : result.kind().color(), false);
+            graphics.drawString(font, result.text(), TEXT_X, y, i == hoveredRow ? result.kind().hoverColor() : result.kind().color(), false);
             drawIcon(graphics, result, y, tick);
         }
         if (results.size() > rows) {
-            graphics.text(font, Component.translatable("gui.thaumaturge.thaumonomicon.search_more"), MORE_X, FIRST_ROW_Y + ROW_PITCH * rows + MORE_Y_GAP, MORE_COLOR, false);
+            graphics.drawString(font, Component.translatable("gui.thaumaturge.thaumonomicon.search_more"), MORE_X, FIRST_ROW_Y + ROW_PITCH * rows + MORE_Y_GAP, MORE_COLOR, false);
         }
     }
 
@@ -121,43 +113,43 @@ final class BrowserSearch {
     }
 
     private void addCategory(CategoryRef category, String needle) {
-        ResourceKey<IResearchCategory> key = ResourceKey.create(IResearchCategory.REGISTRY_KEY, category.id());
-        add(Kind.CATEGORY, TTTooltips.categoryName(key).getString(), category.id(), needle);
+        String label = Component.translatable("research.thaumaturge.category." + category.id().getPath()).getString();
+        add(Kind.CATEGORY, label, category.id(), needle);
     }
 
-    private void add(Kind kind, String text, Identifier id, String needle) {
+    private void add(Kind kind, String text, ResourceLocation id, String needle) {
         if (text.toLowerCase(Locale.ROOT).contains(needle)) {
             results.add(new Result(kind, text, id));
         }
     }
 
-    private void drawIcon(GuiGraphicsExtractor graphics, Result result, int y, long tick) {
+    private void drawIcon(GuiGraphics graphics, Result result, int y, long tick) {
         switch (result.kind()) {
-            case RECIPE -> graphics.blit(RenderPipelines.GUI_TEXTURED, TTScreenTextures.RESEARCH_BROWSER, ICON_X, y, (float) RECIPE_ICON_U, (float) RECIPE_ICON_V, ICON_SIZE, ICON_SIZE,
-                    SOURCE_ICON_SIZE, SOURCE_ICON_SIZE, TEX, TEX);
+            case RECIPE -> graphics.blit(TTScreenTextures.RESEARCH_BROWSER, ICON_X, y, RECIPE_ICON_U, RECIPE_ICON_V, ICON_SIZE, ICON_SIZE, TEX, TEX);
             case ENTRY -> {
                 EntryNode node = model.entry(result.id());
                 if (node != null) {
                     float scale = (float) ICON_SIZE / EntryIconRenderer.ICON_REFERENCE_SIZE;
-                    graphics.pose().pushMatrix();
-                    graphics.pose().translate(ICON_X, y);
-                    graphics.pose().scale(scale, scale);
+                    graphics.pose().pushPose();
+                    graphics.pose().translate(ICON_X, y, 0);
+                    graphics.pose().scale(scale, scale, 1.0F);
                     EntryIconRenderer.drawResearchIcon(graphics, 0, 0, EntryIconRenderer.resolveIcon(node.value(), tick), false);
-                    graphics.pose().popMatrix();
+                    graphics.pose().popPose();
                 }
             }
             case CATEGORY -> {
                 CategoryRef category = model.category(result.id());
                 if (category != null) {
-                    graphics.blit(RenderPipelines.GUI_TEXTURED, category.data().icon(), ICON_X, y, 0.0F, 0.0F, ICON_SIZE, ICON_SIZE, SOURCE_ICON_SIZE, SOURCE_ICON_SIZE, SOURCE_ICON_SIZE,
-                            SOURCE_ICON_SIZE, CATEGORY_ICON_TINT);
+                    EntryIconRenderer.drawStaticTexture(graphics, category.data().icon(), ICON_X, y, ICON_SIZE);
                 }
             }
         }
     }
 
     enum Kind {
-        CATEGORY(0xFFDDAAAA, 0xFFFFCCCC), ENTRY(0xFFDDDDDD, 0xFFFFFFFF), RECIPE(0xFFAAAADD, 0xFFCCCCFF);
+        CATEGORY(0xFFDDAAAA, 0xFFFFCCCC),
+        ENTRY(0xFFDDDDDD, 0xFFFFFFFF),
+        RECIPE(0xFFAAAADD, 0xFFCCCCFF);
 
         private final int color;
         private final int hoverColor;
@@ -176,6 +168,5 @@ final class BrowserSearch {
         }
     }
 
-    record Result(Kind kind, String text, Identifier id) {
-    }
+    record Result(Kind kind, String text, ResourceLocation id) {}
 }

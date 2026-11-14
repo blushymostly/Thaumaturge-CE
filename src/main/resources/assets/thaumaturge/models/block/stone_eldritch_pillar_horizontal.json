@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column_horizontal",
+  "textures": {
+    "end": "thaumaturge:block/eldritch_deco",
+    "side": "thaumaturge:block/stone_eldritch_pillar_side"
+  }
+}

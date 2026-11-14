@@ -1,53 +1,43 @@
 package com.leclowndu93150.thaumaturge.client.screen;
 
 import com.leclowndu93150.thaumaturge.TTIds;
-import com.leclowndu93150.thaumaturge.client.screen.widget.TTGauge;
-import com.leclowndu93150.thaumaturge.content.essentia.smeltery.BlockEntitySmelter;
-import com.leclowndu93150.thaumaturge.content.essentia.smeltery.MenuSmelter;
-import com.leclowndu93150.thaumaturge.content.essentia.smeltery.SmelterGauge;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.leclowndu93150.thaumaturge.content.essentia.smeltery.SmelterMenu;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
-public final class SmelterScreen extends AbstractTTContainerScreen<MenuSmelter> {
-    private static final Identifier SHEET = TTIds.rl("textures/gui/gui_smelter.png");
-    private static final int SHEET_SIZE = 256;
-    private static final int PANEL_WIDTH = 176;
-    private static final int PANEL_HEIGHT = 166;
+public final class SmelterScreen extends AbstractContainerScreen<SmelterMenu> {
+    private static final ResourceLocation TEXTURE = TTIds.rl("textures/gui/gui_smelter.png");
 
-    private static final TTGauge FLAME = new TTGauge(SHEET, SHEET_SIZE, 176, 0, 16, 20);
-    private static final int FLAME_X = 80;
-    private static final int FLAME_Y = 26;
-
-    private static final TTGauge PROGRESS = new TTGauge(SHEET, SHEET_SIZE, 216, 0, 9, 46);
-    private static final int PROGRESS_X = 106;
-    private static final int PROGRESS_Y = 13;
-
-    private static final TTGauge VIS = new TTGauge(SHEET, SHEET_SIZE, 200, 0, 8, 48);
-    private static final int VIS_X = 61;
-    private static final int VIS_Y = 12;
-
-    private static final TTGauge VIS_GLASS = new TTGauge(SHEET, SHEET_SIZE, 232, 0, 10, 55);
-    private static final int VIS_GLASS_X = 60;
-    private static final int VIS_GLASS_Y = 8;
-
-    SmelterScreen(MenuSmelter menu, Inventory inventory, Component title) {
-        super(menu, inventory, title, SHEET, PANEL_WIDTH, PANEL_HEIGHT);
+    public SmelterScreen(SmelterMenu menu, Inventory inventory, Component title) {
+        super(menu, inventory, title);
     }
 
     @Override
-    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {}
+    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {}
 
     @Override
-    protected void extractBackgroundOverlay(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        BlockEntitySmelter smelter = menu.blockEntity();
-        if (smelter == null) {
-            return;
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBackground(graphics);
+        super.render(graphics, mouseX, mouseY, partialTick);
+        renderTooltip(graphics, mouseX, mouseY);
+    }
+
+    @Override
+    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
+        graphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight);
+        drawRising(graphics, 80, 26, 176, 16, 20, menu.fuelHeight(20));
+        drawRising(graphics, 106, 13, 216, 9, 46, menu.progressHeight(46));
+        drawRising(graphics, 61, 12, 200, 8, 48, menu.stockHeight(48));
+        graphics.blit(TEXTURE, leftPos + 60, topPos + 8, 232, 0, 10, 55);
+    }
+
+    private void drawRising(GuiGraphics graphics, int x, int y, int textureX, int width, int height, int visible) {
+        if (visible > 0) {
+            int offset = height - visible;
+            graphics.blit(TEXTURE, leftPos + x, topPos + y + offset, textureX, offset, width, visible);
         }
-        FLAME.extractRising(graphics, leftPos + FLAME_X, topPos + FLAME_Y, smelter.scaled(SmelterGauge.FUEL, FLAME.height()));
-        PROGRESS.extractRising(graphics, leftPos + PROGRESS_X, topPos + PROGRESS_Y, smelter.scaled(SmelterGauge.COOK, PROGRESS.height()));
-        VIS.extractRising(graphics, leftPos + VIS_X, topPos + VIS_Y, smelter.scaled(SmelterGauge.ESSENTIA, VIS.height()));
-        VIS_GLASS.extractFull(graphics, leftPos + VIS_GLASS_X, topPos + VIS_GLASS_Y);
     }
 }

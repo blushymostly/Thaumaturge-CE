@@ -1,0 +1,6 @@
+{
+  "type": "forge:add_features",
+  "biomes": "thaumaturge:magical_forest",
+  "features": "thaumaturge:magic_forest_flora",
+  "step": "vegetal_decoration"
+}

@@ -1,0 +1,29 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "#forge:ores/netherite_scrap",
+      "required": false
+    },
+    {
+      "id": "#forge:ores/diamond",
+      "required": false
+    },
+    {
+      "id": "#forge:ores/emerald",
+      "required": false
+    },
+    {
+      "id": "#forge:ores/cinnabar",
+      "required": false
+    },
+    {
+      "id": "#forge:raw_materials/cinnabar",
+      "required": false
+    },
+    {
+      "id": "#forge:ores/amber",
+      "required": false
+    }
+  ]
+}

@@ -50,6 +50,16 @@ public final class CrystalShards {
         return level.getBlockState(neighbour).isFaceSturdy(level, neighbour, direction.getOpposite());
     }
 
+    public static int supportMask(BlockGetter level, BlockPos pos) {
+        int mask = 0;
+        for (Direction face : Direction.values()) {
+            if (supports(level, pos, face)) {
+                mask |= 1 << face.ordinal();
+            }
+        }
+        return mask;
+    }
+
     private static long mix(long value) {
         long mixed = value;
         mixed = (mixed ^ (mixed >>> SHIFT_FIRST)) * MIX_FIRST;

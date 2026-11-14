@@ -1,0 +1,43 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:base_auromancy@1",
+  "pattern": [
+    "ISI",
+    "BRB",
+    "GTG"
+  ],
+  "key": {
+    "I": {
+      "item": "thaumaturge:plate_iron"
+    },
+    "S": {
+      "item": "thaumaturge:slab_arcane_stone"
+    },
+    "B": {
+      "item": "thaumaturge:arcane_stone"
+    },
+    "R": {
+      "item": "thaumaturge:vis_resonator"
+    },
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "T": {
+      "item": "thaumaturge:table_stone"
+    }
+  },
+  "vis": 100,
+  "crystals": [
+    {
+      "aspect": "thaumaturge:terra",
+      "amount": 1
+    },
+    {
+      "aspect": "thaumaturge:aqua",
+      "amount": 1
+    }
+  ],
+  "result": {
+    "item": "thaumaturge:focal_manipulator"
+  }
+}

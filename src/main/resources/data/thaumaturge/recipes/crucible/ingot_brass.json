@@ -1,0 +1,9 @@
+{
+  "type": "thaumaturge:crucible",
+  "research": "thaumaturge:metallurgy@0",
+  "catalyst": { "tag": "forge:ingots/copper" },
+  "aspects": [
+    { "aspect": "thaumaturge:instrumentum", "amount": 5 }
+  ],
+  "result": { "item": "thaumaturge:ingot_brass", "count": 1 }
+}

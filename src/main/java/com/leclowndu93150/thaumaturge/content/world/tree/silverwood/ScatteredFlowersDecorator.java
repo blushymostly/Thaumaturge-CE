@@ -1,12 +1,13 @@
 package com.leclowndu93150.thaumaturge.content.world.tree.silverwood;
 
-import java.util.function.Predicate;
-import java.util.function.Consumer;
+import com.leclowndu93150.thaumaturge.registry.TTBulkContent;
 import com.leclowndu93150.thaumaturge.registry.TTTreePlacers;
-import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.tags.BlockTags;
@@ -18,8 +19,8 @@ import net.minecraft.world.level.levelgen.feature.treedecorators.TreeDecorator;
 import net.minecraft.world.level.levelgen.feature.treedecorators.TreeDecoratorType;
 
 public final class ScatteredFlowersDecorator extends TreeDecorator {
-    public static final MapCodec<ScatteredFlowersDecorator> CODEC = RecordCodecBuilder
-            .mapCodec(instance -> instance.group(BuiltInRegistries.BLOCK.byNameCodec().fieldOf("flower").forGetter(decorator -> decorator.flower)).apply(instance, ScatteredFlowersDecorator::new));
+    public static final Codec<ScatteredFlowersDecorator> CODEC = RecordCodecBuilder
+            .create(instance -> instance.group(BuiltInRegistries.BLOCK.byNameCodec().fieldOf("flower").forGetter(decorator -> decorator.flower)).apply(instance, ScatteredFlowersDecorator::new));
 
     private static final int FLOWER_MAX_COUNT = 18;
     private static final int FLOWER_BOX_HALF_WIDTH = 7;
@@ -42,8 +43,15 @@ public final class ScatteredFlowersDecorator extends TreeDecorator {
         if (logs.isEmpty()) {
             return;
         }
+        if (flower == TTBulkContent.BLOCKS.get("shimmerleaf").get()) {
+            return;
+        }
         BlockState flowerState = flower.defaultBlockState();
-        scatter(findFoot(logs), context.random(), context::isAir, pos -> context.checkBlock(pos.below(), ScatteredFlowersDecorator::isFlowerSoil), pos -> context.setBlock(pos, flowerState));
+        scatter(findFoot(logs), context.random(), context::isAir, pos -> checkBlockBelow(context, pos.below(), ScatteredFlowersDecorator::isFlowerSoil), pos -> context.setBlock(pos, flowerState));
+    }
+
+    private static boolean checkBlockBelow(Context context, BlockPos pos, Predicate<BlockState> pred) {
+        return context.level().isStateAtPosition(pos, pred::test);
     }
 
     public static void scatter(BlockPos foot, RandomSource random, Predicate<BlockPos> isAir, Predicate<BlockPos> hasSoil, Consumer<BlockPos> place) {
@@ -87,6 +95,6 @@ public final class ScatteredFlowersDecorator extends TreeDecorator {
     }
 
     private static boolean isBefore(BlockPos candidate, BlockPos current) {
-        return candidate.getX() < current.getX() || (candidate.getX() == current.getX() && candidate.getZ() < current.getZ());
+        return current == null || candidate.getX() < current.getX() || (candidate.getX() == current.getX() && candidate.getZ() < current.getZ());
     }
 }

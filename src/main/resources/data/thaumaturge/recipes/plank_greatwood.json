@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "thaumaturge:log_greatwood"
+    }
+  ],
+  "result": {
+    "item": "thaumaturge:plank_greatwood",
+    "count": 4
+  }
+}

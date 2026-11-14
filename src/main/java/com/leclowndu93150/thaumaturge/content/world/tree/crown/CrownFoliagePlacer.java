@@ -3,20 +3,20 @@ package com.leclowndu93150.thaumaturge.content.world.tree.crown;
 import com.leclowndu93150.thaumaturge.content.world.tree.TreeLeafUpdater;
 import com.leclowndu93150.thaumaturge.registry.TTTreePlacers;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.IntProvider;
-import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LevelSimulatedReader;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 import net.minecraft.world.level.levelgen.feature.foliageplacers.FoliagePlacer;
 import net.minecraft.world.level.levelgen.feature.foliageplacers.FoliagePlacerType;
 
 public final class CrownFoliagePlacer extends FoliagePlacer {
-    public static final MapCodec<CrownFoliagePlacer> CODEC = RecordCodecBuilder.mapCodec(
+    public static final Codec<CrownFoliagePlacer> CODEC = RecordCodecBuilder.create(
             instance -> foliagePlacerParts(instance).and(Codec.BOOL.fieldOf("absorb_foreign_leaves").forGetter(placer -> placer.absorbForeignLeaves)).apply(instance, CrownFoliagePlacer::new));
 
     private static final int LAYER_COUNT = 4;
@@ -37,9 +37,10 @@ public final class CrownFoliagePlacer extends FoliagePlacer {
     }
 
     @Override
-    protected void createFoliage(WorldGenLevel level, FoliageSetter setter, RandomSource random, TreeConfiguration config, int treeHeight, FoliageAttachment attachment, int foliageHeight, int leafRadius, int offset) {
-        BlockPos anchor = attachment.pos();
-        BlockState leaf = config.foliageProvider.getState(level, random, anchor);
+    protected void createFoliage(LevelSimulatedReader level, FoliageSetter setter, RandomSource random, TreeConfiguration config, int treeHeight, FoliageAttachment attachment, int foliageHeight, int leafRadius, int offset) {
+        LevelAccessor world = (LevelAccessor) level;
+        BlockPos anchor = attachment.pos().above(offset);
+        BlockState leaf = config.foliageProvider.getState(random, anchor);
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
         for (int layer = 0; layer < LAYER_COUNT; layer++) {
             boolean plus = layer == 0 || layer == LAST_LAYER;
@@ -47,7 +48,7 @@ public final class CrownFoliagePlacer extends FoliagePlacer {
                 for (int dz = -SQUARE_RADIUS; dz <= SQUARE_RADIUS; dz++) {
                     if (inLayer(plus, dx, dz)) {
                         cursor.setWithOffset(anchor, dx, layer, dz);
-                        placeLeaf(level, setter, cursor, leaf);
+                        placeLeaf(world, setter, cursor, leaf);
                     }
                 }
             }
@@ -73,7 +74,7 @@ public final class CrownFoliagePlacer extends FoliagePlacer {
         return !(absX == SQUARE_RADIUS && absZ == SQUARE_RADIUS);
     }
 
-    private void placeLeaf(WorldGenLevel level, FoliageSetter setter, BlockPos pos, BlockState leaf) {
+    private void placeLeaf(LevelAccessor level, FoliageSetter setter, BlockPos pos, BlockState leaf) {
         if (level.isOutsideBuildHeight(pos)) {
             return;
         }

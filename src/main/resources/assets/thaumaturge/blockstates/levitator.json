@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "facing=up,enabled=true": { "model": "thaumaturge:block/levitator_on" },
+    "facing=up,enabled=false": { "model": "thaumaturge:block/levitator" },
+    "facing=down,enabled=true": { "model": "thaumaturge:block/levitator_on", "x": 180 },
+    "facing=down,enabled=false": { "model": "thaumaturge:block/levitator", "x": 180 },
+    "facing=north,enabled=true": { "model": "thaumaturge:block/levitator_on", "x": 90 },
+    "facing=north,enabled=false": { "model": "thaumaturge:block/levitator", "x": 90 },
+    "facing=south,enabled=true": { "model": "thaumaturge:block/levitator_on", "x": 90, "y": 180 },
+    "facing=south,enabled=false": { "model": "thaumaturge:block/levitator", "x": 90, "y": 180 },
+    "facing=west,enabled=true": { "model": "thaumaturge:block/levitator_on", "x": 90, "y": 270 },
+    "facing=west,enabled=false": { "model": "thaumaturge:block/levitator", "x": 90, "y": 270 },
+    "facing=east,enabled=true": { "model": "thaumaturge:block/levitator_on", "x": 90, "y": 90 },
+    "facing=east,enabled=false": { "model": "thaumaturge:block/levitator", "x": 90, "y": 90 }
+  }
+}

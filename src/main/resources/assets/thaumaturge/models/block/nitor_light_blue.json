@@ -1,0 +1,6 @@
+{
+  "parent": "thaumaturge:block/empty",
+  "textures": {
+    "particle": "thaumaturge:block/nitor"
+  }
+}

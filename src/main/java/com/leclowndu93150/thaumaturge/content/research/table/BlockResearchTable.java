@@ -3,11 +3,11 @@ package com.leclowndu93150.thaumaturge.content.research.table;
 import com.leclowndu93150.thaumaturge.content.device.DeviceShapes;
 import com.leclowndu93150.thaumaturge.registry.TTBlockEntities;
 import com.leclowndu93150.thaumaturge.registry.TTBlocks;
-import com.mojang.serialization.MapCodec;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.LivingEntity;
@@ -16,8 +16,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -27,18 +27,18 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.pathfinder.PathComputationType;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import org.jspecify.annotations.Nullable;
+import net.minecraftforge.network.NetworkHooks;
+import org.jetbrains.annotations.Nullable;
 
-public final class BlockResearchTable extends BaseEntityBlock {
-    public static final MapCodec<BlockResearchTable> CODEC = simpleCodec(BlockResearchTable::new);
-
-    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
+public final class BlockResearchTable extends Block implements EntityBlock {
+    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final EnumProperty<ResearchTablePart> PART = EnumProperty.create("part", ResearchTablePart.class);
 
     private static final VoxelShape TRESTLE = Shapes.or(box(0.0, 14.0, 0.0, 16.0, 16.0, 16.0), box(2.0, 11.0, 0.0, 3.0, 14.0, 12.0), box(4.0, 11.0, 12.0, 12.0, 14.0, 13.0),
@@ -51,11 +51,6 @@ public final class BlockResearchTable extends BaseEntityBlock {
     public BlockResearchTable(BlockBehaviour.Properties properties) {
         super(properties);
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(PART, ResearchTablePart.MAIN));
-    }
-
-    @Override
-    protected MapCodec<BlockResearchTable> codec() {
-        return CODEC;
     }
 
     @Override
@@ -84,28 +79,28 @@ public final class BlockResearchTable extends BaseEntityBlock {
     }
 
     @Override
-    protected BlockState rotate(BlockState state, Rotation rotation) {
+    public BlockState rotate(BlockState state, Rotation rotation) {
         return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
     @Override
-    protected BlockState mirror(BlockState state, Mirror mirror) {
+    public BlockState mirror(BlockState state, Mirror mirror) {
         return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
     @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         Map<Direction, VoxelShape> shapes = state.getValue(PART) == ResearchTablePart.MAIN ? MAIN_SHAPES : EXT_SHAPES;
         return shapes.get(state.getValue(FACING));
     }
 
     @Override
-    protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return getShape(state, level, pos, context);
     }
 
     @Override
-    protected boolean isPathfindable(BlockState state, PathComputationType type) {
+    public boolean isPathfindable(BlockState state, BlockGetter level, BlockPos pos, PathComputationType type) {
         return false;
     }
 
@@ -119,37 +114,43 @@ public final class BlockResearchTable extends BaseEntityBlock {
     }
 
     @Override
-    protected @Nullable MenuProvider getMenuProvider(BlockState state, Level level, BlockPos pos) {
+    public @Nullable MenuProvider getMenuProvider(BlockState state, Level level, BlockPos pos) {
         return level.getBlockEntity(mainPos(state, pos)) instanceof BlockEntityResearchTable be ? be : null;
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-        if (!level.isClientSide()) {
+    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
             BlockPos main = mainPos(state, pos);
             MenuProvider provider = getMenuProvider(state, level, pos);
             if (provider != null) {
-                player.openMenu(provider, buf -> buf.writeBlockPos(main));
+                NetworkHooks.openScreen(serverPlayer, provider, main);
             }
         }
-        return InteractionResult.SUCCESS;
+        return InteractionResult.sidedSuccess(level.isClientSide());
     }
 
     @Override
-    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        if (level.isClientSide()) {
+    public @Nullable <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+        if (level.isClientSide() || type != TTBlockEntities.RESEARCH_TABLE.get()) {
             return null;
         }
-        return createTickerHelper(type, TTBlockEntities.RESEARCH_TABLE.get(), BlockEntityResearchTable::serverTick);
+        return (tickLevel, tickPos, tickState, be) -> BlockEntityResearchTable.serverTick(tickLevel, tickPos, tickState, (BlockEntityResearchTable) be);
     }
 
     @Override
-    protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel level, BlockPos pos, boolean movedByPiston) {
-        Direction facing = state.getValue(FACING);
-        BlockPos partnerPos = pos.relative(facing);
-        BlockState partner = level.getBlockState(partnerPos);
-        if (partner.is(this) && partner.getValue(FACING) == facing.getOpposite() && partner.getValue(PART) != state.getValue(PART)) {
-            level.setBlock(partnerPos, TTBlocks.TABLE_WOOD.get().defaultBlockState(), 3);
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!state.is(newState.getBlock())) {
+            if (state.getValue(PART) == ResearchTablePart.MAIN && level.getBlockEntity(pos) instanceof BlockEntityResearchTable table) {
+                table.spillContents();
+            }
+            Direction facing = state.getValue(FACING);
+            BlockPos partnerPos = pos.relative(facing);
+            BlockState partner = level.getBlockState(partnerPos);
+            if (partner.is(this) && partner.getValue(FACING) == facing.getOpposite() && partner.getValue(PART) != state.getValue(PART)) {
+                level.setBlock(partnerPos, TTBlocks.TABLE.get().defaultBlockState(), 3);
+            }
         }
+        super.onRemove(state, level, pos, newState, movedByPiston);
     }
 }

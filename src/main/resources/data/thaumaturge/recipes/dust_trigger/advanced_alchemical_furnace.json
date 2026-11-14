@@ -1,0 +1,128 @@
+{
+  "type": "thaumaturge:dust_structure",
+  "research": "thaumaturge:advanced_alchemical_furnace",
+  "result": {
+    "item": "thaumaturge:advanced_alchemical_furnace"
+  },
+  "cells": [
+    {
+      "x": -1,
+      "y": 0,
+      "z": -1,
+      "source": "thaumaturge:advanced_alchemical_construct",
+      "replacement": "thaumaturge:advanced_alchemical_furnace_advanced_construct_placeholder"
+    },
+    {
+      "x": -1,
+      "y": 1,
+      "z": -1,
+      "source": "thaumaturge:alembic",
+      "replacement": "thaumaturge:advanced_alchemical_furnace_alembic_placeholder"
+    },
+    {
+      "x": -1,
+      "y": 0,
+      "z": 0,
+      "source": "thaumaturge:alchemical_construct",
+      "replacement": "thaumaturge:advanced_alchemical_furnace_nozzle"
+    },
+    {
+      "x": -1,
+      "y": 1,
+      "z": 0,
+      "source": "thaumaturge:alchemical_construct",
+      "replacement": "thaumaturge:advanced_alchemical_furnace_construct_placeholder"
+    },
+    {
+      "x": -1,
+      "y": 0,
+      "z": 1,
+      "source": "thaumaturge:advanced_alchemical_construct",
+      "replacement": "thaumaturge:advanced_alchemical_furnace_advanced_construct_placeholder"
+    },
+    {
+      "x": -1,
+      "y": 1,
+      "z": 1,
+      "source": "thaumaturge:alembic",
+      "replacement": "thaumaturge:advanced_alchemical_furnace_alembic_placeholder"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": -1,
+      "source": "thaumaturge:alchemical_construct",
+      "replacement": "thaumaturge:advanced_alchemical_furnace_nozzle"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "z": -1,
+      "source": "thaumaturge:alchemical_construct",
+      "replacement": "thaumaturge:advanced_alchemical_furnace_construct_placeholder"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": 1,
+      "source": "thaumaturge:alchemical_construct",
+      "replacement": "thaumaturge:advanced_alchemical_furnace_nozzle"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "z": 1,
+      "source": "thaumaturge:alchemical_construct",
+      "replacement": "thaumaturge:advanced_alchemical_furnace_construct_placeholder"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "z": -1,
+      "source": "thaumaturge:advanced_alchemical_construct",
+      "replacement": "thaumaturge:advanced_alchemical_furnace_advanced_construct_placeholder"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "z": -1,
+      "source": "thaumaturge:alembic",
+      "replacement": "thaumaturge:advanced_alchemical_furnace_alembic_placeholder"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "z": 0,
+      "source": "thaumaturge:alchemical_construct",
+      "replacement": "thaumaturge:advanced_alchemical_furnace_nozzle"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "z": 0,
+      "source": "thaumaturge:alchemical_construct",
+      "replacement": "thaumaturge:advanced_alchemical_furnace_construct_placeholder"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "z": 1,
+      "source": "thaumaturge:advanced_alchemical_construct",
+      "replacement": "thaumaturge:advanced_alchemical_furnace_advanced_construct_placeholder"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "z": 1,
+      "source": "thaumaturge:alembic",
+      "replacement": "thaumaturge:advanced_alchemical_furnace_alembic_placeholder"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "source": "thaumaturge:smelter_basic",
+      "replacement": "thaumaturge:advanced_alchemical_furnace"
+    }
+  ]
+}

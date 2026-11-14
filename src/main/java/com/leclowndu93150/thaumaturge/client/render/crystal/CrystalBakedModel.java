@@ -1,80 +1,140 @@
 package com.leclowndu93150.thaumaturge.client.render.crystal;
 
 import com.leclowndu93150.thaumaturge.client.model.mesh.TTMesh;
-import com.leclowndu93150.thaumaturge.client.model.mesh.TTMeshPart;
 import com.leclowndu93150.thaumaturge.content.world.crystal.BlockCrystal;
 import com.leclowndu93150.thaumaturge.content.world.crystal.CrystalFaceTransforms;
+import com.leclowndu93150.thaumaturge.content.world.crystal.CrystalModelData;
 import com.leclowndu93150.thaumaturge.content.world.crystal.CrystalShards;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import net.minecraft.client.renderer.block.BlockAndTintGetter;
-import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
-import net.minecraft.client.resources.model.SimpleModelWrapper;
-import net.minecraft.client.resources.model.geometry.BakedQuad;
-import net.minecraft.client.resources.model.geometry.QuadCollection;
-import net.minecraft.client.resources.model.sprite.Material;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.ItemOverrides;
+import net.minecraft.client.renderer.block.model.ItemTransforms;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.client.model.DynamicBlockStateModel;
+import net.minecraftforge.client.ChunkRenderTypeSet;
+import net.minecraftforge.client.model.IDynamicBakedModel;
+import net.minecraftforge.client.model.data.ModelData;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public final class CrystalBakedModel implements DynamicBlockStateModel {
+public final class CrystalBakedModel implements IDynamicBakedModel {
     private static final Direction[] FACES = Direction.values();
-    private static final int TINT_INDEX = 0;
-    private static final int MATERIAL_FLAGS = 0;
-    private static final boolean AMBIENT_OCCLUSION = true;
 
-    private final BlockStateModelPart[][] shards;
-    private final Material.Baked material;
+    private final List<BakedQuad>[][] shards;
+    private final TextureAtlasSprite particle;
+    private final ItemTransforms transforms;
+    private final ItemOverrides overrides;
+    private final boolean ao;
+    private final boolean gui3d;
+    private final boolean blockLight;
 
-    public CrystalBakedModel(TTMesh mesh, Material.Baked material) {
-        this.material = material;
-        this.shards = new BlockStateModelPart[FACES.length][CrystalShards.COUNT];
+    public CrystalBakedModel(TTMesh mesh, TextureAtlasSprite particle, ItemTransforms transforms, ItemOverrides overrides, boolean ao, boolean gui3d, boolean blockLight) {
+        this.particle = particle;
+        this.transforms = transforms;
+        this.overrides = overrides;
+        this.ao = ao;
+        this.gui3d = gui3d;
+        this.blockLight = blockLight;
+        @SuppressWarnings("unchecked")
+        List<BakedQuad>[][] built = new List[FACES.length][CrystalShards.COUNT];
+        this.shards = built;
         for (Direction face : FACES) {
             for (int shard = 0; shard < CrystalShards.COUNT; shard++) {
-                shards[face.ordinal()][shard] = bakeShard(mesh.parts().get(shard), face);
+                List<BakedQuad> quads = new ArrayList<>();
+                CrystalQuadBaker.bakePart(mesh.parts().get(shard), particle, CrystalFaceTransforms.forFace(face), quads);
+                shards[face.ordinal()][shard] = List.copyOf(quads);
             }
         }
     }
 
     @Override
-    public void collectParts(BlockAndTintGetter level, BlockPos pos, BlockState state, RandomSource random, List<BlockStateModelPart> parts) {
-        int growth = state.hasProperty(BlockCrystal.SIZE) ? state.getValue(BlockCrystal.SIZE) : 0;
-        long seed = CrystalShards.seed(state, pos);
+    public @NotNull List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @NotNull RandomSource rand, @NotNull ModelData data, @Nullable RenderType renderType) {
+        if (side != null) {
+            return Collections.emptyList();
+        }
+        int growth = state != null && state.hasProperty(BlockCrystal.SIZE) ? state.getValue(BlockCrystal.SIZE) : 0;
+        Integer liveMask = data.get(CrystalModelData.SUPPORT_MASK);
+        int supportMask = liveMask != null
+                ? liveMask
+                : (state != null && state.hasProperty(BlockCrystal.SUPPORT) ? state.getValue(BlockCrystal.SUPPORT) : 0);
+        Long seedValue = data.get(CrystalModelData.SEED);
+        long seed = seedValue != null ? seedValue : (state != null ? CrystalShards.seed(state, BlockPos.ZERO) : 0L);
+
+        List<BakedQuad> out = new ArrayList<>();
         boolean any = false;
         for (Direction face : FACES) {
-            if (!CrystalShards.supports(level, pos, face)) {
+            if ((supportMask & 1 << face.ordinal()) == 0) {
                 continue;
             }
             any = true;
             int[] order = CrystalShards.order(face, seed);
             for (int i = 0; i <= growth; i++) {
-                parts.add(shards[face.ordinal()][order[i]]);
+                out.addAll(shards[face.ordinal()][order[i]]);
             }
         }
         if (!any) {
-            parts.add(shards[Direction.DOWN.ordinal()][CrystalShards.unsupported(seed)]);
+            out.addAll(shards[Direction.DOWN.ordinal()][CrystalShards.unsupported(seed)]);
         }
-    }
-
-    private BlockStateModelPart bakeShard(TTMeshPart part, Direction face) {
-        List<BakedQuad> quads = new ArrayList<>();
-        CrystalQuadBaker.bakePart(part, material, TINT_INDEX, CrystalFaceTransforms.forFace(face), quads);
-        QuadCollection.Builder builder = new QuadCollection.Builder();
-        for (BakedQuad quad : quads) {
-            builder.addUnculledFace(quad);
-        }
-        return new SimpleModelWrapper(builder.build(), AMBIENT_OCCLUSION, material);
+        return out;
     }
 
     @Override
-    public Material.Baked particleMaterial() {
-        return material;
+    public @NotNull ModelData getModelData(@NotNull BlockAndTintGetter level, @NotNull BlockPos pos, @NotNull BlockState state, @NotNull ModelData modelData) {
+        return ModelData.builder()
+                .with(CrystalModelData.SUPPORT_MASK, CrystalShards.supportMask(level, pos))
+                .with(CrystalModelData.SEED, CrystalShards.seed(state, pos))
+                .build();
     }
 
     @Override
-    public int materialFlags() {
-        return MATERIAL_FLAGS;
+    public @NotNull ChunkRenderTypeSet getRenderTypes(@NotNull BlockState state, @NotNull RandomSource rand, @NotNull ModelData data) {
+        return ChunkRenderTypeSet.of(RenderType.cutout());
+    }
+
+    @Override
+    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource rand) {
+        return getQuads(state, side, rand, ModelData.EMPTY, null);
+    }
+
+    @Override
+    public boolean useAmbientOcclusion() {
+        return ao;
+    }
+
+    @Override
+    public boolean isGui3d() {
+        return gui3d;
+    }
+
+    @Override
+    public boolean usesBlockLight() {
+        return blockLight;
+    }
+
+    @Override
+    public boolean isCustomRenderer() {
+        return false;
+    }
+
+    @Override
+    public TextureAtlasSprite getParticleIcon() {
+        return particle;
+    }
+
+    @Override
+    public ItemTransforms getTransforms() {
+        return transforms;
+    }
+
+    @Override
+    public ItemOverrides getOverrides() {
+        return overrides;
     }
 }

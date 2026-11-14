@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["NNN", "N N"],
+  "key": {
+    "N": { "tag": "forge:nuggets/iron" }
+  },
+  "result": { "item": "thaumaturge:wand_cap_iron", "count": 1 }
+}

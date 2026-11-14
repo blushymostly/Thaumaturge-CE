@@ -1,25 +1,26 @@
 package com.leclowndu93150.thaumaturge.content.aspect;
 
 import com.leclowndu93150.thaumaturge.api.aspect.IAspect;
+import com.leclowndu93150.thaumaturge.api.aspect.TTAspects;
 import java.util.List;
-import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
-import org.jspecify.annotations.Nullable;
+import java.util.Map;
+import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Nullable;
 
 public final class AspectCombinations {
-
     private AspectCombinations() {}
 
-    public static @Nullable Holder<IAspect> result(HolderLookup.Provider registries, Holder<IAspect> first, Holder<IAspect> second) {
-        for (Holder.Reference<IAspect> candidate : registries.lookupOrThrow(IAspect.REGISTRY_KEY).listElements().toList()) {
-            List<Holder<IAspect>> components = candidate.value().components();
+    /** The compound aspect made of exactly {@code first} + {@code second} (either order), or {@code null}. */
+    public static @Nullable ResourceLocation result(ResourceLocation first, ResourceLocation second) {
+        for (Map.Entry<ResourceLocation, IAspect> candidate : TTAspects.all().entrySet()) {
+            List<ResourceLocation> components = candidate.getValue().componentIds();
             if (components.size() != 2) {
                 continue;
             }
-            boolean direct = components.get(0).is(first.getKey()) && components.get(1).is(second.getKey());
-            boolean swapped = components.get(0).is(second.getKey()) && components.get(1).is(first.getKey());
+            boolean direct = components.get(0).equals(first) && components.get(1).equals(second);
+            boolean swapped = components.get(0).equals(second) && components.get(1).equals(first);
             if (direct || swapped) {
-                return candidate;
+                return candidate.getKey();
             }
         }
         return null;

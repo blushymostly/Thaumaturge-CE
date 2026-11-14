@@ -1,0 +1,20 @@
+{
+  "type": "thaumaturge:crucible",
+  "research": "thaumaturge:base_alchemy@1",
+  "catalyst": { "tag": "forge:nuggets/quartz" },
+  "aspects": [
+    { "aspect": "thaumaturge:terra", "amount": 2 }
+  ],
+  "result": {
+    "item": "thaumaturge:essentia_crystal",
+    "count": 1,
+    "nbt": {
+      "Thaumaturge": {
+        "CrystalAspect": {
+          "aspect": "thaumaturge:terra",
+          "amount": 1
+        }
+      }
+    }
+  }
+}

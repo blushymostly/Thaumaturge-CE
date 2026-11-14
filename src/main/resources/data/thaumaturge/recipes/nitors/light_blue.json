@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "group": "thaumaturge:nitor_dye",
+  "ingredients": [
+    { "tag": "thaumaturge:nitors" },
+    { "tag": "forge:dyes/light_blue" }
+  ],
+  "result": {
+    "item": "thaumaturge:nitor_light_blue",
+    "count": 1
+  }
+}

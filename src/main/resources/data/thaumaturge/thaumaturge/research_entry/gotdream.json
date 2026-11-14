@@ -1,0 +1,15 @@
+{
+  "category": "thaumaturge:basics",
+  "name": "research.thaumaturge.gotdream.title",
+  "parents": [],
+  "column": -2,
+  "row": -1,
+  "meta": ["hidden", "auto"],
+  "icons": ["minecraft:red_bed"],
+  "stages": [
+    {
+      "text": "research.thaumaturge.gotdream.stage_0"
+    }
+  ],
+  "complexity": 1
+}

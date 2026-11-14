@@ -19,6 +19,7 @@
       "craft": [
         {
           "items": [
+            "thaumaturge:arcane_stone",
             "thaumaturge:stone_arcane"
           ],
           "amount": 1

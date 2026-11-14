@@ -1,0 +1,10 @@
+{
+  "type": "thaumaturge:crucible",
+  "catalyst": { "tag": "forge:gunpowder" },
+  "aspects": [
+    { "aspect": "thaumaturge:ignis", "amount": 10 },
+    { "aspect": "thaumaturge:perditio", "amount": 10 },
+    { "aspect": "thaumaturge:alkimia", "amount": 5 }
+  ],
+  "result": { "item": "minecraft:gunpowder", "count": 2 }
+}

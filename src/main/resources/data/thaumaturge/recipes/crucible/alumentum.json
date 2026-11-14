@@ -1,0 +1,11 @@
+{
+  "type": "thaumaturge:crucible",
+  "research": "thaumaturge:alumentum@2",
+  "catalyst": { "tag": "minecraft:coals" },
+  "aspects": [
+    { "aspect": "thaumaturge:ignis", "amount": 10 },
+    { "aspect": "thaumaturge:potentia", "amount": 10 },
+    { "aspect": "thaumaturge:perditio", "amount": 5 }
+  ],
+  "result": { "item": "thaumaturge:alumentum", "count": 1 }
+}

@@ -9,10 +9,11 @@ import java.util.List;
 import java.util.Map;
 import net.minecraft.client.StringSplitter;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
-import net.minecraft.resources.Identifier;
-import org.jspecify.annotations.Nullable;
+import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Nullable;
 
 public final class PageParser {
     public static final int PAGE_HEIGHT = 195;
@@ -34,7 +35,7 @@ public final class PageParser {
     private static final int SHORT_TAIL_LINES = 6;
     private static final int PAGES_PER_SPREAD = 2;
     private static final int MIN_SPLIT_LINES = 2;
-    private static final Identifier KNOWLEDGE_TYPES = TTIds.rl("knowledge_types");
+    private static final ResourceLocation KNOWLEDGE_TYPES = TTIds.rl("knowledge_types");
     private static final String ADDENDUM_KEY = "gui.thaumaturge.thaumonomicon.addendum";
     private static final char TAG_OPEN = '<';
     private static final String IMAGE_OPEN = "<IMG>";
@@ -94,7 +95,7 @@ public final class PageParser {
         public static final PageImage LINE_DIVIDER = new PageImage(TTScreenTextures.RESEARCH_BOOK, 24, 184, 95, 6, 1.0F);
         public static final PageImage SECTION_DIVIDER = new PageImage(TTScreenTextures.RESEARCH_BOOK, 28, 192, 140, 6, 1.0F);
 
-        public final Identifier texture;
+        public final ResourceLocation texture;
         public final int u;
         public final int v;
         public final int w;
@@ -103,7 +104,7 @@ public final class PageParser {
         public final int renderedWidth;
         public final int renderedHeight;
 
-        public PageImage(Identifier texture, int u, int v, int w, int h, float scale) {
+        public PageImage(ResourceLocation texture, int u, int v, int w, int h, float scale) {
             this.renderedWidth = (int) (w * scale);
             this.renderedHeight = (int) (h * scale);
             this.scale = scale;
@@ -127,7 +128,7 @@ public final class PageParser {
             if (parts.length != DESCRIPTOR_FIELDS + 1) {
                 return null;
             }
-            Identifier texture = Identifier.tryParse(parts[0].trim() + DESCRIPTOR_SEPARATOR + parts[1].trim());
+            ResourceLocation texture = ResourceLocation.tryParse(parts[0].trim() + DESCRIPTOR_SEPARATOR + parts[1].trim());
             if (texture == null) {
                 return null;
             }
@@ -135,7 +136,7 @@ public final class PageParser {
             return candidate != null && candidate.fitsPage() ? candidate : null;
         }
 
-        private static @Nullable PageImage readNumbers(Identifier texture, String[] parts) {
+        private static @Nullable PageImage readNumbers(ResourceLocation texture, String[] parts) {
             try {
                 int[] ints = new int[4];
                 for (int slot = 0; slot < ints.length; slot++) {
@@ -162,7 +163,7 @@ public final class PageParser {
         return new Layout(font, budget, PARAGRAPH_EXTRA).run(tokens(textKey, List.of()));
     }
 
-    public static List<Page> parse(Font font, Identifier entryId, String stageTextKey, List<String> addendaTextKeys, int knowledgeRows, boolean complete, boolean hasRequiredResearch, boolean hasObtain, boolean hasCraft, boolean hasKnowledge, boolean reserveHistoryGap) {
+    public static List<Page> parse(Font font, ResourceLocation entryId, String stageTextKey, List<String> addendaTextKeys, int knowledgeRows, boolean complete, boolean hasRequiredResearch, boolean hasObtain, boolean hasCraft, boolean hasKnowledge, boolean reserveHistoryGap) {
         boolean knowledgeTypes = KNOWLEDGE_TYPES.equals(entryId);
         int reserved = 0;
         if (knowledgeTypes) {
@@ -218,6 +219,12 @@ public final class PageParser {
     private static List<Token> tokens(String textKey, List<String> addendaTextKeys) {
         List<Token> tokens = new ArrayList<>();
         appendMarkup(tokens, Component.translatable(textKey).getString());
+        String portNote = textKey + ".forge_note";
+        if (I18n.exists(portNote)) {
+            tokens.add(Token.of(Kind.PAGE));
+            appendMarkup(tokens, Component.translatable("gui.thaumaturge.thaumonomicon.forge_note").getString()
+                    + "<BR>" + Component.translatable(portNote).getString());
+        }
         for (int i = 0; i < addendaTextKeys.size(); i++) {
             tokens.add(Token.of(Kind.PAGE));
             tokens.add(new Token(Kind.TEXT, Component.translatable(ADDENDUM_KEY, i + 1).getString(), null, Style.EMPTY.withItalic(true)));

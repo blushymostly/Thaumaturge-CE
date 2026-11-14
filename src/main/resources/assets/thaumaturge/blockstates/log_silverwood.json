@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "thaumaturge:block/log_silverwood_horizontal",
+      "x": 90,
+      "y": 90
+    },
+    "axis=y": {
+      "model": "thaumaturge:block/log_silverwood"
+    },
+    "axis=z": {
+      "model": "thaumaturge:block/log_silverwood_horizontal",
+      "x": 90
+    }
+  }
+}

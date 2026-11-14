@@ -1,158 +1,83 @@
 package com.leclowndu93150.thaumaturge.client.screen.research;
 
-import com.leclowndu93150.thaumaturge.api.aspect.AspectInstance;
-import com.leclowndu93150.thaumaturge.api.capability.KnowledgeAccess;
-import com.leclowndu93150.thaumaturge.api.capability.ResearchFlag;
-import com.leclowndu93150.thaumaturge.api.research.IResearchEntry;
-import com.leclowndu93150.thaumaturge.api.research.IResearchStage;
-import com.leclowndu93150.thaumaturge.api.research.ResearchAddendum;
-import com.leclowndu93150.thaumaturge.client.render.research.PageParser;
-import com.leclowndu93150.thaumaturge.client.render.research.RecipeDisplayCache;
-import com.leclowndu93150.thaumaturge.client.render.research.RecipeDisplayWidget.ItemHit;
 import com.leclowndu93150.thaumaturge.client.screen.AbstractTTScreen;
 import com.leclowndu93150.thaumaturge.client.screen.TTScreenTextures;
-import com.leclowndu93150.thaumaturge.client.screen.research.detail.DetailActions;
-import com.leclowndu93150.thaumaturge.client.screen.research.detail.DetailClickMap;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.DetailFrame;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.EntryDetailModel;
-import com.leclowndu93150.thaumaturge.client.screen.research.detail.HitRecorder;
-import com.leclowndu93150.thaumaturge.client.screen.research.detail.PreviewController;
+import com.leclowndu93150.thaumaturge.client.screen.research.detail.Rect;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.bookmark.BookmarkJitter;
+import com.leclowndu93150.thaumaturge.client.screen.research.detail.bookmark.BookmarkKind;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.bookmark.BookmarkLayout;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.bookmark.BookmarkPainter;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.bookmark.BookmarkSlot;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.insert.AspectInsertRenderer;
-import com.leclowndu93150.thaumaturge.client.screen.research.detail.insert.ConstructInsertRenderer;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.insert.RecipeInsertRenderer;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.knowledge.KnowledgeGridRenderer;
+import com.leclowndu93150.thaumaturge.client.screen.research.detail.page.NavigationLayout;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.page.NavigationPainter;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.page.PageTextLayout;
-import com.leclowndu93150.thaumaturge.client.screen.research.detail.page.WarpIndicatorRenderer;
 import com.leclowndu93150.thaumaturge.client.screen.research.detail.requirement.RequirementRowRenderer;
-import com.leclowndu93150.thaumaturge.client.screen.widget.TTPlusMinusButton;
-import com.leclowndu93150.thaumaturge.network.ServerboundAdvanceStagePayload;
-import com.leclowndu93150.thaumaturge.network.ServerboundClearResearchFlagsPayload;
-import com.leclowndu93150.thaumaturge.network.ServerboundObtainNotePayload;
+import com.leclowndu93150.thaumaturge.content.research.ResearchEntry;
+import com.leclowndu93150.thaumaturge.content.research.ResearchFlag;
+import com.leclowndu93150.thaumaturge.content.research.ResearchStage;
+import com.leclowndu93150.thaumaturge.network.TTNetwork;
+import com.leclowndu93150.thaumaturge.network.packet.ServerboundClearResearchFlagsPacket;
 import com.leclowndu93150.thaumaturge.registry.TTSounds;
-import com.leclowndu93150.thaumaturge.client.screen.research.detail.page.NavigationLayout;
-import net.minecraft.world.item.crafting.display.RecipeDisplay;
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import org.jspecify.annotations.Nullable;
-import org.joml.Matrix3x2fStack;
+import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 public final class EntryDetailScreen extends AbstractTTScreen {
     private static final float BOOK_ZOOM = 1.3F;
     private static final int BOOK_TEX_W = 256;
     private static final int BOOK_TEX_H = 181;
+    private static final float TURN_VOLUME = 0.66F;
+    private static final float SELECT_VOLUME = 0.7F;
+    private static final float SELECT_PITCH = 0.9F;
+    private static final float DISMISS_VOLUME = 0.4F;
+    private static final float DISMISS_PITCH = 1.1F;
+    private static final float WRITE_VOLUME = 0.66F;
     private static final List<ResearchFlag> OPEN_CLEARED_FLAGS = List.of(ResearchFlag.RESEARCH, ResearchFlag.PAGE);
-    private static final int BLOCKED_POINTER = Integer.MIN_VALUE;
-
-    private static final Cue TURN = new Cue(0.66F, 1.0F);
-    private static final Cue SELECT = new Cue(0.7F, 0.9F);
-    private static final Cue DISMISS = new Cue(0.4F, 1.1F);
-    private static final Cue WRITE = new Cue(0.66F, 1.0F);
-
-    private record Cue(float volume, float pitch) {
-    }
 
     private final EntryDetailModel model;
     private final @Nullable Screen parent;
-    private final HitRecorder hits = new HitRecorder();
-    private final PreviewController preview = new PreviewController();
-    private final RequirementRowRenderer requirementRows = new RequirementRowRenderer(hits);
-    private final BookmarkPainter bookmarkPainter = new BookmarkPainter(hits);
-    private final DetailClickMap clickMap;
+    private final RequirementRowRenderer requirementRows = new RequirementRowRenderer();
     private int bookLeft;
     private int bookTop;
 
-    public record AspectHit(AspectInstance aspect, int x, int y) {
-        private static final int SLOT_HIT_SIZE = 16;
-
-        public boolean contains(double mouseX, double mouseY) {
-            double dx = mouseX - x;
-            double dy = mouseY - y;
-            return dx >= 0 && dx < SLOT_HIT_SIZE && dy >= 0 && dy < SLOT_HIT_SIZE;
-        }
-    }
-
-    public EntryDetailScreen(Holder<IResearchEntry> entry, Identifier entryId, @Nullable Screen parent) {
-        super(Component.translatable(entry.value().nameKey()));
+    public EntryDetailScreen(ResearchEntry entry, ResourceLocation entryId, @Nullable Screen parent) {
+        super(Component.translatable(entry.nameKey()));
         this.parent = parent;
         this.model = new EntryDetailModel(entry, entryId);
         ThaumonomiconBrowserScreen.rememberEntry(entryId);
-        this.clickMap = new DetailClickMap(model, preview, new ScreenActions());
     }
 
     @Override
     protected void init() {
-        hits.clear();
         super.init();
         bookLeft = (width - BOOK_TEX_W) / 2;
         bookTop = (height - BOOK_TEX_H) / 2;
-        model.restorePage();
-        requestRecipeDisplays();
-        addLayerButtons();
         rebuildPages();
+        model.restorePage();
         clearFlagsOnce();
-    }
-
-    private void addLayerButtons() {
-        Component previousLabel = Component.translatable("gui.thaumaturge.thaumonomicon.preview.previous_layer");
-        Component nextLabel = Component.translatable("gui.thaumaturge.thaumonomicon.preview.next_layer");
-        TTPlusMinusButton down = addRenderableWidget(TTPlusMinusButton.minus(0, 0, previousLabel, () -> preview.shiftLayer(-1)));
-        TTPlusMinusButton up = addRenderableWidget(TTPlusMinusButton.plus(0, 0, nextLabel, () -> preview.shiftLayer(1)));
-        preview.bind(down, up);
-    }
-
-    private void clearFlagsOnce() {
-        if (!model.claimFlagClear()) {
-            return;
-        }
-        ServerboundClearResearchFlagsPayload payload = new ServerboundClearResearchFlagsPayload(model.entryId(), OPEN_CLEARED_FLAGS);
-        ClientPacketDistributor.sendToServer(payload);
-    }
-
-    private void requestRecipeDisplays() {
-        for (IResearchStage stage : model.stages()) {
-            stage.recipes().forEach(RecipeDisplayCache::ensureRequested);
-        }
-        for (ResearchAddendum addendum : model.research().addenda()) {
-            addendum.recipes().forEach(RecipeDisplayCache::ensureRequested);
-        }
-    }
-
-    private @Nullable Player localPlayer() {
-        return minecraft == null ? null : minecraft.player;
-    }
-
-    private DetailFrame frameFor(Player player) {
-        return new DetailFrame(font, player, minecraft.level, bookLeft, bookTop, width, height);
     }
 
     private void rebuildPages() {
         Player player = localPlayer();
         int displayedStage = model.displayedStage(player);
         int progressStage = model.progressStage(player);
-        List<ResearchAddendum> addenda = model.unlockedAddenda(player);
-        model.replacePages(composePages(player, displayedStage, progressStage, addenda));
-        model.markBuilt(displayedStage, progressStage, addenda.size());
-    }
-
-    private List<PageParser.Page> composePages(@Nullable Player player, int displayedStage, int progressStage, List<ResearchAddendum> addenda) {
-        IResearchStage shown = model.stages().get(displayedStage);
-        int knowledgeTypes = KnowledgeGridRenderer.activeTypeCount(player);
-        return PageTextLayout.compose(font, model.entryId(), shown, addenda, knowledgeTypes, model.stages().size(), progressStage);
+        ResearchStage shown = model.stages().get(Math.max(0, displayedStage));
+        int knowledgeRows = KnowledgeGridRenderer.activeTypeCount(player);
+        model.replacePages(PageTextLayout.compose(font, model.entryId(), shown, knowledgeRows, model.stages().size(), progressStage,
+                model.completedStageView(player)));
+        model.markBuilt(displayedStage, progressStage);
     }
 
     @Override
@@ -164,366 +89,240 @@ public final class EntryDetailScreen extends AbstractTTScreen {
         }
     }
 
+    private void clearFlagsOnce() {
+        if (!model.claimFlagClear()) {
+            return;
+        }
+        TTNetwork.sendToServer(new ServerboundClearResearchFlagsPacket(model.entryId(), OPEN_CLEARED_FLAGS));
+    }
+
+    private @Nullable Player localPlayer() {
+        return minecraft == null ? null : minecraft.player;
+    }
+
+    private DetailFrame frameFor(Player player) {
+        return new DetailFrame(font, player, minecraft == null ? null : minecraft.level, bookLeft, bookTop, width, height);
+    }
+
     @Override
-    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        super.extractBackground(graphics, mouseX, mouseY, partialTick);
-        hits.clear();
-        preview.beginFrame();
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBackground(graphics);
         drawPaneBackground(graphics);
         Player player = localPlayer();
-        if (player == null) {
-            return;
-        }
-        DetailFrame frame = frameFor(player);
-        int displayedStage = model.displayedStage(player);
-        IResearchStage stage = model.stages().get(displayedStage);
-        boolean insertOpen = model.insertOpen();
-        int pageMouseX = pointerOrBlocked(insertOpen, mouseX);
-        int pageMouseY = pointerOrBlocked(insertOpen, mouseY);
-        PageTextLayout.drawSpread(graphics, frame, getTitle(), model.pages(), model.leftPage());
-        requirementRows.render(graphics, frame, model, stage, displayedStage, pageMouseX, pageMouseY);
-        WarpIndicatorRenderer.render(graphics, frame, model, stage, pageMouseX, pageMouseY);
-        if (insertOpen) {
-            hits.clear();
-        }
-        if (model.leftPage() == 0 && EntryDetailModel.knowsResearch(player, EntryDetailModel.KNOWLEDGE_TYPES_RESEARCH) && model.isKnowledgeTypesEntry()) {
-            KnowledgeGridRenderer.drawInPage(graphics, frame, pageMouseX, pageMouseY);
-        }
-        drawInsert(graphics, frame, stage, mouseX, mouseY);
-        List<BookmarkSlot> slots = BookmarkLayout.slots(frame, model, stage);
-        bookmarkPainter.paint(graphics, frame, model, stage, slots, BookmarkJitter.forEntry(model.entryId(), displayedStage), mouseX, mouseY);
-        NavigationPainter.paint(graphics, frame, model, mouseX, mouseY);
-    }
-
-    private static int pointerOrBlocked(boolean blocked, int coordinate) {
-        return blocked ? BLOCKED_POINTER : coordinate;
-    }
-
-    private void drawInsert(GuiGraphicsExtractor graphics, DetailFrame frame, IResearchStage stage, int mouseX, int mouseY) {
-        if (model.aspectsOpen()) {
-            AspectInsertRenderer.render(graphics, frame, model, mouseX, mouseY);
-            return;
-        }
-        if (model.knowledgeOpen()) {
-            KnowledgeGridRenderer.drawInsert(graphics, frame, mouseX, mouseY);
-            return;
-        }
-        if (model.constructOpen()) {
-            boolean drawn = ConstructInsertRenderer.render(graphics, frame, stage, preview, mouseX, mouseY);
-            if (!drawn) {
-                model.dismissConstruct();
+        if (player != null) {
+            DetailFrame frame = frameFor(player);
+            int displayedStage = model.displayedStage(player);
+            ResearchStage stage = model.stages().get(Math.max(0, displayedStage));
+            if (model.insertOpen()) {
+                if (model.insert() == EntryDetailModel.Insert.ASPECTS) {
+                    AspectInsertRenderer.render(graphics, frame, model, mouseX, mouseY);
+                } else if (model.insert() == EntryDetailModel.Insert.KNOWLEDGE) {
+                    KnowledgeGridRenderer.drawInsert(graphics, frame, mouseX, mouseY);
+                } else if (model.insert() == EntryDetailModel.Insert.RECIPE) {
+                    RecipeInsertRenderer.render(graphics, frame, model, mouseX, mouseY);
+                }
+            } else {
+                PageTextLayout.drawSpread(graphics, frame, getTitle(), model.pages(), model.leftPage());
+                requirementRows.render(graphics, frame, model, stage, displayedStage, mouseX, mouseY);
             }
-            return;
+            List<BookmarkSlot> slots = BookmarkLayout.slots(frame, model, stage);
+            BookmarkPainter.paint(graphics, frame, slots, minecraft == null ? null : minecraft.level,
+                    BookmarkJitter.forEntry(model.entryId(), displayedStage), mouseX, mouseY);
+            if (!model.insertOpen()) {
+                NavigationPainter.paint(graphics, frame, model, mouseX, mouseY);
+            }
         }
-        if (model.openRecipe() == null) {
-            return;
-        }
-        RecipeInsertRenderer.render(graphics, frame, model, preview, mouseX, mouseY);
+        super.render(graphics, mouseX, mouseY, partialTick);
     }
 
-    private void drawPaneBackground(GuiGraphicsExtractor graphics) {
+    private void drawPaneBackground(GuiGraphics graphics) {
         float shiftX = (width - BOOK_TEX_W * BOOK_ZOOM) * 0.5F;
         float shiftY = (height - BOOK_TEX_H * BOOK_ZOOM) * 0.5F;
-        Matrix3x2fStack pose = graphics.pose();
-        pose.pushMatrix();
-        pose.translate(shiftX, shiftY).scale(BOOK_ZOOM);
-        blitBookTexture(graphics);
-        pose.popMatrix();
-    }
-
-    private static void blitBookTexture(GuiGraphicsExtractor graphics) {
-        int atlas = TTScreenTextures.TEX_SIZE;
-        graphics.blit(RenderPipelines.GUI_TEXTURED, TTScreenTextures.RESEARCH_BOOK, 0, 0, 0.0F, 0.0F, BOOK_TEX_W, BOOK_TEX_H, BOOK_TEX_W, BOOK_TEX_H, atlas, atlas);
+        graphics.pose().pushPose();
+        graphics.pose().translate(shiftX, shiftY, 0);
+        graphics.pose().scale(BOOK_ZOOM, BOOK_ZOOM, 1.0F);
+        graphics.blit(TTScreenTextures.RESEARCH_BOOK, 0, 0, 0, 0, BOOK_TEX_W, BOOK_TEX_H, TTScreenTextures.TEX_SIZE, TTScreenTextures.TEX_SIZE);
+        graphics.pose().popPose();
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (event.button() == 1) {
-            returnToBrowser();
-            return true;
+    public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
+        return (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && model.rotateStructure(dx, -dy))
+                || super.mouseDragged(x, y, button, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(double x, double y, int button) {
+        return (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && model.endStructureRotation())
+                || super.mouseReleased(x, y, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double x, double y, double delta) {
+        Player player = localPlayer();
+        return (player != null && RecipeInsertRenderer.scrollPreview(frameFor(player), model, x, y, delta))
+                || super.mouseScrolled(x, y, delta);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+            return super.mouseClicked(mouseX, mouseY, button);
         }
         Player player = localPlayer();
-        if (event.button() == 0 && player != null && clickMap.handle(frameFor(player), event.x(), event.y(), () -> super.mouseClicked(event, doubleClick))) {
-            return true;
+        if (player == null) {
+            return super.mouseClicked(mouseX, mouseY, button);
         }
-        return super.mouseClicked(event, doubleClick);
-    }
-
-    @Override
-    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
-        if (event.button() == 0 && preview.isRotating()) {
-            preview.dragRotation(dragX);
-            return true;
-        }
-        return super.mouseDragged(event, dragX, dragY);
-    }
-
-    @Override
-    public boolean mouseReleased(MouseButtonEvent event) {
-        if (event.button() == 0 && preview.isRotating()) {
-            preview.endRotation();
-            return true;
-        }
-        return super.mouseReleased(event);
-    }
-
-    @Override
-    public boolean keyPressed(KeyEvent event) {
-        if (minecraft != null && minecraft.options.keyInventory.matches(event)) {
-            onClose();
-            return true;
-        }
-        switch (event.key()) {
-            case GLFW.GLFW_KEY_LEFT, GLFW.GLFW_KEY_UP, GLFW.GLFW_KEY_PAGE_UP -> {
-                if (!model.insertOpen()) {
-                    turnPage(false);
+        DetailFrame frame = frameFor(player);
+        ResearchStage stage = model.stages().get(Math.max(0, model.displayedStage(player)));
+        for (BookmarkSlot slot : BookmarkLayout.slots(frame, model, stage)) {
+            if (!slot.hoverArea().contains(mouseX, mouseY)) {
+                continue;
+            }
+            if (slot.kind() == BookmarkKind.ASPECTS) {
+                if (model.insert() == EntryDetailModel.Insert.ASPECTS) {
+                    model.closeInsert();
+                    playCue(TTSounds.PAGE.get(), DISMISS_VOLUME, DISMISS_PITCH);
+                } else {
+                    model.openInsert(EntryDetailModel.Insert.ASPECTS);
+                    playCue(TTSounds.PAGE.get(), SELECT_VOLUME, SELECT_PITCH);
                 }
                 return true;
             }
-            case GLFW.GLFW_KEY_RIGHT, GLFW.GLFW_KEY_DOWN, GLFW.GLFW_KEY_PAGE_DOWN -> {
-                if (!model.insertOpen()) {
-                    turnPage(true);
+            if (slot.kind() == BookmarkKind.KNOWLEDGE) {
+                if (model.insert() == EntryDetailModel.Insert.KNOWLEDGE) {
+                    model.closeInsert();
+                    playCue(TTSounds.PAGE.get(), DISMISS_VOLUME, DISMISS_PITCH);
+                } else {
+                    model.openInsert(EntryDetailModel.Insert.KNOWLEDGE);
+                    playCue(TTSounds.PAGE.get(), SELECT_VOLUME, SELECT_PITCH);
                 }
                 return true;
             }
-            case GLFW.GLFW_KEY_BACKSPACE -> {
-                navigateBack();
+            if (slot.kind() == BookmarkKind.RECIPE && slot.recipeId() != null) {
+                model.selectRecipe(slot.recipeId());
+                playCue(TTSounds.PAGE.get(), SELECT_VOLUME, SELECT_PITCH);
                 return true;
             }
-            default -> {
-                return super.keyPressed(event);
+        }
+        if (RecipeInsertRenderer.startPreviewDrag(frame, model, mouseX, mouseY)) return true;
+        if (RecipeInsertRenderer.clickPreviewLayer(frame, model, mouseX, mouseY)) {
+            playCue(TTSounds.PAGE.get(), SELECT_VOLUME, SELECT_PITCH);
+            return true;
+        }
+        if (model.insert() == EntryDetailModel.Insert.RECIPE && RecipeInsertRenderer.clickPager(model, frame, mouseX, mouseY)) {
+            playCue(TTSounds.PAGE.get(), SELECT_VOLUME, SELECT_PITCH);
+            return true;
+        }
+        if (model.insert() == EntryDetailModel.Insert.ASPECTS) {
+            int pages = AspectInsertRenderer.pageCount();
+            if (mouseX < frame.paperLeft() + 50) {
+                model.shiftAspectsPage(-1, pages);
+                playCue(TTSounds.PAGE.get(), SELECT_VOLUME, SELECT_PITCH);
+                return true;
             }
-        }
-    }
-
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (scrollY == 0.0) {
-            return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
-        }
-        int step = scrollY < 0.0 ? 1 : -1;
-        if (model.aspectsOpen()) {
-            stepAspectsPage(step);
-            return true;
-        }
-        if (model.openRecipe() != null) {
-            stepRecipeVariant(step);
-            return true;
+            if (mouseX > frame.paperLeft() + 200) {
+                model.shiftAspectsPage(1, pages);
+                playCue(TTSounds.PAGE.get(), SELECT_VOLUME, SELECT_PITCH);
+                return true;
+            }
         }
         if (model.insertOpen()) {
-            return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
-        }
-        Player player = localPlayer();
-        boolean overStages = model.canNavigateStageHistory(player) && NavigationLayout.stageStripHit(frameFor(player)).contains(mouseX, mouseY);
-        if (overStages || minecraft != null && minecraft.hasShiftDown()) {
-            if (model.hasStageHistory(player)) {
-                stepStageHistory(step);
-            }
             return true;
         }
-        turnPage(step > 0);
-        return true;
-    }
-
-    @Override
-    public void onClose() {
-        if (!closeInsert()) {
-            super.onClose();
-        }
-    }
-
-    @Override
-    public boolean isPauseScreen() {
-        return false;
-    }
-
-    public @Nullable ItemHit itemUnderMouse(double mouseX, double mouseY) {
-        if (minecraft == null || minecraft.player == null || minecraft.level == null) {
-            return null;
-        }
-        ItemHit recorded = hits.topItemAt(mouseX, mouseY);
-        if (recorded != null) {
-            return recorded;
-        }
-        return RecipeInsertRenderer.hoverItem(model, width, height, mouseX, mouseY);
-    }
-
-    public @Nullable AspectHit aspectUnderMouse(double mouseX, double mouseY) {
-        if (minecraft == null || minecraft.player == null || minecraft.level == null || model.insertOpen()) {
-            return null;
-        }
-        return hits.topKnownAspectAt(mouseX, mouseY);
-    }
-
-    public void openRecipeFromNavigation(Identifier recipeId) {
-        if (!model.showLinkedRecipe(recipeId)) {
-            return;
-        }
-        preview.reset();
-        playCue(SELECT);
-    }
-
-    private void turnPage(boolean forward) {
-        boolean turned = forward ? model.turnSpreadForward() : model.turnSpreadBack();
-        if (turned) {
-            playCue(TURN);
-        }
-    }
-
-    private void navigateBack() {
-        if (model.canStepBack()) {
-            stepBackInsert();
-        } else {
+        if (NavigationLayout.backButton(frame).contains(mouseX, mouseY)) {
             returnToBrowser();
+            return true;
         }
+        if (model.leftPage() > 0 && NavigationLayout.pageLeftHit(frame).contains(mouseX, mouseY) && model.turnSpreadBack()) {
+            playCue(TTSounds.PAGE.get(), TURN_VOLUME, 1.0F);
+            return true;
+        }
+        if (model.hasNextSpread() && NavigationLayout.pageRightHit(frame).contains(mouseX, mouseY) && model.turnSpreadForward()) {
+            playCue(TTSounds.PAGE.get(), TURN_VOLUME, 1.0F);
+            return true;
+        }
+        if (model.canNavigateStageHistory(player)) {
+            int displayed = model.displayedStage(player);
+            int progress = model.progressStage(player);
+            if (displayed > 0 && NavigationLayout.stageLeftHit(frame).contains(mouseX, mouseY)) {
+                model.pinStage(displayed - 1, progress);
+                rebuildPages();
+                playCue(TTSounds.PAGE.get(), TURN_VOLUME, 1.0F);
+                return true;
+            }
+            if (displayed < progress && NavigationLayout.stageRightHit(frame).contains(mouseX, mouseY)) {
+                model.pinStage(displayed + 1, progress);
+                rebuildPages();
+                playCue(TTSounds.PAGE.get(), TURN_VOLUME, 1.0F);
+                return true;
+            }
+        }
+        Rect complete = requirementRows.completeButtonHit();
+        if (complete.width() > 0 && complete.contains(mouseX, mouseY)) {
+            requirementRows.tryAdvance(model);
+            playCue(TTSounds.WRITE.get(), WRITE_VOLUME, 1.0F);
+            return true;
+        }
+        if (requirementRows.tryObtainTheoryNote(mouseX, mouseY)) {
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
-    private void stepBackInsert() {
-        boolean construct = model.constructOpen();
-        boolean trail = !construct && model.hasRecipeTrail();
-        if (construct) {
-            model.dismissConstruct();
-        } else if (!trail) {
-            model.clearOpenRecipe();
-            return;
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (model.insertOpen() && keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            model.closeInsert();
+            return true;
         }
-        playCue(TURN);
-        if (trail) {
-            preview.reset();
-            model.restoreTrailRecipe();
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE || (minecraft != null && minecraft.options.keyInventory.matches(keyCode, scanCode))) {
+            returnToBrowser();
+            return true;
         }
-    }
-
-    private void stepAspectsPage(int delta) {
-        int target = model.aspectsPageIndex() + delta;
-        if (target < 0 || target >= AspectInsertRenderer.pageCount(localPlayer())) {
-            return;
-        }
-        model.shiftAspectsPage(delta);
-        playCue(SELECT);
-    }
-
-    private void stepRecipeVariant(int delta) {
-        Identifier recipeId = model.openRecipe();
-        List<RecipeDisplay> variants = recipeId == null ? null : RecipeDisplayCache.get(recipeId);
-        int target = model.recipeVariant() + delta;
-        if (variants == null || target < 0 || target >= variants.size()) {
-            return;
-        }
-        model.setRecipeVariant(target);
-        preview.reset();
-        playCue(SELECT);
-    }
-
-    private void stepStageHistory(int delta) {
-        Player player = localPlayer();
-        int target = model.displayedStage(player) + delta;
-        if (target >= 0 && target <= model.progressStage(player)) {
-            showStage(target);
-        }
-    }
-
-    private void showStage(int stageIndex) {
-        model.pinStage(stageIndex, model.progressStage(localPlayer()));
-        rebuildPages();
-        playCue(SELECT);
-    }
-
-    private boolean closeInsert() {
-        boolean closed = model.closeInserts();
-        if (closed) {
-            playCue(DISMISS);
-        }
-        return closed;
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     private void returnToBrowser() {
-        if (closeInsert()) {
+        if (model.insertOpen()) {
+            model.closeInsert();
+            playCue(TTSounds.PAGE.get(), DISMISS_VOLUME, DISMISS_PITCH);
             return;
         }
         ThaumonomiconBrowserScreen.rememberEntry(null);
         if (minecraft != null) {
-            minecraft.setScreen(parent);
+            minecraft.setScreen(parent != null ? parent : new ThaumonomiconBrowserScreen());
         }
     }
 
-    private void playCue(Cue cue) {
+    private void playCue(SoundEvent sound, float volume, float pitch) {
         Player listener = localPlayer();
-        if (listener == null) {
-            return;
-        }
-        listener.playSound(TTSounds.PAGE.get(), cue.volume(), cue.pitch());
-    }
-
-    private final class ScreenActions implements DetailActions {
-        @Override
-        public void turnPageBack() {
-            EntryDetailScreen.this.turnPage(false);
-        }
-
-        @Override
-        public void turnPageForward() {
-            EntryDetailScreen.this.turnPage(true);
-        }
-
-        @Override
-        public void navigateBack() {
-            EntryDetailScreen.this.navigateBack();
-        }
-
-        @Override
-        public void showStage(int stageIndex) {
-            EntryDetailScreen.this.showStage(stageIndex);
-        }
-
-        @Override
-        public void toggleAspectsInsert() {
-            model.toggleAspects(AspectInsertRenderer.pageCount(localPlayer()));
-            playCue(SELECT);
-        }
-
-        @Override
-        public void toggleKnowledgeInsert() {
-            model.toggleKnowledge();
-            playCue(SELECT);
-        }
-
-        @Override
-        public void turnAspectsPage(int delta) {
-            stepAspectsPage(delta);
-        }
-
-        @Override
-        public void turnRecipeVariant(int delta) {
-            stepRecipeVariant(delta);
-        }
-
-        @Override
-        public void toggleRecipeInsert(Identifier recipeId) {
-            preview.reset();
-            model.toggleRecipe(recipeId);
-            playCue(SELECT);
-        }
-
-        @Override
-        public void toggleConstructInsert() {
-            preview.reset();
-            model.toggleConstruct();
-            playCue(SELECT);
-        }
-
-        @Override
-        public void submitStageCompletion() {
-            Player player = localPlayer();
-            Identifier id = model.entryId();
-            model.beginHold(KnowledgeAccess.of(player).researchStage(id), player.level().getGameTime());
-            ClientPacketDistributor.sendToServer(new ServerboundAdvanceStagePayload(id));
-            player.playSound(TTSounds.WRITE.get(), WRITE.volume(), WRITE.pitch());
-        }
-
-        @Override
-        public void obtainNote(int ordinal) {
-            ClientPacketDistributor.sendToServer(new ServerboundObtainNotePayload(model.entryId(), ordinal));
+        if (listener != null) {
+            listener.playSound(sound, volume, pitch);
         }
     }
+
+    @Override
+    public void onClose() {
+        ThaumonomiconBrowserScreen.rememberEntry(null);
+        super.onClose();
+    }
+
+    /** JEI / EMI: item under mouse on recipe insert (16×16 hit). */
+    public @Nullable HoveredItem itemUnderMouse(double mouseX, double mouseY) {
+        Player player = localPlayer();
+        if (player == null || model.insert() != EntryDetailModel.Insert.RECIPE) {
+            return null;
+        }
+        return RecipeInsertRenderer.hoveredItem(frameFor(player), model, mouseX, mouseY);
+    }
+
+    /** JEI aspect under mouse — Wave 0 returns null until aspect ingredient type lands. */
+    public @Nullable HoveredAspect aspectUnderMouse(double mouseX, double mouseY) {
+        return null;
+    }
+
+    public record HoveredItem(ItemStack stack, int x, int y) {}
+
+    public record HoveredAspect(ResourceLocation aspect, int x, int y) {}
 }

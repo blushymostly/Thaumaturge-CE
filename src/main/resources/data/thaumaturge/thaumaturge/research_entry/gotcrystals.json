@@ -1,0 +1,15 @@
+{
+  "category": "thaumaturge:basics",
+  "name": "research.thaumaturge.gotcrystals.title",
+  "parents": [],
+  "column": -3,
+  "row": -1,
+  "meta": ["hidden", "auto"],
+  "icons": ["thaumaturge:essentia_crystal"],
+  "stages": [
+    {
+      "text": "research.thaumaturge.gotcrystals.stage_0"
+    }
+  ],
+  "complexity": 1
+}

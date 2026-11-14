@@ -1,0 +1,10 @@
+{
+  "type": "thaumaturge:crucible",
+  "catalyst": { "tag": "forge:slimeballs" },
+  "aspects": [
+    { "aspect": "thaumaturge:aqua", "amount": 5 },
+    { "aspect": "thaumaturge:victus", "amount": 5 },
+    { "aspect": "thaumaturge:alkimia", "amount": 1 }
+  ],
+  "result": { "item": "minecraft:slime_ball", "count": 2 }
+}

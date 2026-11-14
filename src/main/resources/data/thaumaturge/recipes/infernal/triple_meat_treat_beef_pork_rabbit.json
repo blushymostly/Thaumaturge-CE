@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "group": "thaumaturge:triple_meat_treat",
+  "ingredients": [
+    {
+      "item": "thaumaturge:chunk_beef"
+    },
+    {
+      "item": "thaumaturge:chunk_pork"
+    },
+    {
+      "item": "thaumaturge:chunk_rabbit"
+    },
+    {
+      "item": "minecraft:sugar"
+    }
+  ],
+  "result": {
+    "item": "thaumaturge:triple_meat_treat"
+  }
+}

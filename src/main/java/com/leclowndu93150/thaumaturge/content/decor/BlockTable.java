@@ -6,7 +6,6 @@ import com.leclowndu93150.thaumaturge.content.research.table.BlockResearchTable;
 import com.leclowndu93150.thaumaturge.content.research.table.ResearchTablePart;
 import com.leclowndu93150.thaumaturge.registry.TTBlocks;
 import com.leclowndu93150.thaumaturge.registry.TTItemTags;
-import com.mojang.serialization.MapCodec;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -24,36 +23,44 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.neoforged.neoforge.transfer.item.ItemResource;
 
+/** Wooden table that converts into a two-block research table when used with scribing tools. */
 public final class BlockTable extends Block {
-    public static final MapCodec<BlockTable> CODEC = simpleCodec(BlockTable::new);
+    private static final VoxelShape SHAPE = Shapes.or(
+            Block.box(0.0, 13.0, 0.0, 16.0, 16.0, 16.0),
+            Block.box(1.0, 0.0, 1.0, 5.0, 2.0, 5.0),
+            Block.box(1.0, 0.0, 11.0, 5.0, 2.0, 15.0),
+            Block.box(1.0, 11.0, 1.0, 15.0, 13.0, 15.0),
+            Block.box(2.0, 2.0, 2.0, 4.0, 4.0, 14.0),
+            Block.box(2.0, 4.0, 2.0, 5.0, 11.0, 5.0),
+            Block.box(2.0, 4.0, 11.0, 5.0, 11.0, 14.0),
+            Block.box(4.0, 2.0, 2.0, 5.0, 4.0, 5.0),
+            Block.box(4.0, 2.0, 11.0, 5.0, 4.0, 14.0),
+            Block.box(5.0, 2.0, 2.0, 14.0, 4.0, 4.0),
+            Block.box(5.0, 2.0, 12.0, 14.0, 4.0, 14.0),
+            Block.box(11.0, 0.0, 1.0, 15.0, 2.0, 5.0),
+            Block.box(11.0, 0.0, 11.0, 15.0, 2.0, 15.0),
+            Block.box(11.0, 2.0, 4.0, 14.0, 11.0, 5.0),
+            Block.box(11.0, 2.0, 11.0, 14.0, 11.0, 12.0),
+            Block.box(11.0, 4.0, 2.0, 14.0, 11.0, 4.0),
+            Block.box(11.0, 4.0, 12.0, 14.0, 11.0, 14.0),
+            Block.box(12.0, 2.0, 5.0, 14.0, 4.0, 11.0));
 
-    private static final VoxelShape SHAPE = Shapes.or(Block.box(0.0, 13.0, 0.0, 16.0, 16.0, 16.0), Block.box(1.0, 0.0, 1.0, 5.0, 2.0, 5.0), Block.box(1.0, 0.0, 11.0, 5.0, 2.0, 15.0),
-            Block.box(1.0, 11.0, 1.0, 15.0, 13.0, 15.0), Block.box(2.0, 2.0, 2.0, 4.0, 4.0, 14.0), Block.box(2.0, 4.0, 2.0, 5.0, 11.0, 5.0), Block.box(2.0, 4.0, 11.0, 5.0, 11.0, 14.0),
-            Block.box(4.0, 2.0, 2.0, 5.0, 4.0, 5.0), Block.box(4.0, 2.0, 11.0, 5.0, 4.0, 14.0), Block.box(5.0, 2.0, 2.0, 14.0, 4.0, 4.0), Block.box(5.0, 2.0, 12.0, 14.0, 4.0, 14.0),
-            Block.box(11.0, 0.0, 1.0, 15.0, 2.0, 5.0), Block.box(11.0, 0.0, 11.0, 15.0, 2.0, 15.0), Block.box(11.0, 2.0, 4.0, 14.0, 11.0, 5.0), Block.box(11.0, 2.0, 11.0, 14.0, 11.0, 12.0),
-            Block.box(11.0, 4.0, 2.0, 14.0, 11.0, 4.0), Block.box(11.0, 4.0, 12.0, 14.0, 11.0, 14.0), Block.box(12.0, 2.0, 5.0, 14.0, 4.0, 11.0));
+    private static final List<Direction> CONVERT_SCAN_ORDER = List.of(Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST);
 
     public BlockTable(BlockBehaviour.Properties properties) {
         super(properties);
     }
 
     @Override
-    protected MapCodec<BlockTable> codec() {
-        return CODEC;
-    }
-
-    @Override
-    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return SHAPE;
     }
 
-    private static final List<Direction> CONVERT_SCAN_ORDER = List.of(Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST);
-
     @Override
-    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        if (this != TTBlocks.TABLE_WOOD.get() || !stack.is(TTItemTags.SCRIBING_TOOLS)) {
+    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        ItemStack stack = player.getItemInHand(hand);
+        if (!stack.is(TTItemTags.SCRIBING_TOOLS)) {
             return InteractionResult.PASS;
         }
         if (level.isClientSide()) {
@@ -61,15 +68,18 @@ public final class BlockTable extends Block {
         }
         for (Direction dir : CONVERT_SCAN_ORDER) {
             BlockPos partnerPos = pos.relative(dir);
-            if (!level.getBlockState(partnerPos).is(TTBlocks.TABLE_WOOD.get())) {
+            if (!level.getBlockState(partnerPos).is(TTBlocks.TABLE.get())) {
                 continue;
             }
-            level.setBlock(pos, TTBlocks.RESEARCH_TABLE.get().defaultBlockState().setValue(BlockResearchTable.FACING, dir).setValue(BlockResearchTable.PART, ResearchTablePart.MAIN), 3);
-            level.setBlock(partnerPos,
-                    TTBlocks.RESEARCH_TABLE.get().defaultBlockState().setValue(BlockResearchTable.FACING, dir.getOpposite()).setValue(BlockResearchTable.PART, ResearchTablePart.EXT), 3);
+            level.setBlock(pos, TTBlocks.RESEARCH_TABLE.get().defaultBlockState()
+                    .setValue(BlockResearchTable.FACING, dir)
+                    .setValue(BlockResearchTable.PART, ResearchTablePart.MAIN), 3);
+            level.setBlock(partnerPos, TTBlocks.RESEARCH_TABLE.get().defaultBlockState()
+                    .setValue(BlockResearchTable.FACING, dir.getOpposite())
+                    .setValue(BlockResearchTable.PART, ResearchTablePart.EXT), 3);
             if (level.getBlockEntity(pos) instanceof BlockEntityResearchTable researchTable) {
                 ItemStack tools = stack.copy();
-                researchTable.items().set(BlockEntityResearchTable.SLOT_SCRIBE_TOOLS, ItemResource.of(tools), tools.getCount());
+                researchTable.items().setItem(BlockEntityResearchTable.SLOT_SCRIBE_TOOLS, tools);
                 researchTable.setChanged();
             }
             player.setItemInHand(hand, ItemStack.EMPTY);

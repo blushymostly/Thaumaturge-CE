@@ -2,14 +2,16 @@ package com.leclowndu93150.thaumaturge.content.recipe.dust;
 
 import com.leclowndu93150.thaumaturge.api.recipe.DustTrigger;
 import com.leclowndu93150.thaumaturge.api.recipe.DustTriggerPlacement;
-import com.leclowndu93150.thaumaturge.content.effect.Effects;
 import com.leclowndu93150.thaumaturge.content.particle.SparkleParticleOptions;
+import com.leclowndu93150.thaumaturge.registry.TTSounds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.BlockPos.MutableBlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
@@ -18,15 +20,16 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
+/** Server-driven sparkle effects for Salis Mundus (CE SparkleParticleOptions). */
 public final class DustTriggerFx {
-    public static final double SPARKLE_TICKS_PER_BLOCK = 16.0;
-
     private static final double HAND_HEIGHT = 0.25;
     private static final double HAND_SIDE_OFFSET = 0.3;
     private static final double HAND_LOOK_OFFSET = 0.3;
     private static final double HALF_TURN_DEGREES = 180.0;
+
+    public static final double SPARKLE_TICKS_PER_BLOCK = 16.0;
 
     private static final int BURST_COUNT = 50;
     private static final int BURST_FLOATY_COUNT = 16;
@@ -96,9 +99,8 @@ public final class DustTriggerFx {
             decay = BURST_FLOATY_DECAY_MIN + random.nextFloat() * BURST_FLOATY_DECAY_SPAN;
             gravity = BURST_FLOATY_GRAVITY;
         }
-        int color = randomColor(random);
         int delay = random.nextInt(START_DELAY_BOUND);
-        Effects.spawn(level, new SparkleParticleOptions(color, BURST_SCALE, delay, decay, gravity, SPARKLE_BASE_AGE, true), origin.x, origin.y, origin.z, driftX, driftY, driftZ);
+        level.sendParticles(new SparkleParticleOptions(randomColor(random), BURST_SCALE, delay, decay, gravity, SPARKLE_BASE_AGE, true), origin.x, origin.y, origin.z, 0, driftX, driftY, driftZ, 1.0);
     }
 
     public static void emitTriggerSparkles(ServerLevel level, ServerPlayer player, BlockPos clicked, DustTrigger trigger, Vec3 start, @Nullable DustTriggerPlacement placement) {
@@ -128,6 +130,36 @@ public final class DustTriggerFx {
         }
     }
 
+    private static void emitShellSparkle(ServerLevel level, RandomSource random, BlockPos pos, AABB box, Direction face, Vec3 start) {
+        double x = pos.getX() + localCoordinate(box, Axis.X, face, random);
+        double y = pos.getY() + localCoordinate(box, Axis.Y, face, random);
+        double z = pos.getZ() + localCoordinate(box, Axis.Z, face, random);
+        double travel = Math.sqrt(start.distanceToSqr(x, y, z));
+        int delay = random.nextInt(START_DELAY_BOUND) + (int) Math.floor(SPARKLE_TICKS_PER_BLOCK * travel);
+        float scale = (float) (SHELL_SCALE + random.nextGaussian() * SHELL_SCALE_DEVIATION);
+        level.sendParticles(new SparkleParticleOptions(randomColor(random), scale, delay, SHELL_DECAY, SHELL_GRAVITY, SPARKLE_BASE_AGE, true), x, y, z, 0, 0.0, SHELL_RISE, 0.0, 1.0);
+    }
+
+    /** Poof played when a queued swap lands (CE: {@code Effects.bamf}). */
+    public static void emitSwapBamf(ServerLevel level, BlockPos pos) {
+        double x = pos.getX() + 0.5;
+        double y = pos.getY() + 0.5;
+        double z = pos.getZ() + 0.5;
+        level.sendParticles(ParticleTypes.POOF, x, y, z, 18, 0.35, 0.35, 0.35, 0.03);
+        level.sendParticles(ParticleTypes.ENCHANT, x, y, z, 36, 0.45, 0.45, 0.45, 0.55);
+        level.sendParticles(ParticleTypes.END_ROD, x, y, z, 10, 0.25, 0.25, 0.25, 0.02);
+        RandomSource random = level.getRandom();
+        float pitch = 0.9F + random.nextFloat() * 0.2F;
+        level.playSound(null, pos, TTSounds.POOF.get(), SoundSource.BLOCKS, 0.4F, pitch);
+        for (int i = 0; i < 16; i++) {
+            level.sendParticles(new SparkleParticleOptions(randomColor(random), BURST_SCALE, 0, BURST_GROUNDED_DECAY, BURST_FLOATY_GRAVITY, SPARKLE_BASE_AGE, true), x, y, z, 0,
+                    (random.nextDouble() - 0.5) * 0.35,
+                    random.nextDouble() * 0.25,
+                    (random.nextDouble() - 0.5) * 0.35,
+                    1.0);
+        }
+    }
+
     private static AABB shapeBounds(ServerLevel level, BlockPos pos) {
         VoxelShape shape = level.getBlockState(pos).getShape(level, pos);
         return !shape.isEmpty() ? shape.bounds() : UNIT_BOX;
@@ -138,19 +170,8 @@ public final class DustTriggerFx {
             return false;
         }
         BlockState occupant = level.getBlockState(neighborPos);
-        boolean sealed = occupant.isSolidRender() && occupant.isFaceSturdy(level, neighborPos, face.getOpposite());
+        boolean sealed = occupant.isSolidRender(level, neighborPos) && occupant.isFaceSturdy(level, neighborPos, face.getOpposite());
         return !sealed;
-    }
-
-    private static void emitShellSparkle(ServerLevel level, RandomSource random, BlockPos pos, AABB box, Direction face, Vec3 start) {
-        double x = pos.getX() + localCoordinate(box, Axis.X, face, random);
-        double y = pos.getY() + localCoordinate(box, Axis.Y, face, random);
-        double z = pos.getZ() + localCoordinate(box, Axis.Z, face, random);
-        double travel = Math.sqrt(start.distanceToSqr(x, y, z));
-        int delay = random.nextInt(START_DELAY_BOUND) + (int) Math.floor(SPARKLE_TICKS_PER_BLOCK * travel);
-        float scale = (float) (SHELL_SCALE + random.nextGaussian() * SHELL_SCALE_DEVIATION);
-        int color = randomColor(random);
-        Effects.spawn(level, new SparkleParticleOptions(color, scale, delay, SHELL_DECAY, SHELL_GRAVITY, SPARKLE_BASE_AGE, true), x, y, z, 0.0, SHELL_RISE, 0.0);
     }
 
     private static double localCoordinate(AABB box, Axis axis, Direction face, RandomSource random) {

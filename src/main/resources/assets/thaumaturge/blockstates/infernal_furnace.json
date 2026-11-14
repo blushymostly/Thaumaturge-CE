@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "thaumaturge:block/infernal_furnace"
+    },
+    "facing=east": {
+      "model": "thaumaturge:block/infernal_furnace",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "thaumaturge:block/infernal_furnace",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "thaumaturge:block/infernal_furnace",
+      "y": 270
+    }
+  }
+}

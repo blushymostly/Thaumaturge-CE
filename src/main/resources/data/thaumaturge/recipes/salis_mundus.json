@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    { "item": "minecraft:flint" },
+    { "item": "minecraft:bowl" },
+    { "tag": "forge:dusts/redstone" },
+    { "item": "thaumaturge:essentia_crystal" },
+    { "item": "thaumaturge:essentia_crystal" },
+    { "item": "thaumaturge:essentia_crystal" }
+  ],
+  "result": {
+    "item": "thaumaturge:salis_mundus",
+    "count": 1
+  }
+}

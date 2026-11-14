@@ -1,162 +1,149 @@
 package com.leclowndu93150.thaumaturge.content.infusion;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.leclowndu93150.thaumaturge.api.aspect.AspectList;
-import com.leclowndu93150.thaumaturge.api.recipe.ResearchGate;
 import com.leclowndu93150.thaumaturge.registry.TTRecipeTypes;
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
-import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.function.Supplier;
-import net.minecraft.core.component.DataComponentPatch;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.PlacementInfo;
-import net.minecraft.world.item.crafting.RecipeBookCategories;
-import net.minecraft.world.item.crafting.RecipeBookCategory;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraft.world.item.crafting.display.RecipeDisplay;
-import net.minecraft.world.item.crafting.display.SlotDisplay;
+import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.level.Level;
 
-public final class InfusionRecipe implements InfusionJobRecipe {
-    public static final MapCodec<InfusionRecipe> MAP_CODEC = RecordCodecBuilder
-            .<InfusionRecipe>mapCodec(i -> i
-                    .group(Ingredient.CODEC.fieldOf("catalyst").forGetter(r -> r.catalyst), Ingredient.CODEC.listOf(1, 64).fieldOf("components").forGetter(r -> r.components),
-                            AspectList.NON_EMPTY_CODEC.fieldOf("aspects").forGetter(r -> r.aspects), Codec.intRange(0, 100).optionalFieldOf("instability", 0).forGetter(r -> r.instability),
-                            ItemStackTemplate.CODEC.optionalFieldOf("result").forGetter(r -> r.output.fixed()),
-                            DataComponentPatch.CODEC.optionalFieldOf("catalyst_patch").forGetter(r -> r.output.patch()), ResearchGate.CODEC.optionalFieldOf("research").forGetter(r -> r.research))
-                    .apply(i, InfusionRecipe::new))
-            .validate(recipe -> recipe.output.fixed().isPresent() == recipe.output.patch().isPresent()
-                    ? DataResult.error(() -> "Infusion recipe needs exactly one of result or catalyst_patch")
-                    : DataResult.success(recipe));
-
-    public static final StreamCodec<RegistryFriendlyByteBuf, InfusionRecipe> STREAM_CODEC = StreamCodec.composite(Ingredient.CONTENTS_STREAM_CODEC, r -> r.catalyst,
-            Ingredient.CONTENTS_STREAM_CODEC.apply(ByteBufCodecs.list()), r -> r.components, AspectList.STREAM_CODEC, r -> r.aspects, ByteBufCodecs.VAR_INT, r -> r.instability,
-            ByteBufCodecs.optional(ItemStackTemplate.STREAM_CODEC), r -> r.output.fixed(), ByteBufCodecs.optional(DataComponentPatch.STREAM_CODEC), r -> r.output.patch(),
-            ByteBufCodecs.optional(ResearchGate.STREAM_CODEC), r -> r.research, InfusionRecipe::new);
-
-    public static final RecipeSerializer<InfusionRecipe> SERIALIZER = new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
-
-    private final Ingredient catalyst;
+public class InfusionRecipe implements Recipe<Container> {
+    private final ResourceLocation id;
+    private final Ingredient central;
     private final List<Ingredient> components;
     private final AspectList aspects;
+    private final ItemStack result;
     private final int instability;
-    private final Output output;
-    private final Optional<ResearchGate> research;
+    private final String research;
 
-    public InfusionRecipe(Ingredient catalyst, List<Ingredient> components, AspectList aspects, int instability, ItemStackTemplate result, Optional<ResearchGate> research) {
-        this(catalyst, components, aspects, instability, Optional.of(result), Optional.empty(), research);
-    }
-
-    public InfusionRecipe(Ingredient catalyst, List<Ingredient> components, AspectList aspects, int instability, Optional<ItemStackTemplate> result, Optional<DataComponentPatch> catalystPatch, Optional<ResearchGate> research) {
-        this.catalyst = catalyst;
+    public InfusionRecipe(ResourceLocation id, Ingredient central, List<Ingredient> components, AspectList aspects, ItemStack result, int instability, String research) {
+        this.id = id;
+        this.central = central;
         this.components = List.copyOf(components);
         this.aspects = aspects;
+        this.result = result;
         this.instability = instability;
-        this.output = new Output(result, catalystPatch);
         this.research = research;
     }
 
-    @Override
-    public boolean matches(InfusionInput input, Level level) {
-        if (!catalyst.test(input.catalyst())) {
-            return false;
-        }
-        return matchComponents(input.components()) != null;
+    public boolean isUnlocked(net.minecraft.world.entity.player.Player player) {
+        return com.leclowndu93150.thaumaturge.api.recipe.ResearchGate.isOpen(
+                com.leclowndu93150.thaumaturge.registry.TTAttachments.knowledge(player), research);
     }
 
-    @Override
-    public Ingredient catalyst() {
-        return catalyst;
+    public Ingredient central() {
+        return central;
     }
 
-    @Override
     public List<Ingredient> components() {
         return components;
     }
 
-    @Override
     public AspectList aspects() {
         return aspects;
     }
 
-    @Override
     public int instability() {
         return instability;
     }
 
     @Override
-    public ItemStack resultItem() {
-        return output.produce(() -> catalyst.items().findFirst().map(ItemStack::new).orElse(ItemStack.EMPTY));
+    public boolean matches(Container container, Level level) {
+        return central.test(container.getItem(0));
     }
 
     @Override
-    public Optional<ResearchGate> researchGate() {
-        return research;
+    public ItemStack assemble(Container container, RegistryAccess access) {
+        return result.copy();
     }
 
     @Override
-    public List<RecipeDisplay> display() {
-        ItemStack out = resultItem();
-        SlotDisplay resultDisplay = out.isEmpty() ? SlotDisplay.Empty.INSTANCE : new SlotDisplay.ItemStackSlotDisplay(ItemStackTemplate.fromNonEmptyStack(out));
-        return List.of(new InfusionRecipeDisplay(catalyst.display(), components.stream().map(Ingredient::display).map(d -> (SlotDisplay) d).toList(), aspects, instability, resultDisplay));
+    public boolean canCraftInDimensions(int width, int height) {
+        return true;
     }
 
     @Override
-    public ItemStack assemble(InfusionInput input) {
-        return output.produce(() -> input.catalyst().copyWithCount(1));
+    public ItemStack getResultItem(RegistryAccess access) {
+        return result;
     }
 
     @Override
-    public RecipeSerializer<InfusionRecipe> getSerializer() {
-        return SERIALIZER;
+    public ResourceLocation getId() {
+        return id;
     }
 
     @Override
-    public RecipeType<InfusionRecipe> getType() {
+    public RecipeSerializer<?> getSerializer() {
+        return TTRecipeTypes.INFUSION_SERIALIZER.get();
+    }
+
+    @Override
+    public RecipeType<?> getType() {
         return TTRecipeTypes.INFUSION.get();
     }
 
     @Override
-    public String group() {
-        return "";
+    public NonNullList<Ingredient> getIngredients() {
+        NonNullList<Ingredient> list = NonNullList.create();
+        list.add(central);
+        list.addAll(components);
+        return list;
     }
 
-    @Override
-    public boolean showNotification() {
-        return false;
-    }
+    public static class Serializer implements RecipeSerializer<InfusionRecipe> {
+        @Override
+        public InfusionRecipe fromJson(ResourceLocation id, JsonObject json) {
+            Ingredient central = Ingredient.fromJson(json.get("central"));
+            List<Ingredient> components = new ArrayList<>();
+            JsonArray array = GsonHelper.getAsJsonArray(json, "components");
+            for (int i = 0; i < array.size(); i++) {
+                components.add(Ingredient.fromJson(array.get(i)));
+            }
+            AspectList aspects = AspectList.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE, json.get("aspects")).result().orElse(AspectList.EMPTY);
+            ItemStack result = ShapedRecipe.itemStackFromJson(GsonHelper.getAsJsonObject(json, "result"));
+            int instability = GsonHelper.getAsInt(json, "instability", 0);
+            return new InfusionRecipe(id, central, components, aspects, result, instability, GsonHelper.getAsString(json, "research", null));
+        }
 
-    @Override
-    public RecipeBookCategory recipeBookCategory() {
-        return RecipeBookCategories.CRAFTING_MISC;
-    }
+        @Override
+        public InfusionRecipe fromNetwork(ResourceLocation id, FriendlyByteBuf buf) {
+            Ingredient central = Ingredient.fromNetwork(buf);
+            int count = buf.readVarInt();
+            List<Ingredient> components = new ArrayList<>(count);
+            for (int i = 0; i < count; i++) {
+                components.add(Ingredient.fromNetwork(buf));
+            }
+            AspectList aspects = AspectList.read(buf);
+            ItemStack result = buf.readItem();
+            int instability = buf.readVarInt();
+            return new InfusionRecipe(id, central, components, aspects, result, instability, buf.readBoolean() ? buf.readUtf() : null);
+        }
 
-    @Override
-    public PlacementInfo placementInfo() {
-        return PlacementInfo.NOT_PLACEABLE;
-    }
-
-    @Override
-    public boolean isSpecial() {
-        return true;
-    }
-
-    private record Output(Optional<ItemStackTemplate> fixed, Optional<DataComponentPatch> patch) {
-        private ItemStack produce(Supplier<ItemStack> base) {
-            return fixed.map(ItemStackTemplate::create).orElseGet(() -> {
-                ItemStack stack = base.get();
-                patch.ifPresent(stack::applyComponents);
-                return stack;
-            });
+        @Override
+        public void toNetwork(FriendlyByteBuf buf, InfusionRecipe recipe) {
+            recipe.central.toNetwork(buf);
+            buf.writeVarInt(recipe.components.size());
+            for (Ingredient component : recipe.components) {
+                component.toNetwork(buf);
+            }
+            recipe.aspects.write(buf);
+            buf.writeItem(recipe.result);
+            buf.writeVarInt(recipe.instability);
+            buf.writeBoolean(recipe.research != null);
+            if (recipe.research != null) buf.writeUtf(recipe.research);
         }
     }
 }

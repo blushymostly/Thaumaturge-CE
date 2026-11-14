@@ -1,0 +1,11 @@
+{
+  "type": "thaumaturge:dust_trigger_simple",
+  "target": "minecraft:cauldron",
+  "result": {
+    "item": "thaumaturge:crucible"
+  },
+  "research": {
+    "entry": "thaumaturge:unlock_alchemy",
+    "stage": 0
+  }
+}

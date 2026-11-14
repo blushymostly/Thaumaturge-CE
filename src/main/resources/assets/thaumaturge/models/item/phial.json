@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "thaumaturge:item/phial"
+  },
+  "overrides": [
+    { "predicate": { "thaumaturge:filled": 1 }, "model": "thaumaturge:item/phial_filled" }
+  ]
+}

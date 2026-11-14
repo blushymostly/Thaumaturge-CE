@@ -1,0 +1,31 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:node_stabilizer",
+  "pattern": [
+    " G ",
+    "QPQ",
+    "SNS"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "Q": {
+      "item": "minecraft:quartz_block"
+    },
+    "P": {
+      "item": "minecraft:piston"
+    },
+    "S": {
+      "item": "thaumaturge:arcane_stone_brick"
+    },
+    "N": {
+      "tag": "thaumaturge:nitors"
+    }
+  },
+  "result": {
+    "item": "thaumaturge:node_stabilizer",
+    "count": 1
+  },
+  "vis": 96
+}

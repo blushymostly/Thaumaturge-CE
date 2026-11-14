@@ -1,0 +1,14 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:base_alchemy@1",
+  "pattern": ["GWG"],
+  "key": {
+    "G": { "tag": "forge:ingots/gold" },
+    "W": { "item": "thaumaturge:plank_silverwood" }
+  },
+  "result": { "item": "thaumaturge:filter", "count": 2 },
+  "vis": 15,
+  "crystals": [
+    { "aspect": "thaumaturge:aqua", "amount": 1 }
+  ]
+}

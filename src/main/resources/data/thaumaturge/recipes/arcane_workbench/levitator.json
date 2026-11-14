@@ -1,0 +1,16 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:levitator",
+  "pattern": ["WIW", "BNB", "WGW"],
+  "key": {
+    "W": { "tag": "minecraft:planks" },
+    "I": { "tag": "forge:plates/thaumium" },
+    "B": { "tag": "forge:plates/iron" },
+    "N": { "tag": "thaumaturge:nitors" },
+    "G": { "item": "thaumaturge:mechanism_simple" }
+  },
+  "result": { "item": "thaumaturge:levitator", "count": 1 },
+  "vis": [
+    { "aspect": "thaumaturge:aer", "amount": 1 }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "thaumaturge:block/slab_ancient_tile"
+    },
+    "type=double": {
+      "model": "thaumaturge:block/stone_ancient_tile"
+    },
+    "type=top": {
+      "model": "thaumaturge:block/slab_ancient_tile_top"
+    }
+  }
+}

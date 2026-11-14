@@ -4,6 +4,9 @@
   "parents": [
     "thaumaturge:unlock_alchemy"
   ],
+  "siblings": [
+    "thaumaturge:base_infusion"
+  ],
   "column": 0,
   "row": 4,
   "meta": [

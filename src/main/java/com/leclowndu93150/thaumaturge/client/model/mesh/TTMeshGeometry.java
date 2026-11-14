@@ -3,80 +3,95 @@ package com.leclowndu93150.thaumaturge.client.model.mesh;
 import com.mojang.math.Transformation;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.Sheets;
-import net.minecraft.client.renderer.block.dispatch.ModelState;
-import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.ItemOverrides;
+import net.minecraft.client.renderer.block.model.ItemTransforms;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.resources.model.Material;
 import net.minecraft.client.resources.model.ModelBaker;
-import net.minecraft.client.resources.model.ModelDebugName;
-import net.minecraft.client.resources.model.geometry.BakedQuad;
-import net.minecraft.client.resources.model.geometry.QuadCollection;
-import net.minecraft.client.resources.model.sprite.Material;
-import net.minecraft.client.resources.model.sprite.TextureSlots;
-import net.minecraft.resources.Identifier;
-import net.minecraft.util.context.ContextMap;
-import net.neoforged.neoforge.client.model.ExtendedUnbakedGeometry;
-import net.neoforged.neoforge.client.model.NeoForgeModelProperties;
-import net.neoforged.neoforge.client.model.UnbakedElementsHelper;
+import net.minecraft.client.resources.model.ModelState;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.client.ChunkRenderTypeSet;
+import net.minecraftforge.client.model.data.ModelData;
+import net.minecraftforge.client.model.geometry.IGeometryBakingContext;
+import net.minecraftforge.client.model.geometry.IUnbakedGeometry;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 
-public final class TTMeshGeometry implements ExtendedUnbakedGeometry {
+public final class TTMeshGeometry implements IUnbakedGeometry<TTMeshGeometry> {
     private static final float CENTER_OFFSET = 0.5F;
-    private static final int NO_TINT = -1;
 
-    private final Identifier model;
+    private final ResourceLocation model;
     private final boolean flipV;
     private final boolean cornerSpace;
+    private final boolean worldLight;
 
-    public TTMeshGeometry(Identifier model, boolean flipV, boolean cornerSpace) {
+    public TTMeshGeometry(ResourceLocation model, boolean flipV, boolean cornerSpace, boolean worldLight) {
         this.model = model;
         this.flipV = flipV;
         this.cornerSpace = cornerSpace;
+        this.worldLight = worldLight;
     }
 
     @Override
-    public QuadCollection bake(TextureSlots textureSlots, ModelBaker modelBaker, ModelState modelState, ModelDebugName name, ContextMap additionalProperties) {
-        Transformation rootTransform = additionalProperties.getOrDefault(NeoForgeModelProperties.TRANSFORM, Transformation.IDENTITY);
-        if (!rootTransform.isIdentity()) {
-            modelState = UnbakedElementsHelper.composeRootTransformIntoModelState(modelState, rootTransform);
-        }
+    public BakedModel bake(IGeometryBakingContext context, ModelBaker baker, Function<Material, TextureAtlasSprite> spriteGetter, ModelState modelState, ItemOverrides overrides,
+            ResourceLocation modelLocation) {
         TTMesh mesh = loadMesh();
-        Matrix4f transform = new Matrix4f().translate(CENTER_OFFSET, CENTER_OFFSET, CENTER_OFFSET).mul(modelState.transformation().getMatrix());
+        Transformation root = context.getRootTransform();
+        Matrix4f transform = new Matrix4f().translate(CENTER_OFFSET, CENTER_OFFSET, CENTER_OFFSET);
+        transform.mul(modelState.getRotation().getMatrix());
+        if (!root.isIdentity()) {
+            transform.mul(root.getMatrix());
+        }
         if (cornerSpace) {
             transform.translate(-CENTER_OFFSET, -CENTER_OFFSET, -CENTER_OFFSET);
         }
-        Map<String, Boolean> visibility = additionalProperties.getOrDefault(NeoForgeModelProperties.PART_VISIBILITY, Map.of());
-        QuadCollection.Builder builder = new QuadCollection.Builder();
+
+        List<BakedQuad> unculled = new ArrayList<>();
+        TextureAtlasSprite particle = null;
         for (TTMeshPart part : mesh.parts()) {
-            if (!visibility.getOrDefault(part.name(), true)) {
+            String slot = part.materialSlot() == null || part.materialSlot().isEmpty() ? "texture" : part.materialSlot();
+            if (!context.hasMaterial(slot) && context.hasMaterial("particle")) {
+                slot = "particle";
+            }
+            if (!context.hasMaterial(slot)) {
                 continue;
             }
-            String slot = part.materialSlot();
-            Material material = textureSlots.getMaterial(slot);
-            if (material == null) {
-                throw new IllegalStateException("Missing texture slot '" + slot + "' for mesh model " + model + " in " + name.debugName());
+            Material material = context.getMaterial(slot);
+            TextureAtlasSprite sprite = spriteGetter.apply(material);
+            if (particle == null) {
+                particle = sprite;
             }
-            Material.Baked baked = modelBaker.materials().get(material, name);
-            boolean itemsAtlas = baked.sprite().atlasLocation().equals(TextureAtlas.LOCATION_ITEMS);
-            boolean translucent = baked.forceTranslucent();
-            RenderType sheet;
-            if (itemsAtlas) {
-                sheet = translucent ? Sheets.translucentItemSheet() : Sheets.cutoutItemSheet();
-            } else {
-                sheet = translucent ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockItemSheet();
-            }
-            BakedQuad.MaterialInfo info = new BakedQuad.MaterialInfo(baked.sprite(), translucent ? ChunkSectionLayer.TRANSLUCENT : ChunkSectionLayer.CUTOUT, sheet, NO_TINT, true, 0);
-            List<BakedQuad> quads = new ArrayList<>();
-            TTMeshQuadBaker.bakePart(part, baked, NO_TINT, transform, info, flipV, quads);
-            for (BakedQuad quad : quads) {
-                builder.addUnculledFace(quad);
-            }
+            TTMeshQuadBaker.bakePart(part, sprite, transform, flipV, worldLight, unculled);
         }
-        return builder.build();
+        if (particle == null && context.hasMaterial("particle")) {
+            particle = spriteGetter.apply(context.getMaterial("particle"));
+        }
+        if (particle == null) {
+            particle = spriteGetter.apply(new Material(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS, new ResourceLocation("minecraft", "block/stone")));
+        }
+
+        ItemTransforms transforms = context.getTransforms();
+        boolean ao = context.useAmbientOcclusion();
+        boolean gui3d = context.isGui3d();
+        boolean blockLight = context.useBlockLight();
+        var hint = context.getRenderTypeHint();
+        var group = hint == null ? net.minecraftforge.client.RenderTypeGroup.EMPTY : context.getRenderType(hint);
+        var renderTypes = group.isEmpty() ? ChunkRenderTypeSet.of(RenderType.cutout(), RenderType.translucent())
+                : ChunkRenderTypeSet.of(group.block());
+        return new Baked(unculled, particle, transforms, overrides, ao, gui3d, blockLight, renderTypes);
     }
 
     private TTMesh loadMesh() {
@@ -84,6 +99,82 @@ public final class TTMeshGeometry implements ExtendedUnbakedGeometry {
             return TTMeshLoader.load(Minecraft.getInstance().getResourceManager(), model);
         } catch (IOException e) {
             throw new RuntimeException("Could not load mesh model at " + model, e);
+        }
+    }
+
+    private static final class Baked implements BakedModel {
+        private final List<BakedQuad> quads;
+        private final TextureAtlasSprite particle;
+        private final ItemTransforms transforms;
+        private final ItemOverrides overrides;
+        private final boolean ao;
+        private final boolean gui3d;
+        private final boolean blockLight;
+        private final ChunkRenderTypeSet renderTypes;
+        private final Map<Direction, List<BakedQuad>> bySide = new EnumMap<>(Direction.class);
+
+        private Baked(List<BakedQuad> quads, TextureAtlasSprite particle, ItemTransforms transforms, ItemOverrides overrides, boolean ao, boolean gui3d, boolean blockLight, ChunkRenderTypeSet renderTypes) {
+            this.quads = List.copyOf(quads);
+            this.particle = particle;
+            this.transforms = transforms;
+            this.overrides = overrides;
+            this.ao = ao;
+            this.gui3d = gui3d;
+            this.blockLight = blockLight;
+            this.renderTypes = renderTypes;
+            for (Direction dir : Direction.values()) {
+                bySide.put(dir, Collections.emptyList());
+            }
+        }
+
+        @Override
+        public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, RandomSource random) {
+            return side == null ? quads : bySide.getOrDefault(side, Collections.emptyList());
+        }
+
+        @Override
+        public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @NotNull RandomSource rand, @NotNull ModelData data, @Nullable RenderType renderType) {
+            return getQuads(state, side, rand);
+        }
+
+        @Override
+        public ChunkRenderTypeSet getRenderTypes(@NotNull BlockState state, @NotNull RandomSource rand, @NotNull ModelData data) {
+            return renderTypes;
+        }
+
+        @Override
+        public boolean useAmbientOcclusion() {
+            return ao;
+        }
+
+        @Override
+        public boolean isGui3d() {
+            return gui3d;
+        }
+
+        @Override
+        public boolean usesBlockLight() {
+            return blockLight;
+        }
+
+        @Override
+        public boolean isCustomRenderer() {
+            return false;
+        }
+
+        @Override
+        public TextureAtlasSprite getParticleIcon() {
+            return particle;
+        }
+
+        @Override
+        public ItemTransforms getTransforms() {
+            return transforms;
+        }
+
+        @Override
+        public ItemOverrides getOverrides() {
+            return overrides;
         }
     }
 }

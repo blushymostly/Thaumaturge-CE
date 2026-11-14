@@ -1,10 +1,13 @@
 {
-  "loader": "thaumaturge:mesh",
-  "parent": "block/block",
-  "model": "thaumaturge:models/mesh/arcane_workbench_charger.ttmesh",
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
   "corner_space": true,
+  "world_light": true,
+  "render_type": "minecraft:cutout",
+  "loader": "thaumaturge:mesh",
+  "model": "thaumaturge:models/mesh/arcane_workbench_charger.ttmesh",
   "textures": {
-    "texture": "thaumaturge:block/arcane_workbench_charger",
-    "particle": "#texture"
+    "particle": "thaumaturge:block/arcane_workbench_charger",
+    "texture": "thaumaturge:block/arcane_workbench_charger"
   }
 }

@@ -1,362 +1,233 @@
 package com.leclowndu93150.thaumaturge.content.aura.node;
 
-import com.leclowndu93150.thaumaturge.content.taint.spread.TaintOrigins;
-import com.leclowndu93150.thaumaturge.api.taint.ITaintOrigin;
+import com.leclowndu93150.thaumaturge.config.ThaumaturgeCommonConfig;
+import com.leclowndu93150.thaumaturge.content.taint.EtherealBloom;
+import com.leclowndu93150.thaumaturge.api.aspect.AspectInstance;
 import com.leclowndu93150.thaumaturge.api.aspect.AspectList;
-import com.leclowndu93150.thaumaturge.api.aspect.Aspects;
-import com.leclowndu93150.thaumaturge.api.aspect.IAspect;
-import com.leclowndu93150.thaumaturge.api.aspect.IAspectContainer;
-import com.leclowndu93150.thaumaturge.api.aspect.TTAspects;
-import com.leclowndu93150.thaumaturge.api.aura.IVisRelaySource;
+import com.leclowndu93150.thaumaturge.api.aura.AuraHelper;
 import com.leclowndu93150.thaumaturge.api.nodes.NodeModifier;
 import com.leclowndu93150.thaumaturge.api.nodes.NodeType;
 import com.leclowndu93150.thaumaturge.content.blockentity.AbstractSyncedBlockEntity;
+import com.leclowndu93150.thaumaturge.content.item.EssentiaCrystalFactory;
+import com.leclowndu93150.thaumaturge.content.particle.SparkleParticleOptions;
+import com.leclowndu93150.thaumaturge.content.research.pool.AspectPools;
 import com.leclowndu93150.thaumaturge.registry.TTBlockEntities;
-import com.leclowndu93150.thaumaturge.registry.TTBlocks;
+import com.leclowndu93150.thaumaturge.content.item.WandCharge;
+import com.leclowndu93150.thaumaturge.registry.TTBulkContent;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
-import java.util.UUID;
+import java.util.Optional;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.UUIDUtil;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.RandomSource;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
-import org.jspecify.annotations.Nullable;
+import net.minecraft.world.phys.AABB;
+import org.jetbrains.annotations.Nullable;
 
-public class BlockEntityNode extends AbstractSyncedBlockEntity implements IAspectContainer, ITaintOrigin {
-    static final int LOCK_NONE = 0;
-    static final int LOCK_BASIC = 1;
-    static final int LOCK_ADVANCED = 2;
-    static final int UNSET = -1;
+public class BlockEntityNode extends AbstractSyncedBlockEntity {
+    public static final String NBT_NODE = "Node";
 
-    private static final String KEY_TYPE = "Type";
-    private static final String KEY_MODIFIER = "Modifier";
-    private static final String KEY_ASPECTS = "Aspects";
-    private static final String KEY_ASPECTS_BASE = "AspectsBase";
-    private static final String KEY_ENERGIZED = "Energized";
-    private static final String KEY_ASPECTS_BASE_ORIGINAL = "AspectsBaseOriginal";
-    private static final String KEY_DRAIN_PLAYER = "DrainPlayer";
-    private static final String KEY_DRAIN_COLOR = "DrainColor";
-    private static final String KEY_JARRING = "Jarring";
-    private static final String KEY_TAINT_RESERVE = "TaintReserve";
-    private static final String KEY_TAINT_PURIFY = "TaintPurify";
-    private static final int DEFAULT_DRAIN_COLOR = 0xFFFFFF;
-    private static final int DEFAULT_CLIENT_CHANNEL = 255;
-    private static final int LOCK_REFRESH_INTERVAL = 50;
-    private static final int BASIC_LOCK_FEED_FACTOR = 2;
-    private static final int ADVANCED_LOCK_FEED_FACTOR = 20;
-    static final int TYPE_BEHAVIOR_INTERVAL = 50;
-    private static final int DRAIN_LINGER_TICKS = 12;
-    private static final int CONTENT_AVERAGE_DIVISOR = 2;
+    private static final float RAW_PER_POINT = 3.0F;
+    private static final float REFILL_SUCCESS_THRESHOLD = 2.99F;
+    private static final int DEGRADE_AFTER_FAILURES = 10;
 
-    protected AspectList held = AspectList.EMPTY;
-    protected AspectList aspectsBase = AspectList.EMPTY;
-    protected boolean energized;
-    public int clientDrainRed = DEFAULT_CLIENT_CHANNEL;
-    public int clientDrainGreen = DEFAULT_CLIENT_CHANNEL;
-    public int clientDrainBlue = DEFAULT_CLIENT_CHANNEL;
-
-    int tickCounter;
-    int lock;
-    int refillWait;
-    int starvation;
-    int taintPurifyTicks;
-    private int refillInterval = UNSET;
-    private int drainLinger;
     private NodeType type = NodeType.NORMAL;
-    private @Nullable NodeModifier modifier;
-    private @Nullable AspectList aspectsBaseOriginal;
-    private @Nullable UUID drainPlayer;
-    private int drainColor = DEFAULT_DRAIN_COLOR;
-    private int jarring;
-    private float taintReserve;
-    private boolean inTick;
-    private boolean tickDirty;
-    private final NodeCentivis centivis = new NodeCentivis(this);
-    private final NodeHunger hunger = new NodeHunger(this);
-    private final IVisRelaySource relay = new NodeVisRelaySource(this);
+    @Nullable
+    private NodeModifier modifier;
+    private AspectList held = AspectList.EMPTY;
+    private AspectList aspectsBase = AspectList.EMPTY;
+
+    private @Nullable AspectList originalCapacity;
+    private final Map<ResourceLocation, Integer> relayAllowance = new HashMap<>();
+    private final Map<ResourceLocation, Integer> relayCredit = new HashMap<>();
+
+    private int tickCounter;
+    private int starvation;
+    private int taintPurifyTicks;
 
     public BlockEntityNode(BlockPos pos, BlockState state) {
-        this(TTBlockEntities.NODE.get(), pos, state);
-    }
-
-    protected BlockEntityNode(BlockEntityType<?> blockEntityType, BlockPos pos, BlockState state) {
-        super(blockEntityType, pos, state);
-    }
-
-    public @Nullable UUID getDrainPlayer() {
-        return drainPlayer;
-    }
-
-    public int getDrainColor() {
-        return drainColor;
-    }
-
-    public void applyNodeData(NodeData data) {
-        type = data.type();
-        modifier = data.modifier().orElse(null);
-        held = data.aspects();
-        aspectsBase = data.aspectsBase();
-        refreshIndex();
-        invalidateRefill();
+        super(TTBlockEntities.NODE.get(), pos, state);
     }
 
     public NodeType kind() {
         return type;
     }
 
-    public void reclassify(NodeType nodeType) {
-        NodeType previous = type;
-        type = nodeType;
-        if (previous != nodeType && level instanceof ServerLevel serverLevel) {
-            NodeBiomeSpread.revertPainted(serverLevel, worldPosition, previous);
-        }
-        if (nodeType != NodeType.TAINTED) {
-            taintReserve = 0.0F;
-            taintPurifyTicks = 0;
-        }
-        refreshIndex();
-        changed();
-    }
-
-    public @Nullable NodeModifier trait() {
+    @Nullable
+    public NodeModifier trait() {
         return modifier;
     }
 
-    public void assignTrait(@Nullable NodeModifier nodeModifier) {
-        modifier = nodeModifier;
-        refillInterval = UNSET;
-        changed();
-    }
-
-    @Override
-    public void onLoad() {
-        super.onLoad();
-        refreshIndex();
-    }
-
-    @Override
-    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
-        super.preRemoveSideEffects(pos, state);
-        if (level instanceof ServerLevel serverLevel) {
-            NodeLocationIndex.get(serverLevel).remove(pos);
-            TaintOrigins.unregister(serverLevel, pos);
-            NodeBiomeSpread.revertPainted(serverLevel, pos, type);
-        }
-    }
-
-    private void refreshIndex() {
-        if (!(level instanceof ServerLevel serverLevel)) {
-            return;
-        }
-        BlockState state = getBlockState();
-        if (state.is(TTBlocks.NODE.get()) || state.is(TTBlocks.SILVERWOOD_NODE_LOG.get())) {
-            NodeLocationIndex.get(serverLevel).register(worldPosition, type);
-            if (type == NodeType.TAINTED) {
-                TaintOrigins.register(serverLevel, worldPosition);
-            } else {
-                TaintOrigins.unregister(serverLevel, worldPosition);
-            }
-        }
-    }
-
-    @Override
-    public boolean isLiveTaintOrigin() {
-        return type == NodeType.TAINTED && allowTypeBehavior() && !isRemoved();
-    }
-
-    @Override
-    public float getTaintReserve() {
-        return taintReserve;
-    }
-
-    @Override
-    public void setTaintReserve(float reserve) {
-        taintReserve = Math.max(0.0F, reserve);
-        setChanged();
-    }
-
-    @Override
     public AspectList getAspects() {
         return held;
-    }
-
-    @Override
-    public void setAspects(AspectList list) {
-        held = list;
-        aspectsBase = list;
-        invalidateRefill();
-    }
-
-    @Override
-    public boolean accepts(Holder<IAspect> aspect) {
-        return true;
     }
 
     public AspectList capacity() {
         return aspectsBase;
     }
 
-    public int capacityOf(Holder<IAspect> aspect) {
-        return aspectsBase.amountOf(aspect);
-    }
-
-    @Override
-    public int fill(Holder<IAspect> aspect, int amount) {
-        if (amount <= 0) {
-            return 0;
+    public int drain(ResourceLocation aspect, int amount) {
+        int taken = Math.min(Math.max(0, amount), held.amountOf(aspect));
+        if (taken > 0) {
+            held = held.remove(aspect, taken);
+            setChangedAndSync();
         }
-        int room = Math.max(0, aspectsBase.amountOf(aspect) - held.amountOf(aspect));
-        if (room == 0) {
-            return amount;
-        }
-        int added = Math.min(room, amount);
-        held = held.add(aspect, added);
-        changed();
-        return amount - added;
-    }
-
-    @Override
-    public boolean drain(Holder<IAspect> aspect, int amount) {
-        if (held.amountOf(aspect) < amount) {
-            return false;
-        }
-        if (amount > 0) {
-            held = held.reduce(aspect, amount);
-            changed();
-        }
-        return true;
-    }
-
-    @Override
-    public boolean holds(Holder<IAspect> aspect, int amount) {
-        return held.amountOf(aspect) >= amount;
-    }
-
-    @Override
-    public int amountOf(Holder<IAspect> aspect) {
-        return held.amountOf(aspect);
+        return taken;
     }
 
     public boolean isEnergized() {
-        return energized;
+        return originalCapacity != null;
     }
 
-    public void setEnergized(boolean value) {
-        if (value == energized) {
+    void setEnergized(boolean energized) {
+        if (energized == isEnergized()) return;
+        relayAllowance.clear();
+        relayCredit.clear();
+        if (energized) {
+            originalCapacity = aspectsBase;
+            Map<ResourceLocation, Integer> primals = new java.util.LinkedHashMap<>();
+            for (AspectInstance aspect : aspectsBase.entries()) {
+                collectPrimals(aspect.aspectId(), aspect.amount(), primals, new java.util.HashSet<>());
+            }
+            aspectsBase = AspectList.EMPTY;
+            for (var aspect : primals.entrySet()) {
+                aspectsBase = aspectsBase.add(new AspectInstance(aspect.getKey(), aspect.getValue()));
+            }
+            held = aspectsBase;
+        } else {
+            aspectsBase = originalCapacity;
+            originalCapacity = null;
+            held = AspectList.EMPTY;
+        }
+        setChangedAndSync();
+    }
+
+    public int availableCentivis(ResourceLocation aspect) {
+        if (!isEnergized() || !WandCharge.PRIMALS.contains(aspect)) return 0;
+        return Math.min(relayAllowance.getOrDefault(aspect, 0), held.amountOf(aspect) * WandCharge.CENTIVIS_PER_VIS
+                + relayCredit.getOrDefault(aspect, 0));
+    }
+
+    public int drainCentivis(ResourceLocation aspect, int request) {
+        int taken = Math.min(availableCentivis(aspect), Math.max(0, request));
+        if (taken == 0) return 0;
+        int credit = relayCredit.getOrDefault(aspect, 0);
+        int unit = WandCharge.CENTIVIS_PER_VIS;
+        int points = Math.max(0, (taken - credit + unit - 1) / unit);
+        relayAllowance.put(aspect, relayAllowance.get(aspect) - taken);
+        relayCredit.put(aspect, credit + points * unit - taken);
+        if (points == 0) setChanged();
+        else drain(aspect, points);
+        return taken;
+    }
+
+    private void tickEnergized(ServerLevel level, BlockPos pos) {
+        if (!level.getBlockState(pos.above()).is(TTBulkContent.BLOCKS.get("node_transducer").get())) {
+            setEnergized(false);
             return;
         }
-        energized = value;
-        centivis.clear();
-        if (value) {
-            aspectsBaseOriginal = aspectsBase;
-            aspectsBase = NodeRules.toPrimals(aspectsBase);
-            held = aspectsBase;
-        } else if (aspectsBaseOriginal != null) {
-            aspectsBase = aspectsBaseOriginal;
-            aspectsBaseOriginal = null;
-        }
-        changed();
-    }
-
-    public @Nullable AspectList getAspectsBaseOriginal() {
-        return aspectsBaseOriginal;
-    }
-
-    public boolean isJarring() {
-        return jarring > 0;
-    }
-
-    public void beginJarring(int ticks) {
-        jarring = ticks;
-        changed();
-    }
-
-    public void applyPrimordialPearl(RandomSource random, boolean researched) {
-        List<Holder<IAspect>> primals = new ArrayList<>();
-        for (ResourceKey<IAspect> key : TTAspects.PRIMALS) {
-            Holder<IAspect> primal = Aspects.resolve(level, key);
-            if (primal != null) {
-                primals.add(primal);
+        boolean refilled = false;
+        for (AspectInstance entry : aspectsBase.entries()) {
+            ResourceLocation aspect = entry.aspectId();
+            int rate = entry.amount();
+            relayAllowance.compute(aspect, (id, allowance) -> Math.min(rate * 200, (allowance == null ? 0 : allowance) + rate));
+            if (level.getGameTime() % 20 != 0) continue;
+            for (int attempt = 0; attempt < Math.max(1, rate / 20) && held.amountOf(aspect) < rate; attempt++) {
+                boolean flux = type == NodeType.TAINTED;
+                float cost = ThaumaturgeCommonConfig.ENERGIZED_NODE_VIS_PER_POINT.get().floatValue();
+                float available = flux ? AuraHelper.getFlux(level, pos) : AuraHelper.getVis(level, pos);
+                if (available < cost) break;
+                if (flux) AuraHelper.drainFlux(level, pos, cost, false);
+                else AuraHelper.drainVis(level, pos, cost, false);
+                held = held.add(new AspectInstance(aspect, 1));
+                refilled = true;
             }
         }
-        NodeRules.Contents result = NodeRules.pearl(new NodeRules.Contents(held, aspectsBase), primals, random, researched);
-        held = result.contained();
-        aspectsBase = result.base();
-        modifier = NodeRules.pearlModifier(modifier, random);
-        invalidateRefill();
+        if (refilled) setChangedAndSync();
     }
 
-    public void invalidateRefill() {
-        refillInterval = UNSET;
-        changed();
+    public NodeData nodeData() {
+        return new NodeData(type, Optional.ofNullable(modifier), held, aspectsBase);
     }
 
-    public int centivisRate(Holder<IAspect> aspect) {
-        return energized ? aspectsBase.amountOf(aspect) : 0;
+    public void applyNodeData(NodeData data) {
+        originalCapacity = null;
+        relayAllowance.clear();
+        relayCredit.clear();
+        type = data.type();
+        modifier = data.modifier().orElse(null);
+        held = data.aspects();
+        aspectsBase = data.aspectsBase();
+        starvation = 0;
+        taintPurifyTicks = 0;
+        setChangedAndSync();
     }
 
-    public int availableCentivis(Holder<IAspect> aspect) {
-        return energized ? centivis.available(aspect) : 0;
-    }
-
-    public IVisRelaySource relaySource() {
-        return relay;
-    }
-
-    public int drainCentivis(Holder<IAspect> aspect, int amount, TransactionContext transaction) {
-        return energized ? centivis.drain(aspect, amount, transaction) : 0;
-    }
-
-    void changed() {
-        if (inTick) {
-            tickDirty = true;
-        } else {
-            setChangedAndSync();
+    /**
+     * CE {@code burstIntoOrbs} Make-it-Work: grant held aspects the breaker can receive,
+     * drop essentia crystals for the rest, then clear. No EntityAspectOrb yet.
+     */
+    public void burstAndClear(@Nullable Player breaker) {
+        if (!(level instanceof ServerLevel server)) {
+            held = AspectList.EMPTY;
+            return;
         }
-    }
-
-    int refillInterval() {
-        if (refillInterval == UNSET) {
-            refillInterval = NodeRules.baseRefillInterval(modifier) * feedingIntervalFactor();
+        if (!held.isEmpty()) {
+            ServerPlayer recipient = nearestPlayer(server, breaker);
+            AspectList remaining = AspectList.EMPTY;
+            for (AspectInstance entry : held.entries()) {
+                if (recipient != null && AspectPools.hasDiscoveredComponents(recipient, entry.aspectId())) {
+                    AspectPools.grant(recipient, entry.aspectId(), entry.amount());
+                } else {
+                    remaining = remaining.add(entry);
+                }
+            }
+            for (AspectInstance entry : remaining.entries()) {
+                int count = Math.min(Math.max(entry.amount(), 1), 8);
+                Block.popResource(server, worldPosition, EssentiaCrystalFactory.of(entry.aspectId(), count));
+            }
+            emitBurstFx(server);
         }
-        return refillInterval;
-    }
-
-    int averageContent() {
-        return (held.totalAmount() + aspectsBase.totalAmount()) / CONTENT_AVERAGE_DIVISOR;
-    }
-
-    void clearContained() {
         held = AspectList.EMPTY;
-        invalidateRefill();
+        setChanged();
     }
 
-    void removeDepleted(ServerLevel serverLevel, BlockPos pos) {
-        BlockState state = getBlockState();
-        if (state.getBlock() instanceof NodeHostBlock host) {
-            serverLevel.setBlock(pos, host.depletedState(state), Block.UPDATE_ALL);
-        } else {
-            serverLevel.removeBlock(pos, false);
+    @Nullable
+    private ServerPlayer nearestPlayer(ServerLevel level, @Nullable Player preferred) {
+        if (preferred instanceof ServerPlayer serverPlayer && serverPlayer.level() == level) {
+            return serverPlayer;
         }
+        AABB box = new AABB(worldPosition).inflate(8.0);
+        ServerPlayer closest = null;
+        double best = Double.MAX_VALUE;
+        for (ServerPlayer player : level.getEntitiesOfClass(ServerPlayer.class, box)) {
+            double dist = player.distanceToSqr(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5);
+            if (dist < best) {
+                best = dist;
+                closest = player;
+            }
+        }
+        return closest;
     }
 
-    void collapse(ServerLevel serverLevel, BlockPos pos) {
-        if (getBlockState().getBlock() instanceof NodeHostBlock) {
-            removeDepleted(serverLevel, pos);
-        } else {
-            serverLevel.destroyBlock(pos, true);
+    private void emitBurstFx(ServerLevel level) {
+        double x = worldPosition.getX() + 0.5;
+        double y = worldPosition.getY() + 0.5;
+        double z = worldPosition.getZ() + 0.5;
+        for (int i = 0; i < 12; i++) {
+            double vx = (level.random.nextDouble() - 0.5) * 0.35;
+            double vy = level.random.nextDouble() * 0.25;
+            double vz = (level.random.nextDouble() - 0.5) * 0.35;
+            int color = 0xFF00FFFF | (level.random.nextInt(0x40) << 16);
+            level.sendParticles(new SparkleParticleOptions(color, 0.35F, 0, 0.9F, 0.02F, 20, true), x, y, z, 0, vx, vy, vz, 1.0);
         }
     }
 
@@ -364,207 +235,180 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity implements IAspec
         if (!(tickLevel instanceof ServerLevel serverLevel)) {
             return;
         }
-        inTick = true;
-        try {
-            tickServer(serverLevel, pos);
-        } finally {
-            inTick = false;
+        tickCounter++;
+        if (isEnergized()) {
+            tickEnergized(serverLevel, pos);
+            return;
         }
-        if (tickDirty) {
-            tickDirty = false;
+        if (type == NodeType.TAINTED && tickTaintProtection(serverLevel, pos)) return;
+        if (type == NodeType.HUNGRY) {
+            NodeTypeEffects.attract(this, serverLevel, pos);
+        }
+        int tier = NodeTransducer.stabilizerTier(tickLevel, pos.below());
+        if (tier > 0 && tickCounter % 100 == 0) {
+            if (type == NodeType.UNSTABLE && serverLevel.random.nextBoolean() && serverLevel.random.nextInt(tier == 2 ? 5000 : 10000) == 0) {
+                type = NodeType.NORMAL;
+                setChangedAndSync();
+            }
+            if (modifier == NodeModifier.FADING && serverLevel.random.nextInt(tier == 2 ? 6250 : 12500) == 0) {
+                modifier = NodeModifier.PALE;
+                setChangedAndSync();
+            }
+        }
+        if ((tier == 0 || type != NodeType.UNSTABLE) && tickCounter % 50 == 0 && NodeTypeEffects.tick(this, serverLevel, pos, tickCounter)) {
+            return;
+        }
+        int interval = NodeRules.baseRefillInterval(modifier) * (tier == 2 ? 20 : tier == 1 ? 2 : 1);
+        if (interval <= 0 || tickCounter % interval != 0) {
+            return;
+        }
+        refill(serverLevel, pos);
+    }
+
+    private boolean tickTaintProtection(ServerLevel level, BlockPos pos) {
+        boolean protectedByBloom = EtherealBloom.protects(level, pos);
+        if (tickCounter % 20 == 0) {
+            if (protectedByBloom) {
+                taintPurifyTicks += 20;
+                if (taintPurifyTicks >= ThaumaturgeCommonConfig.TAINT_STARVE_TICKS.get()) {
+                    applyNodeData(new NodeData(NodeType.NORMAL, Optional.ofNullable(modifier), held, aspectsBase));
+                }
+                setChanged();
+            } else if (taintPurifyTicks != 0) {
+                taintPurifyTicks = 0;
+                setChanged();
+            }
+        }
+        return protectedByBloom;
+    }
+
+    void feed(AspectList food, net.minecraft.util.RandomSource random) {
+        java.util.Map<ResourceLocation, Integer> primals = new java.util.LinkedHashMap<>();
+        for (AspectInstance aspect : food.entries()) {
+            collectPrimals(aspect.aspectId(), aspect.amount(), primals, new java.util.HashSet<>());
+        }
+        if (primals.isEmpty()) return;
+        var chosen = new java.util.ArrayList<>(primals.entrySet()).get(random.nextInt(primals.size()));
+        int capacity = aspectsBase.amountOf(chosen.getKey());
+        if (held.amountOf(chosen.getKey()) < capacity) {
+            held = held.add(new AspectInstance(chosen.getKey(), 1));
+        } else if (random.nextFloat() < chosen.getValue() / (1.0F + capacity * 10)) {
+            aspectsBase = aspectsBase.add(new AspectInstance(chosen.getKey(), 1));
+        } else {
+            return;
+        }
+        setChangedAndSync();
+    }
+
+    private static void collectPrimals(ResourceLocation id, int amount, java.util.Map<ResourceLocation, Integer> totals,
+            java.util.Set<ResourceLocation> path) {
+        var aspect = com.leclowndu93150.thaumaturge.api.aspect.TTAspects.get(id);
+        if (aspect == null || !path.add(id)) return;
+        if (aspect.isPrimal()) totals.merge(id, amount, Integer::sum);
+        else for (ResourceLocation component : aspect.componentIds()) collectPrimals(component, amount, totals, path);
+        path.remove(id);
+    }
+
+    boolean erode(ServerLevel level, BlockPos pos) {
+        if (!aspectsBase.isEmpty()) {
+            var entries = aspectsBase.entries();
+            var chosen = entries.get(level.random.nextInt(entries.size())).aspectId();
+            aspectsBase = aspectsBase.remove(chosen, 1);
+            int surplus = held.amountOf(chosen) - aspectsBase.amountOf(chosen);
+            if (surplus > 0) {
+                held = held.remove(chosen, surplus);
+            }
+            setChangedAndSync();
+        }
+        if (aspectsBase.isEmpty()) {
+            level.removeBlock(pos, false);
+            return true;
+        }
+        return false;
+    }
+
+    private void refill(ServerLevel level, BlockPos pos) {
+        List<ResourceLocation> eligible = new ArrayList<>();
+        for (AspectInstance entry : aspectsBase.entries()) {
+            if (held.amountOf(entry.aspectId()) < entry.amount()) {
+                eligible.add(entry.aspectId());
+            }
+        }
+        if (eligible.isEmpty()) {
+            starvation = 0;
+            return;
+        }
+        ResourceLocation chosen = eligible.get(level.getRandom().nextInt(eligible.size()));
+        boolean flux = type == NodeType.TAINTED;
+        float taken = flux ? AuraHelper.drainFlux(level, pos, RAW_PER_POINT, false) : AuraHelper.drainVis(level, pos, RAW_PER_POINT, false);
+        if (taken >= REFILL_SUCCESS_THRESHOLD) {
+            held = held.add(new AspectInstance(chosen, 1));
+            starvation = 0;
+            setChangedAndSync();
+            return;
+        }
+        if (taken > 0.0F) {
+            if (flux) {
+                AuraHelper.addFlux(level, pos, taken);
+            } else {
+                AuraHelper.addVis(level, pos, taken);
+            }
+        }
+        if (++starvation >= DEGRADE_AFTER_FAILURES) {
+            starvation = 0;
+            if (NodeTransducer.stabilizerTier(level, pos.below()) == 0) modifier = NodeRules.degrade(modifier);
             setChangedAndSync();
         }
     }
 
-    private void tickServer(ServerLevel serverLevel, BlockPos pos) {
-        if (energized) {
-            tickEnergized(serverLevel, pos);
-            tickDrainLinger();
-            return;
+    @Override
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        tag.put(NBT_NODE, nodeData().toTag());
+        if (originalCapacity != null) {
+            AspectList.CODEC.encodeStart(net.minecraft.nbt.NbtOps.INSTANCE, originalCapacity).result()
+                    .ifPresent(encoded -> tag.put("OriginalCapacity", encoded));
+            CompoundTag credit = new CompoundTag();
+            relayCredit.forEach((aspect, amount) -> { if (amount > 0) credit.putInt(aspect.toString(), amount); });
+            tag.put("RelayCredit", credit);
         }
-        if (jarring > 0) {
-            tickJarring(serverLevel, pos);
-            return;
-        }
-        tickDrainLinger();
-        tickCounter++;
-        RandomSource random = serverLevel.getRandom();
-        refreshLock(serverLevel, pos);
-        NodeUpkeep.refill(this, serverLevel, pos, random);
-        NodeUpkeep.discharge(this, serverLevel, pos, random);
-        if (NodeUpkeep.decay(this, serverLevel, pos, random)) {
-            return;
-        }
-        NodeUpkeep.stability(this, serverLevel, pos, random);
-        if (allowTypeBehavior() && !runTypeBehavior(serverLevel, pos, random)) {
-            NodeBiomeSpread.tick(serverLevel, this, pos, tickCounter);
-        }
-    }
-
-    private void tickJarring(ServerLevel serverLevel, BlockPos pos) {
-        tickDirty = true;
-        if (--jarring == 0) {
-            NodeJarRitual.completeJar(serverLevel, pos, this);
-        }
-    }
-
-    private boolean runTypeBehavior(ServerLevel serverLevel, BlockPos pos, RandomSource random) {
-        if (type == NodeType.HUNGRY) {
-            hunger.tick(serverLevel, pos, tickCounter);
-            if (NodeHunger.eatDue(tickCounter)) {
-                eatBlock(serverLevel, pos, random);
-            }
-            return false;
-        }
-        if (tickCounter % TYPE_BEHAVIOR_INTERVAL != 0) {
-            return false;
-        }
-        return NodeTypeBehavior.tick(this, serverLevel, pos, random);
-    }
-
-    private @Nullable BlockPos hungryTarget(Level targetLevel, BlockPos pos, RandomSource random) {
-        return NodeHunger.findTarget(targetLevel, pos, modifier, random);
-    }
-
-    private void eatBlock(ServerLevel serverLevel, BlockPos pos, RandomSource random) {
-        BlockPos target = hungryTarget(serverLevel, pos, random);
-        if (target != null) {
-            serverLevel.destroyBlock(target, true);
-        }
-    }
-
-    private void tickDrainLinger() {
-        if (drainLinger > 0 && --drainLinger == 0) {
-            drainPlayer = null;
-            changed();
-        }
-    }
-
-    private void refreshLock(ServerLevel serverLevel, BlockPos pos) {
-        boolean due = tickCounter == 1 || tickCounter % LOCK_REFRESH_INTERVAL == 0;
-        if (!due) {
-            return;
-        }
-        BlockPos below = pos.below();
-        if (!serverLevel.hasChunkAt(below) || !columnsGenerated(serverLevel, pos)) {
-            return;
-        }
-        int next = lockBeneath(serverLevel, below);
-        if (next == lock) {
-            return;
-        }
-        lock = next;
-        refillInterval = UNSET;
-    }
-
-    private static int lockBeneath(ServerLevel serverLevel, BlockPos below) {
-        if (!(serverLevel.getBlockState(below).getBlock() instanceof BlockNodeStabilizer stabilizer)) {
-            return LOCK_NONE;
-        }
-        if (serverLevel.hasNeighborSignal(below)) {
-            return LOCK_NONE;
-        }
-        return stabilizer.isAdvanced() ? LOCK_ADVANCED : LOCK_BASIC;
-    }
-
-    protected int feedingIntervalFactor() {
-        return switch (lock) {
-            case LOCK_ADVANCED -> ADVANCED_LOCK_FEED_FACTOR;
-            case LOCK_BASIC -> BASIC_LOCK_FEED_FACTOR;
-            default -> 1;
-        };
-    }
-
-    public int stabilizerTier() {
-        return lock;
-    }
-
-    protected boolean allowDischarge() {
-        return true;
-    }
-
-    protected boolean allowTypeBehavior() {
-        return true;
-    }
-
-    private static boolean columnsGenerated(LevelReader reader, BlockPos pos) {
-        return reader.hasChunkAt(pos) && reader.hasChunkAt(pos.north()) && reader.hasChunkAt(pos.south()) && reader.hasChunkAt(pos.east()) && reader.hasChunkAt(pos.west());
-    }
-
-    private void tickEnergized(ServerLevel serverLevel, BlockPos pos) {
-        if (NodeEnergy.refillDue(serverLevel) && NodeEnergy.refill(this, serverLevel, pos)) {
-            tickDirty = true;
-        }
-        centivis.accrue();
-    }
-
-    public void burstIntoOrbs(ServerLevel serverLevel, BlockPos pos) {
-        NodeOrbs.burst(serverLevel, pos, held);
-        held = AspectList.EMPTY;
-    }
-
-    public boolean drainToWand(ServerLevel serverLevel, Player player, ItemStack wand, int remainingUse) {
-        return NodeWandTap.tap(this, serverLevel, player, wand, remainingUse);
-    }
-
-    void recordDrain(UUID player, int color) {
-        drainPlayer = player;
-        drainColor = color;
-        drainLinger = DRAIN_LINGER_TICKS;
-        changed();
-    }
-
-    public void clientTick(Level tickLevel, BlockPos pos) {
-        if (!tickLevel.isClientSide() || energized || type != NodeType.HUNGRY || !allowTypeBehavior()) {
-            return;
-        }
-        NodeHunger.predict(tickLevel, pos, modifier);
+        if (taintPurifyTicks > 0) tag.putInt("TaintPurifyTicks", taintPurifyTicks);
     }
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
-        output.store(KEY_TYPE, NodeType.CODEC, type);
-        if (modifier != null) {
-            output.store(KEY_MODIFIER, NodeModifier.CODEC, modifier);
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        taintPurifyTicks = tag.getInt("TaintPurifyTicks");
+        relayAllowance.clear();
+        relayCredit.clear();
+        CompoundTag credit = tag.getCompound("RelayCredit");
+        for (String key : credit.getAllKeys()) {
+            ResourceLocation id = ResourceLocation.tryParse(key);
+            int amount = credit.getInt(key);
+            if (id != null && WandCharge.PRIMALS.contains(id) && amount > 0 && amount < WandCharge.CENTIVIS_PER_VIS) relayCredit.put(id, amount);
         }
-        output.store(KEY_ASPECTS, AspectList.CODEC, held);
-        output.store(KEY_ASPECTS_BASE, AspectList.CODEC, aspectsBase);
-        if (energized) {
-            output.putBoolean(KEY_ENERGIZED, true);
-        }
-        if (aspectsBaseOriginal != null) {
-            output.store(KEY_ASPECTS_BASE_ORIGINAL, AspectList.CODEC, aspectsBaseOriginal);
-        }
-        if (drainPlayer != null) {
-            output.store(KEY_DRAIN_PLAYER, UUIDUtil.CODEC, drainPlayer);
-            output.putInt(KEY_DRAIN_COLOR, drainColor);
-        }
-        if (jarring > 0) {
-            output.putInt(KEY_JARRING, jarring);
-        }
-        if (taintReserve > 0.0F) {
-            output.putFloat(KEY_TAINT_RESERVE, taintReserve);
-        }
-        if (taintPurifyTicks > 0) {
-            output.putInt(KEY_TAINT_PURIFY, taintPurifyTicks);
+        readNodeFromTag(tag);
+    }
+
+    @Override
+    protected void readClientData(CompoundTag tag) {
+        readNodeFromTag(tag);
+    }
+
+    private void readNodeFromTag(CompoundTag tag) {
+        originalCapacity = tag.contains("OriginalCapacity")
+                ? AspectList.CODEC.parse(net.minecraft.nbt.NbtOps.INSTANCE, tag.get("OriginalCapacity")).result().orElse(null) : null;
+        NodeData data = NodeData.fromTag(tag.getCompound(NBT_NODE));
+        if (data != null) {
+            type = data.type();
+            modifier = data.modifier().orElse(null);
+            held = data.aspects();
+            aspectsBase = data.aspectsBase();
         }
     }
 
     @Override
-    protected void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
-        type = input.read(KEY_TYPE, NodeType.CODEC).orElse(NodeType.NORMAL);
-        modifier = input.read(KEY_MODIFIER, NodeModifier.CODEC).orElse(null);
-        held = input.read(KEY_ASPECTS, AspectList.CODEC).orElse(AspectList.EMPTY);
-        aspectsBase = input.read(KEY_ASPECTS_BASE, AspectList.CODEC).orElse(AspectList.EMPTY);
-        energized = input.getBooleanOr(KEY_ENERGIZED, false);
-        aspectsBaseOriginal = input.read(KEY_ASPECTS_BASE_ORIGINAL, AspectList.CODEC).orElse(null);
-        drainPlayer = input.read(KEY_DRAIN_PLAYER, UUIDUtil.CODEC).orElse(null);
-        drainColor = input.getIntOr(KEY_DRAIN_COLOR, DEFAULT_DRAIN_COLOR);
-        jarring = input.getIntOr(KEY_JARRING, 0);
-        taintReserve = Math.max(0.0F, input.getFloatOr(KEY_TAINT_RESERVE, 0.0F));
-        taintPurifyTicks = input.getIntOr(KEY_TAINT_PURIFY, 0);
-        refillInterval = UNSET;
+    public AABB getRenderBoundingBox() {
+        return new AABB(worldPosition).inflate(2.3);
     }
 }

@@ -1,0 +1,12 @@
+{
+  "variants": {
+    "facing=north,lit=false": { "model": "thaumaturge:block/smelter_basic" },
+    "facing=east,lit=false": { "model": "thaumaturge:block/smelter_basic", "y": 90 },
+    "facing=south,lit=false": { "model": "thaumaturge:block/smelter_basic", "y": 180 },
+    "facing=west,lit=false": { "model": "thaumaturge:block/smelter_basic", "y": 270 },
+    "facing=north,lit=true": { "model": "thaumaturge:block/smelter_basic_lit" },
+    "facing=east,lit=true": { "model": "thaumaturge:block/smelter_basic_lit", "y": 90 },
+    "facing=south,lit=true": { "model": "thaumaturge:block/smelter_basic_lit", "y": 180 },
+    "facing=west,lit=true": { "model": "thaumaturge:block/smelter_basic_lit", "y": 270 }
+  }
+}
