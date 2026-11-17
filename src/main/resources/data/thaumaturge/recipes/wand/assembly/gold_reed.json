@@ -1,0 +1,1 @@
+{"type": "thaumaturge:arcane_crafting", "research": "thaumaturge:rod_reed", "pattern": ["  C", " R ", "C  "], "key": {"C": {"item": "thaumaturge:wand_cap_gold"}, "R": {"item": "thaumaturge:wand_rod_reed"}}, "vis": 108, "crystals": [], "result": {"item": "thaumaturge:wand", "nbt": {"Thaumaturge": {"Cap": "gold", "Rod": "reed"}}}}

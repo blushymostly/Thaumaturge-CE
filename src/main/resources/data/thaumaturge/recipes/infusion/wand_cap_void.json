@@ -1,0 +1,43 @@
+{
+  "type": "thaumaturge:infusion",
+  "research": "thaumaturge:cap_void",
+  "central": {
+    "item": "thaumaturge:wand_cap_void_inert"
+  },
+  "components": [
+    {
+      "item": "thaumaturge:salis_mundus"
+    },
+    {
+      "item": "thaumaturge:salis_mundus"
+    },
+    {
+      "item": "thaumaturge:salis_mundus"
+    },
+    {
+      "item": "thaumaturge:salis_mundus"
+    }
+  ],
+  "aspects": [
+    {
+      "aspect": "thaumaturge:potentia",
+      "amount": 18
+    },
+    {
+      "aspect": "thaumaturge:vacuos",
+      "amount": 18
+    },
+    {
+      "aspect": "thaumaturge:alienis",
+      "amount": 18
+    },
+    {
+      "aspect": "thaumaturge:auram",
+      "amount": 18
+    }
+  ],
+  "instability": 8,
+  "result": {
+    "item": "thaumaturge:wand_cap_void"
+  }
+}

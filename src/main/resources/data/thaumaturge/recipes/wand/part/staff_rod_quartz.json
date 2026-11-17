@@ -1,0 +1,22 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:staves",
+  "pattern": [
+    "  S",
+    " G ",
+    "G  "
+  ],
+  "key": {
+    "S": {
+      "item": "thaumaturge:primal_charm"
+    },
+    "G": {
+      "item": "thaumaturge:wand_rod_quartz"
+    }
+  },
+  "vis": 14,
+  "crystals": [],
+  "result": {
+    "item": "thaumaturge:staff_rod_quartz"
+  }
+}

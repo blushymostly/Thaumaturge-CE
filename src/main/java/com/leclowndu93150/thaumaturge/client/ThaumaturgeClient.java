@@ -27,6 +27,7 @@ import com.leclowndu93150.thaumaturge.content.world.crystal.BlockCrystal;
 import com.leclowndu93150.thaumaturge.client.screen.research.DeconstructionTableScreen;
 import com.leclowndu93150.thaumaturge.client.screen.research.ResearchTableScreen;
 import com.leclowndu93150.thaumaturge.client.screen.workbench.ArcaneWorkbenchScreen;
+import com.leclowndu93150.thaumaturge.client.screen.FocalManipulatorScreen;
 import com.leclowndu93150.thaumaturge.client.render.blockentity.JarRenderer;
 import com.leclowndu93150.thaumaturge.client.render.blockentity.BrainJarRenderer;
 import com.leclowndu93150.thaumaturge.client.render.blockentity.VisRelayRenderer;
@@ -70,6 +71,7 @@ public final class ThaumaturgeClient {
         ClientAuraCache.clear();
         event.enqueueWork(() -> {
             MenuScreens.register(TTMenus.ARCANE_WORKBENCH.get(), ArcaneWorkbenchScreen::new);
+            MenuScreens.register(TTMenus.FOCAL_MANIPULATOR.get(), FocalManipulatorScreen::new);
             MenuScreens.register(TTMenus.RESEARCH_TABLE.get(), ResearchTableScreen::new);
             MenuScreens.register(TTMenus.DECONSTRUCTION_TABLE.get(), DeconstructionTableScreen::new);
             net.minecraft.client.renderer.item.ItemProperties.register(TTItems.THAUMIUM_SHIELD.get(), TTIds.rl("blocking"),
@@ -77,11 +79,10 @@ public final class ThaumaturgeClient {
             MenuScreens.register(TTMenus.SMELTER.get(), com.leclowndu93150.thaumaturge.client.screen.SmelterScreen::new);
             net.minecraft.client.renderer.item.ItemProperties.register(TTItems.PHIAL.get(), TTIds.rl("filled"),
                     (stack, level, entity, seed) -> com.leclowndu93150.thaumaturge.registry.TTItemData.getAspects(stack).isEmpty() ? 0.0F : 1.0F);
-            net.minecraft.client.renderer.item.ItemProperties.register(TTItems.RESEARCH_NOTE.get(), TTIds.rl("complete"),
-                    (stack, level, entity, seed) -> {
-                        var data = com.leclowndu93150.thaumaturge.content.research.note.ResearchNotes.dataOf(stack);
-                        return data != null && data.complete() ? 1.0F : 0.0F;
-                    });
+            net.minecraft.client.renderer.item.ItemProperties.register(TTItems.RESEARCH_NOTE.get(), TTIds.rl("complete"), (stack, level, entity, seed) -> {
+                var data = com.leclowndu93150.thaumaturge.content.research.note.ResearchNotes.dataOf(stack);
+                return data != null && data.complete() ? 1.0F : 0.0F;
+            });
         });
     }
 
@@ -101,12 +102,12 @@ public final class ThaumaturgeClient {
         event.registerBlockEntityRenderer(TTBlockEntities.RESEARCH_TABLE.get(), ResearchTableRenderer::new);
         event.registerBlockEntityRenderer(TTBlockEntities.NODE.get(), NodeRenderer::new);
         event.registerBlockEntityRenderer(TTBlockEntities.JAR_NODE.get(), NodeRenderer::new);
+        event.registerBlockEntityRenderer(TTBlockEntities.NODE_STABILIZER.get(), com.leclowndu93150.thaumaturge.client.render.blockentity.NodeDeviceRenderer::new);
+        event.registerBlockEntityRenderer(TTBlockEntities.NODE_TRANSDUCER.get(), com.leclowndu93150.thaumaturge.client.render.blockentity.NodeDeviceRenderer::new);
         event.registerBlockEntityRenderer(TTBlockEntities.HUNGRY_CHEST.get(), HungryChestRenderer::new);
         event.registerBlockEntityRenderer(TTBlockEntities.DIOPTRA.get(), DioptraRenderer::new);
-        event.registerBlockEntityRenderer(TTBlockEntities.INFUSION_MATRIX.get(),
-                com.leclowndu93150.thaumaturge.client.render.blockentity.InfusionMatrixRenderer::new);
-        event.registerBlockEntityRenderer(TTBlockEntities.INFUSION_PEDESTAL.get(),
-                com.leclowndu93150.thaumaturge.client.render.blockentity.InfusionPedestalRenderer::new);
+        event.registerBlockEntityRenderer(TTBlockEntities.INFUSION_MATRIX.get(), com.leclowndu93150.thaumaturge.client.render.blockentity.InfusionMatrixRenderer::new);
+        event.registerBlockEntityRenderer(TTBlockEntities.INFUSION_PEDESTAL.get(), com.leclowndu93150.thaumaturge.client.render.blockentity.InfusionPedestalRenderer::new);
         event.registerBlockEntityRenderer(TTBlockEntities.DECONSTRUCTION_TABLE.get(), DeconstructionTableRenderer::new);
     }
 
@@ -131,17 +132,15 @@ public final class ThaumaturgeClient {
         event.registerSpriteSet(TTParticles.TAINT.get(), TTSimpleParticle.Provider::new);
         event.registerSpriteSet(TTParticles.ESSENTIA.get(), TTSimpleParticle.Provider::new);
         event.registerSpecial(TTParticles.SPARKLE.get(), new SparkleParticle.Provider());
+        event.registerSpecial(TTParticles.BOLT.get(), new com.leclowndu93150.thaumaturge.client.particle.BoltParticle.Provider());
         event.registerSpecial(TTParticles.BLOCK_RUNES.get(), new BlockRunesParticle.Provider());
     }
 
     @SubscribeEvent
     public static void registerGuiOverlays(RegisterGuiOverlaysEvent event) {
-        event.registerAbove(VanillaGuiOverlay.EXPERIENCE_BAR.id(), "knowledge_gain",
-                (gui, graphics, partial, width, height) -> KnowledgeGainOverlay.render(graphics, partial, width, height));
-        event.registerAbove(VanillaGuiOverlay.EXPERIENCE_BAR.id(), "wand_dial",
-                (gui, graphics, partial, width, height) -> com.leclowndu93150.thaumaturge.client.hud.WandHudOverlay.render(graphics));
-        event.registerAbove(VanillaGuiOverlay.HOTBAR.id(), "aura_gauge",
-                (gui, graphics, partialTick, width, height) -> AuraHudOverlay.render(graphics, partialTick));
+        event.registerAbove(VanillaGuiOverlay.EXPERIENCE_BAR.id(), "knowledge_gain", (gui, graphics, partial, width, height) -> KnowledgeGainOverlay.render(graphics, partial, width, height));
+        event.registerAbove(VanillaGuiOverlay.EXPERIENCE_BAR.id(), "wand_dial", (gui, graphics, partial, width, height) -> com.leclowndu93150.thaumaturge.client.hud.WandHudOverlay.render(graphics));
+        event.registerAbove(VanillaGuiOverlay.HOTBAR.id(), "aura_gauge", (gui, graphics, partialTick, width, height) -> AuraHudOverlay.render(graphics, partialTick));
     }
 
     @SubscribeEvent
@@ -189,8 +188,8 @@ public final class ThaumaturgeClient {
                 return aspect != null ? aspect.color() : 0xFFFFFF;
             }
             return 0xFFFFFF;
-        }, TTBlocks.CRYSTAL_AER.get(), TTBlocks.CRYSTAL_IGNIS.get(), TTBlocks.CRYSTAL_AQUA.get(), TTBlocks.CRYSTAL_TERRA.get(),
-                TTBlocks.CRYSTAL_ORDO.get(), TTBlocks.CRYSTAL_PERDITIO.get(), TTBlocks.CRYSTAL_VITIUM.get());
+        }, TTBlocks.CRYSTAL_AER.get(), TTBlocks.CRYSTAL_IGNIS.get(), TTBlocks.CRYSTAL_AQUA.get(), TTBlocks.CRYSTAL_TERRA.get(), TTBlocks.CRYSTAL_ORDO.get(), TTBlocks.CRYSTAL_PERDITIO.get(),
+                TTBlocks.CRYSTAL_VITIUM.get());
         Block[] nitors = TTBlocks.NITORS.values().stream().map(RegistryObject::get).toArray(Block[]::new);
         event.register((state, level, pos, tint) -> state.getBlock() instanceof BlockNitor nitor ? nitor.dyeColor() : 0xFFFFFF, nitors);
         Block greatwoodLeaves = bulkBlock("leaves_greatwood");

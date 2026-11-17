@@ -44,6 +44,8 @@ public final class TTSounds {
     public static final RegistryObject<SoundEvent> INFUSER = register("infuser");
     public static final RegistryObject<SoundEvent> WHISPER = register("whisper");
     public static final RegistryObject<SoundEvent> WHISPERS = register("whispers");
+    public static final RegistryObject<SoundEvent> ZAP = register("zap");
+    public static final RegistryObject<SoundEvent> WAND = register("wand");
 
     private TTSounds() {}
 

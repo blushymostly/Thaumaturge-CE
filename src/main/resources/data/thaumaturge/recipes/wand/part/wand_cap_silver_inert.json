@@ -1,0 +1,27 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:cap_silver",
+  "pattern": [
+    "NNN",
+    "N N"
+  ],
+  "key": {
+    "N": {
+      "tag": "forge:nuggets/silver"
+    }
+  },
+  "vis": 12,
+  "crystals": [],
+  "result": {
+    "item": "thaumaturge:wand_cap_silver_inert"
+  },
+  "conditions": [
+    {
+      "type": "forge:not",
+      "value": {
+        "type": "forge:tag_empty",
+        "tag": "forge:nuggets/silver"
+      }
+    }
+  ]
+}

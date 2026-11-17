@@ -1,0 +1,41 @@
+{
+  "type": "thaumaturge:infusion",
+  "research": "thaumaturge:rod_obsidian",
+  "central": {
+    "tag": "forge:obsidian"
+  },
+  "components": [
+    {
+      "item": "thaumaturge:salis_mundus"
+    },
+    {
+      "type": "forge:partial_nbt",
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:terra"
+          }
+        }
+      }
+    }
+  ],
+  "aspects": [
+    {
+      "aspect": "thaumaturge:terra",
+      "amount": 12
+    },
+    {
+      "aspect": "thaumaturge:praecantatio",
+      "amount": 6
+    },
+    {
+      "aspect": "thaumaturge:tenebrae",
+      "amount": 6
+    }
+  ],
+  "instability": 3,
+  "result": {
+    "item": "thaumaturge:wand_rod_obsidian"
+  }
+}

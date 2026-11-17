@@ -8,7 +8,8 @@
     "S": { "item": "thaumaturge:nugget_quicksilver" }
   },
   "result": { "item": "thaumaturge:morphic_resonator", "count": 1 },
-  "vis": [
+  "vis": 50,
+  "crystals": [
     { "aspect": "thaumaturge:aer", "amount": 1 },
     { "aspect": "thaumaturge:ignis", "amount": 1 }
   ]

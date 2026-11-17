@@ -8,7 +8,8 @@
     "S": { "tag": "forge:rods/wooden" }
   },
   "result": { "item": "thaumaturge:mechanism_simple", "count": 1 },
-  "vis": [
+  "vis": 10,
+  "crystals": [
     { "aspect": "thaumaturge:ignis", "amount": 1 },
     { "aspect": "thaumaturge:aqua", "amount": 1 }
   ]

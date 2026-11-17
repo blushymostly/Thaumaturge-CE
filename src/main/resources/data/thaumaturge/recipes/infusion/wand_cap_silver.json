@@ -1,0 +1,29 @@
+{
+  "type": "thaumaturge:infusion",
+  "research": "thaumaturge:cap_silver",
+  "central": {
+    "item": "thaumaturge:wand_cap_silver_inert"
+  },
+  "components": [
+    {
+      "item": "thaumaturge:salis_mundus"
+    },
+    {
+      "item": "thaumaturge:salis_mundus"
+    }
+  ],
+  "aspects": [
+    {
+      "aspect": "thaumaturge:potentia",
+      "amount": 8
+    },
+    {
+      "aspect": "thaumaturge:auram",
+      "amount": 4
+    }
+  ],
+  "instability": 4,
+  "result": {
+    "item": "thaumaturge:wand_cap_silver"
+  }
+}

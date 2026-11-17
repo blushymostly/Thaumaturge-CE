@@ -7,7 +7,5 @@
     "L": { "item": "minecraft:lever" }
   },
   "result": { "item": "thaumaturge:arcane_ear_toggle", "count": 1 },
-  "vis": [
-    { "aspect": "thaumaturge:aer", "amount": 1 }
-  ]
+  "vis": 5
 }

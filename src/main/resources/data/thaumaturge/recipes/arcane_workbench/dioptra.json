@@ -9,7 +9,8 @@
     "I": { "item": "thaumaturge:plate_iron" }
   },
   "result": { "item": "thaumaturge:dioptra", "count": 1 },
-  "vis": [
+  "vis": 50,
+  "crystals": [
     { "aspect": "thaumaturge:aer", "amount": 1 },
     { "aspect": "thaumaturge:aqua", "amount": 1 }
   ]

@@ -10,12 +10,15 @@ import com.leclowndu93150.thaumaturge.api.nodes.NodeType;
 import com.leclowndu93150.thaumaturge.content.blockentity.AbstractSyncedBlockEntity;
 import com.leclowndu93150.thaumaturge.content.decor.BlockObsidianTotem;
 import com.leclowndu93150.thaumaturge.content.world.tree.BlockSilverwoodNodeLog;
+import com.leclowndu93150.thaumaturge.content.world.TTBiomeKeys;
 import com.leclowndu93150.thaumaturge.content.item.EssentiaCrystalFactory;
 import com.leclowndu93150.thaumaturge.content.particle.SparkleParticleOptions;
+import com.leclowndu93150.thaumaturge.content.particle.BoltParticleOptions;
 import com.leclowndu93150.thaumaturge.content.research.pool.AspectPools;
 import com.leclowndu93150.thaumaturge.registry.TTBlockEntities;
 import com.leclowndu93150.thaumaturge.content.item.WandCharge;
 import com.leclowndu93150.thaumaturge.registry.TTBulkContent;
+import com.leclowndu93150.thaumaturge.registry.TTSounds;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,12 +30,15 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 public class BlockEntityNode extends AbstractSyncedBlockEntity {
@@ -43,6 +49,7 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
     private static final int DEGRADE_AFTER_FAILURES = 10;
     private static final int DECAY_INTERVAL = 1200;
     private static final int DRAIN_LINGER = 12;
+    private static final int DISCHARGE_RANGE = 4;
 
     private NodeType type = NodeType.NORMAL;
     @Nullable
@@ -56,10 +63,28 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
 
     private int tickCounter;
     private int starvation;
+    private int refillWait;
     private int taintPurifyTicks;
     private @Nullable DrainEffect drainEffect;
+    private @Nullable NodeJarRitual.Capture capture;
 
-    public record DrainEffect(UUID player, int color, long expiresAt) {}
+    public boolean isCapturing() {
+        return capture != null;
+    }
+
+    void beginCapture(NodeJarRitual.Capture ritual) {
+        capture = ritual;
+        drainEffect = null;
+        setChangedAndSync();
+    }
+
+    void preserveCaptureShellBlock(BlockPos pos) {
+        if (capture != null && capture.preserve(pos))
+            setChanged();
+    }
+
+    public record DrainEffect(UUID player, int color, long expiresAt) {
+    }
 
     public @Nullable DrainEffect drainEffect() {
         return drainEffect != null && level != null && level.getGameTime() < drainEffect.expiresAt() ? drainEffect : null;
@@ -98,6 +123,8 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
     }
 
     public int drain(ResourceLocation aspect, int amount) {
+        if (isCapturing())
+            return 0;
         int taken = Math.min(Math.max(0, amount), held.amountOf(aspect));
         if (taken > 0) {
             held = held.remove(aspect, taken);
@@ -111,7 +138,8 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
     }
 
     void setEnergized(boolean energized) {
-        if (energized == isEnergized()) return;
+        if (energized == isEnergized())
+            return;
         relayAllowance.clear();
         relayCredit.clear();
         if (energized) {
@@ -128,30 +156,31 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
         } else {
             aspectsBase = originalCapacity;
             originalCapacity = null;
-            held = AspectList.ofEntries(held.entries().stream()
-                    .filter(entry -> aspectsBase.amountOf(entry.aspectId()) > 0)
-                    .map(entry -> entry.withAmount(Math.min(entry.amount(), aspectsBase.amountOf(entry.aspectId()))))
-                    .toList());
+            held = AspectList.ofEntries(held.entries().stream().filter(entry -> aspectsBase.amountOf(entry.aspectId()) > 0)
+                    .map(entry -> entry.withAmount(Math.min(entry.amount(), aspectsBase.amountOf(entry.aspectId())))).toList());
         }
         setChangedAndSync();
     }
 
     public int availableCentivis(ResourceLocation aspect) {
-        if (!isEnergized() || !WandCharge.PRIMALS.contains(aspect)) return 0;
-        return Math.min(relayAllowance.getOrDefault(aspect, 0), held.amountOf(aspect) * WandCharge.CENTIVIS_PER_VIS
-                + relayCredit.getOrDefault(aspect, 0));
+        if (!isEnergized() || !WandCharge.PRIMALS.contains(aspect))
+            return 0;
+        return Math.min(relayAllowance.getOrDefault(aspect, 0), held.amountOf(aspect) * WandCharge.CENTIVIS_PER_VIS + relayCredit.getOrDefault(aspect, 0));
     }
 
     public int drainCentivis(ResourceLocation aspect, int request) {
         int taken = Math.min(availableCentivis(aspect), Math.max(0, request));
-        if (taken == 0) return 0;
+        if (taken == 0)
+            return 0;
         int credit = relayCredit.getOrDefault(aspect, 0);
         int unit = WandCharge.CENTIVIS_PER_VIS;
         int points = Math.max(0, (taken - credit + unit - 1) / unit);
         relayAllowance.put(aspect, relayAllowance.get(aspect) - taken);
         relayCredit.put(aspect, credit + points * unit - taken);
-        if (points == 0) setChanged();
-        else drain(aspect, points);
+        if (points == 0)
+            setChanged();
+        else
+            drain(aspect, points);
         return taken;
     }
 
@@ -165,19 +194,24 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
             ResourceLocation aspect = entry.aspectId();
             int rate = entry.amount();
             relayAllowance.compute(aspect, (id, allowance) -> Math.min(rate * 200, (allowance == null ? 0 : allowance) + rate));
-            if (level.getGameTime() % 20 != 0) continue;
+            if (level.getGameTime() % 20 != 0)
+                continue;
             for (int attempt = 0; attempt < Math.max(1, rate / 20) && held.amountOf(aspect) < rate; attempt++) {
                 boolean flux = type == NodeType.TAINTED;
                 float cost = ThaumaturgeCommonConfig.ENERGIZED_NODE_VIS_PER_POINT.get().floatValue();
                 float available = flux ? AuraHelper.getFlux(level, pos) : AuraHelper.getVis(level, pos);
-                if (available < cost) break;
-                if (flux) AuraHelper.drainFlux(level, pos, cost, false);
-                else AuraHelper.drainVis(level, pos, cost, false);
+                if (available < cost)
+                    break;
+                if (flux)
+                    AuraHelper.drainFlux(level, pos, cost, false);
+                else
+                    AuraHelper.drainVis(level, pos, cost, false);
                 held = held.add(new AspectInstance(aspect, 1));
                 refilled = true;
             }
         }
-        if (refilled) setChangedAndSync();
+        if (refilled)
+            setChangedAndSync();
     }
 
     public NodeData nodeData() {
@@ -189,11 +223,12 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
         drainEffect = null;
         relayAllowance.clear();
         relayCredit.clear();
-        type = data.type();
+        changeType(data.type());
         modifier = data.modifier().orElse(null);
         held = data.aspects();
         aspectsBase = data.aspectsBase();
         starvation = 0;
+        refillWait = 0;
         taintPurifyTicks = 0;
         setChangedAndSync();
     }
@@ -262,24 +297,33 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
         if (!(tickLevel instanceof ServerLevel serverLevel)) {
             return;
         }
+        if (capture != null) {
+            capture.tick(serverLevel, this);
+            return;
+        }
         if (isEnergized()) {
             tickEnergized(serverLevel, pos);
             return;
         }
         tickCounter++;
         if (this instanceof JarNodeBlock.Entity) {
-            tickUpkeep(serverLevel, pos, 2);
+            tickRefill(serverLevel, pos, 2);
+            tickDecay(serverLevel, pos);
             return;
         }
         int tier = NodeTransducer.stabilizerTier(tickLevel, pos.below());
-        if (tickUpkeep(serverLevel, pos, tier == 2 ? 20 : tier == 1 ? 2 : 1)) return;
-        if (type == NodeType.TAINTED && tickTaintProtection(serverLevel, pos)) return;
+        boolean protectedFromTaint = type == NodeType.TAINTED && tickTaintProtection(serverLevel, pos);
+        if (!protectedFromTaint)
+            tickRefill(serverLevel, pos, refillFactor(tier));
+        tickDischarge(serverLevel, pos, tier);
+        if (tickDecay(serverLevel, pos) || protectedFromTaint)
+            return;
         if (type == NodeType.HUNGRY) {
             NodeTypeEffects.attract(this, serverLevel, pos);
         }
         if (tier > 0 && tickCounter % 100 == 0) {
             if (type == NodeType.UNSTABLE && serverLevel.random.nextBoolean() && serverLevel.random.nextInt(tier == 2 ? 5000 : 10000) == 0) {
-                type = NodeType.NORMAL;
+                changeType(NodeType.NORMAL);
                 setChangedAndSync();
             }
             if (modifier == NodeModifier.FADING && serverLevel.random.nextInt(tier == 2 ? 6250 : 12500) == 0) {
@@ -290,21 +334,116 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
         if ((tier == 0 || type != NodeType.UNSTABLE) && tickCounter % 50 == 0) {
             NodeTypeEffects.tick(this, serverLevel, pos, tickCounter);
         }
+        NodeBiomeSpread.tick(serverLevel, type, pos, tickCounter);
     }
 
-    private boolean tickUpkeep(ServerLevel level, BlockPos pos, int factor) {
+    private void changeType(NodeType next) {
+        NodeType previous = type;
+        type = next;
+        if (previous != next && !(this instanceof JarNodeBlock.Entity) && level instanceof ServerLevel server) {
+            NodeBiomeSpread.revert(server, worldPosition, previous);
+        }
+    }
+
+    private static int refillFactor(int tier) {
+        return tier == 2 ? 20 : tier == 1 ? 2 : 1;
+    }
+
+    private void tickRefill(ServerLevel level, BlockPos pos, int factor) {
+        if (refillWait > 0)
+            refillWait--;
         int interval = NodeRules.baseRefillInterval(modifier) * factor;
-        if (interval > 0 && tickCounter % interval == 0) refill(level, pos);
-        if (tickCounter % DECAY_INTERVAL != 0) return false;
+        if (interval <= 0 || tickCounter % interval != 0 || refillWait > 0)
+            return;
+        adaptToAura(level, pos);
+        refill(level, pos);
+    }
+
+    private void adaptToAura(ServerLevel level, BlockPos pos) {
+        int base = AuraHelper.getAuraBase(level, pos);
+        if (base <= 0)
+            return;
+        float flux = AuraHelper.getFlux(level, pos);
+        RandomSource random = level.getRandom();
+        if (type != NodeType.TAINTED && type != NodeType.PURE && flux > 0.5F * base && random.nextInt(20) == 0 && !EtherealBloom.protects(level, pos)) {
+            changeType(NodeType.TAINTED);
+            setChangedAndSync();
+        }
+        if (modifier != NodeModifier.BRIGHT && flux < 0.1F * base && AuraHelper.getVis(level, pos) >= 0.9F * base && level.getBiome(pos).is(TTBiomeKeys.MAGICAL_FOREST) && random.nextInt(50) == 0) {
+            modifier = NodeRules.improve(modifier);
+            setChangedAndSync();
+        }
+    }
+
+    private void tickDischarge(ServerLevel level, BlockPos pos, int tier) {
+        if (tier == 1 || modifier == NodeModifier.FADING)
+            return;
+        RandomSource random = level.getRandom();
+        int interval = modifier == NodeModifier.BRIGHT || type == NodeType.HUNGRY && modifier != null ? 1 : modifier == NodeModifier.PALE ? 3 : 2;
+        if (tickCounter % interval != 0 || modifier == NodeModifier.PALE && random.nextBoolean())
+            return;
+
+        BlockPos donorPos = pos.offset(dischargeOffset(random), dischargeOffset(random), dischargeOffset(random));
+        if (donorPos.equals(pos) || !level.hasChunkAt(donorPos) || !(level.getBlockEntity(donorPos) instanceof BlockEntityNode donor) || donor instanceof JarNodeBlock.Entity || donor.isCapturing()
+                || donor.held.isEmpty() || NodeTransducer.stabilizerTier(level, donorPos.below()) != 0 || donor.averageContent() >= averageContent())
+            return;
+
+        AspectInstance offered = donor.held.entries().get(random.nextInt(donor.held.size()));
+        ResourceLocation aspect = offered.aspectId();
+        donor.held = donor.held.remove(aspect, 1);
+        int base = aspectsBase.amountOf(aspect);
+        if (held.amountOf(aspect) < base) {
+            held = held.add(new AspectInstance(aspect, 1));
+        } else if (base < Integer.MAX_VALUE) {
+            boolean elevated = type == NodeType.HUNGRY || modifier == NodeModifier.BRIGHT;
+            int divisor = 1 + (elevated ? (int) (base / 1.5) : base);
+            if (random.nextInt(divisor) == 0) {
+                aspectsBase = aspectsBase.add(new AspectInstance(aspect, 1));
+                if (modifier == NodeModifier.PALE && random.nextInt(100) == 0)
+                    modifier = null;
+                if (random.nextInt(3) == 0)
+                    donor.aspectsBase = donor.aspectsBase.remove(aspect, 1);
+            }
+        }
+
+        if (donor.held.isEmpty() && !donor.isEnergized()) {
+            if (donor.getBlockState().getBlock() instanceof BlockNode)
+                level.destroyBlock(donorPos, true);
+            else
+                donor.removeDepleted(level, donorPos);
+        } else {
+            donor.refillWait = NodeRules.baseRefillInterval(donor.modifier) / 2;
+            donor.setChangedAndSync();
+        }
+        setChangedAndSync();
+        level.playSound(null, donorPos, TTSounds.ZAP.get(), SoundSource.BLOCKS, 0.1F, 1 + random.nextFloat() * 0.2F);
+        BoltParticleOptions.strike(level, Vec3.atCenterOf(donorPos), Vec3.atCenterOf(pos), 0.3F);
+    }
+
+    private static int dischargeOffset(RandomSource random) {
+        return random.nextInt(DISCHARGE_RANGE + 1) - random.nextInt(DISCHARGE_RANGE + 1);
+    }
+
+    private long averageContent() {
+        long stored = held.entries().stream().mapToLong(AspectInstance::amount).sum();
+        long capacity = aspectsBase.entries().stream().mapToLong(AspectInstance::amount).sum();
+        return (stored + capacity) / 2;
+    }
+
+    private boolean tickDecay(ServerLevel level, BlockPos pos) {
+        if (tickCounter % DECAY_INTERVAL != 0)
+            return false;
         for (AspectInstance entry : aspectsBase.entries()) {
-            if (held.amountOf(entry.aspectId()) > 0) continue;
+            if (held.amountOf(entry.aspectId()) > 0)
+                continue;
             boolean lost = entry.amount() == 1 || level.random.nextInt(20) == 0;
             aspectsBase = aspectsBase.remove(entry.aspectId(), lost ? entry.amount() : 1);
             if (lost) {
                 if (level.random.nextInt(5) == 0 && modifier != NodeModifier.PALE && modifier != NodeModifier.FADING) {
                     modifier = NodeRules.degrade(modifier);
                 }
-                if (modifier == NodeModifier.PALE && level.random.nextInt(5) == 0) modifier = NodeModifier.FADING;
+                if (modifier == NodeModifier.PALE && level.random.nextInt(5) == 0)
+                    modifier = NodeModifier.FADING;
             }
             if (aspectsBase.isEmpty()) {
                 removeDepleted(level, pos);
@@ -334,11 +473,14 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
     }
 
     void feed(AspectList food, net.minecraft.util.RandomSource random) {
+        if (isCapturing())
+            return;
         java.util.Map<ResourceLocation, Integer> primals = new java.util.LinkedHashMap<>();
         for (AspectInstance aspect : food.entries()) {
             collectPrimals(aspect.aspectId(), aspect.amount(), primals, new java.util.HashSet<>());
         }
-        if (primals.isEmpty()) return;
+        if (primals.isEmpty())
+            return;
         var chosen = new java.util.ArrayList<>(primals.entrySet()).get(random.nextInt(primals.size()));
         int capacity = aspectsBase.amountOf(chosen.getKey());
         if (held.amountOf(chosen.getKey()) < capacity) {
@@ -351,12 +493,15 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
         setChangedAndSync();
     }
 
-    private static void collectPrimals(ResourceLocation id, int amount, java.util.Map<ResourceLocation, Integer> totals,
-            java.util.Set<ResourceLocation> path) {
+    private static void collectPrimals(ResourceLocation id, int amount, java.util.Map<ResourceLocation, Integer> totals, java.util.Set<ResourceLocation> path) {
         var aspect = com.leclowndu93150.thaumaturge.api.aspect.TTAspects.get(id);
-        if (aspect == null || !path.add(id)) return;
-        if (aspect.isPrimal()) totals.merge(id, amount, Integer::sum);
-        else for (ResourceLocation component : aspect.componentIds()) collectPrimals(component, amount, totals, path);
+        if (aspect == null || !path.add(id))
+            return;
+        if (aspect.isPrimal())
+            totals.merge(id, amount, Integer::sum);
+        else
+            for (ResourceLocation component : aspect.componentIds())
+                collectPrimals(component, amount, totals, path);
         path.remove(id);
     }
 
@@ -419,7 +564,8 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
         }
         if (++starvation >= DEGRADE_AFTER_FAILURES) {
             starvation = 0;
-            if (NodeTransducer.stabilizerTier(level, pos.below()) == 0) modifier = NodeRules.degrade(modifier);
+            if (NodeTransducer.stabilizerTier(level, pos.below()) == 0)
+                modifier = NodeRules.degrade(modifier);
             setChangedAndSync();
         }
     }
@@ -428,14 +574,19 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         tag.put(NBT_NODE, nodeData().toTag());
+        if (capture != null)
+            tag.put("JarCapture", capture.save());
         if (originalCapacity != null) {
-            AspectList.CODEC.encodeStart(net.minecraft.nbt.NbtOps.INSTANCE, originalCapacity).result()
-                    .ifPresent(encoded -> tag.put("OriginalCapacity", encoded));
+            AspectList.CODEC.encodeStart(net.minecraft.nbt.NbtOps.INSTANCE, originalCapacity).result().ifPresent(encoded -> tag.put("OriginalCapacity", encoded));
             CompoundTag credit = new CompoundTag();
-            relayCredit.forEach((aspect, amount) -> { if (amount > 0) credit.putInt(aspect.toString(), amount); });
+            relayCredit.forEach((aspect, amount) -> {
+                if (amount > 0)
+                    credit.putInt(aspect.toString(), amount);
+            });
             tag.put("RelayCredit", credit);
         }
-        if (taintPurifyTicks > 0) tag.putInt("TaintPurifyTicks", taintPurifyTicks);
+        if (taintPurifyTicks > 0)
+            tag.putInt("TaintPurifyTicks", taintPurifyTicks);
     }
 
     @Override
@@ -448,7 +599,8 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
         for (String key : credit.getAllKeys()) {
             ResourceLocation id = ResourceLocation.tryParse(key);
             int amount = credit.getInt(key);
-            if (id != null && WandCharge.PRIMALS.contains(id) && amount > 0 && amount < WandCharge.CENTIVIS_PER_VIS) relayCredit.put(id, amount);
+            if (id != null && WandCharge.PRIMALS.contains(id) && amount > 0 && amount < WandCharge.CENTIVIS_PER_VIS)
+                relayCredit.put(id, amount);
         }
         readNodeFromTag(tag);
     }
@@ -456,8 +608,7 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
     @Override
     protected void readClientData(CompoundTag tag) {
         readNodeFromTag(tag);
-        drainEffect = tag.hasUUID("DrainPlayer")
-                ? new DrainEffect(tag.getUUID("DrainPlayer"), tag.getInt("DrainColor"), tag.getLong("DrainUntil")) : null;
+        drainEffect = tag.hasUUID("DrainPlayer") ? new DrainEffect(tag.getUUID("DrainPlayer"), tag.getInt("DrainColor"), tag.getLong("DrainUntil")) : null;
     }
 
     @Override
@@ -477,8 +628,8 @@ public class BlockEntityNode extends AbstractSyncedBlockEntity {
     }
 
     private void readNodeFromTag(CompoundTag tag) {
-        originalCapacity = tag.contains("OriginalCapacity")
-                ? AspectList.CODEC.parse(net.minecraft.nbt.NbtOps.INSTANCE, tag.get("OriginalCapacity")).result().orElse(null) : null;
+        capture = tag.contains("JarCapture", net.minecraft.nbt.Tag.TAG_COMPOUND) ? NodeJarRitual.Capture.load(tag.getCompound("JarCapture"), worldPosition) : null;
+        originalCapacity = tag.contains("OriginalCapacity") ? AspectList.CODEC.parse(net.minecraft.nbt.NbtOps.INSTANCE, tag.get("OriginalCapacity")).result().orElse(null) : null;
         NodeData data = NodeData.fromTag(tag.getCompound(NBT_NODE));
         if (data != null) {
             type = data.type();

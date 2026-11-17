@@ -1,6 +1,7 @@
 package com.leclowndu93150.thaumaturge.content.world.tree;
 
 import com.leclowndu93150.thaumaturge.content.aura.node.BlockEntityNode;
+import com.leclowndu93150.thaumaturge.content.aura.node.NodeBiomeSpread;
 import com.leclowndu93150.thaumaturge.registry.TTBlockEntities;
 import com.leclowndu93150.thaumaturge.registry.TTBlocks;
 import com.leclowndu93150.thaumaturge.registry.TTItems;
@@ -30,6 +31,12 @@ public final class BlockSilverwoodNodeLog extends RotatedPillarBlock implements 
     }
 
     @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState replacement, boolean moving) {
+        NodeBiomeSpread.onNodeBlockRemoved(level, pos, state, replacement);
+        super.onRemove(state, level, pos, replacement, moving);
+    }
+
+    @Override
     public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof BlockEntityNode node) {
             node.burstAndClear(player);
@@ -49,9 +56,7 @@ public final class BlockSilverwoodNodeLog extends RotatedPillarBlock implements 
         if (type != TTBlockEntities.NODE.get()) {
             return null;
         }
-        return level.isClientSide()
-                ? null
-                : (tickLevel, tickPos, tickState, be) -> ((BlockEntityNode) be).serverTick(tickLevel, tickPos);
+        return level.isClientSide() ? null : (tickLevel, tickPos, tickState, be) -> ((BlockEntityNode) be).serverTick(tickLevel, tickPos);
     }
 
     /** After the node is drained / burst, leave a normal silverwood log. */

@@ -1,0 +1,18 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:cap_gold",
+  "pattern": [
+    "NNN",
+    "N N"
+  ],
+  "key": {
+    "N": {
+      "tag": "forge:nuggets/gold"
+    }
+  },
+  "vis": 9,
+  "crystals": [],
+  "result": {
+    "item": "thaumaturge:wand_cap_gold"
+  }
+}

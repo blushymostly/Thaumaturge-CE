@@ -1,0 +1,18 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:cap_copper",
+  "pattern": [
+    "NNN",
+    "N N"
+  ],
+  "key": {
+    "N": {
+      "tag": "forge:nuggets/copper"
+    }
+  },
+  "vis": 6,
+  "crystals": [],
+  "result": {
+    "item": "thaumaturge:wand_cap_copper"
+  }
+}

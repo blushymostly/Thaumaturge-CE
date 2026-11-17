@@ -23,13 +23,14 @@ public final class DeviceRenderProbe {
     @SubscribeEvent
     public static void open(TickEvent.ClientTickEvent event) {
         var mc = Minecraft.getInstance();
-        if (CAPTURE != null && event.phase == TickEvent.Phase.END && !done && mc.getOverlay() == null && mc.screen != null
-                && !(mc.screen instanceof Probe)) mc.setScreen(new Probe());
+        if (CAPTURE != null && event.phase == TickEvent.Phase.END && !done && mc.getOverlay() == null && mc.screen != null && !(mc.screen instanceof Probe))
+            mc.setScreen(new Probe());
     }
 
     @SubscribeEvent
     public static void capture(ScreenEvent.Render.Post event) {
-        if (CAPTURE == null || done || !(event.getScreen() instanceof Probe)) return;
+        if (CAPTURE == null || done || !(event.getScreen() instanceof Probe))
+            return;
         done = true;
         var mc = Minecraft.getInstance();
         var graphics = event.getGuiGraphics();
@@ -52,8 +53,7 @@ public final class DeviceRenderProbe {
                     {"y":1,"source":"thaumaturge:arcane_workbench_charger"}
                 ]}
                 """;
-        var preview = new DustStructureRecipe.Serializer().fromJson(TTIds.rl("test/charger_model"),
-                JsonParser.parseString(fixture).getAsJsonObject());
+        var preview = new DustStructureRecipe.Serializer().fromJson(TTIds.rl("test/charger_model"), JsonParser.parseString(fixture).getAsJsonObject());
         StructurePreview.render(graphics, x, graphics.guiHeight() * 4 / 5, preview, 35, 24, -1);
         graphics.flush();
         Screenshot.grab(mc.gameDirectory, CAPTURE + ".png", mc.getMainRenderTarget(), message -> {
@@ -63,6 +63,8 @@ public final class DeviceRenderProbe {
     }
 
     private static final class Probe extends Screen {
-        Probe() { super(Component.literal("Device render check")); }
+        Probe() {
+            super(Component.literal("Device render check"));
+        }
     }
 }

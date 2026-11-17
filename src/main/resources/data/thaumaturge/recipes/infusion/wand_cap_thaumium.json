@@ -1,0 +1,32 @@
+{
+  "type": "thaumaturge:infusion",
+  "research": "thaumaturge:cap_thaumium",
+  "central": {
+    "item": "thaumaturge:wand_cap_thaumium_inert"
+  },
+  "components": [
+    {
+      "item": "thaumaturge:salis_mundus"
+    },
+    {
+      "item": "thaumaturge:salis_mundus"
+    },
+    {
+      "item": "thaumaturge:salis_mundus"
+    }
+  ],
+  "aspects": [
+    {
+      "aspect": "thaumaturge:potentia",
+      "amount": 12
+    },
+    {
+      "aspect": "thaumaturge:auram",
+      "amount": 6
+    }
+  ],
+  "instability": 5,
+  "result": {
+    "item": "thaumaturge:wand_cap_thaumium"
+  }
+}

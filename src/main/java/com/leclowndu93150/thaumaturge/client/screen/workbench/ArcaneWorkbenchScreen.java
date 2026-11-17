@@ -1,22 +1,15 @@
 package com.leclowndu93150.thaumaturge.client.screen.workbench;
 
 import com.leclowndu93150.thaumaturge.TTIds;
-import com.leclowndu93150.thaumaturge.api.aspect.AspectInstance;
-import com.leclowndu93150.thaumaturge.api.aspect.AspectList;
 import com.leclowndu93150.thaumaturge.api.aspect.IAspect;
 import com.leclowndu93150.thaumaturge.api.aspect.TTAspects;
-import com.leclowndu93150.thaumaturge.content.workbench.ArcaneCraftingRecipe;
 import com.leclowndu93150.thaumaturge.content.workbench.ArcaneWorkbenchMenu;
 import com.leclowndu93150.thaumaturge.content.workbench.WorkbenchContainer;
-import com.leclowndu93150.thaumaturge.content.workbench.WorkbenchCraftingContainer;
-import com.leclowndu93150.thaumaturge.registry.TTItemData;
-import com.leclowndu93150.thaumaturge.registry.TTRecipeTypes;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -26,7 +19,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 
 public class ArcaneWorkbenchScreen extends AbstractContainerScreen<ArcaneWorkbenchMenu> {
     private static final ResourceLocation TEXTURE = TTIds.rl("textures/gui/arcane_workbench.png");
@@ -46,7 +38,6 @@ public class ArcaneWorkbenchScreen extends AbstractContainerScreen<ArcaneWorkben
     private static final int VIS_SHORT_COLOR = 0xFFEE6E6E;
     private static final int VIS_REQUIRED_COLOR = 0xFFC0FFFF;
     private static final int SLOT_SIZE = 16;
-    private static final int CRYSTAL_SUBSTITUTE_VIS = 2;
     private static final int WAND_COST_Y_OFFSET = 118;
     private static final int WAND_COST_HOVER_MIN_HALF_WIDTH = 12;
 
@@ -63,28 +54,20 @@ public class ArcaneWorkbenchScreen extends AbstractContainerScreen<ArcaneWorkben
         int x = (width - imageWidth) / 2;
         int y = (height - imageHeight) / 2;
         graphics.blit(TEXTURE, x, y, 0, 0, imageWidth, imageHeight, TEX_SIZE, TEX_SIZE);
-        graphics.blit(WAND_SLOT_TEXTURE,
-                x + ArcaneWorkbenchMenu.WAND_X - WAND_SLOT_TEX_OFFSET_X,
-                y + ArcaneWorkbenchMenu.WAND_Y - WAND_SLOT_TEX_OFFSET_Y,
-                0, 0, WAND_SLOT_TEX_W, WAND_SLOT_TEX_H, WAND_SLOT_TEX_W, WAND_SLOT_TEX_H);
+        graphics.blit(WAND_SLOT_TEXTURE, x + ArcaneWorkbenchMenu.WAND_X - WAND_SLOT_TEX_OFFSET_X, y + ArcaneWorkbenchMenu.WAND_Y - WAND_SLOT_TEX_OFFSET_Y, 0, 0, WAND_SLOT_TEX_W, WAND_SLOT_TEX_H,
+                WAND_SLOT_TEX_W, WAND_SLOT_TEX_H);
         renderCrystalOverlays(graphics, x, y);
     }
 
     private void renderCrystalOverlays(GuiGraphics graphics, int left, int top) {
-        List<OverlayCrystal> overlays = overlayCrystals();
-        if (overlays.isEmpty()) {
-            return;
-        }
-        float spin = (minecraft != null ? minecraft.level.getGameTime() : 0) / CRYSTAL_SPIN_TICKS_PER_RADIAN;
+        float spin = (minecraft != null && minecraft.level != null ? minecraft.level.getGameTime() : 0) / CRYSTAL_SPIN_TICKS_PER_RADIAN;
         PoseStack pose = graphics.pose();
-        for (OverlayCrystal overlay : overlays) {
-            int index = ArcaneWorkbenchMenu.PRIMAL_ORDER.indexOf(overlay.aspectId());
-            if (index < 0) {
+        for (int index = 0; index < ArcaneWorkbenchMenu.PRIMAL_ORDER.size(); index++) {
+            if (menu.crystalsToConsume(index) == 0)
                 continue;
-            }
             int slotX = left + ArcaneWorkbenchMenu.CRYSTAL_X[index];
             int slotY = top + ArcaneWorkbenchMenu.CRYSTAL_Y[index];
-            int color = aspectColor(overlay.aspectId());
+            int color = aspectColor(ArcaneWorkbenchMenu.PRIMAL_ORDER.get(index));
             float r = ((color >> 16) & 0xFF) / 255.0F;
             float g = ((color >> 8) & 0xFF) / 255.0F;
             float b = (color & 0xFF) / 255.0F;
@@ -104,36 +87,6 @@ public class ArcaneWorkbenchScreen extends AbstractContainerScreen<ArcaneWorkben
         }
     }
 
-    private List<OverlayCrystal> overlayCrystals() {
-        List<OverlayCrystal> list = new ArrayList<>();
-        AspectList crystals = clientRecipeCrystals();
-        if (!crystals.isEmpty()) {
-            for (AspectInstance entry : crystals.entries()) {
-                list.add(new OverlayCrystal(entry.aspectId()));
-            }
-            return list;
-        }
-        for (int i = 0; i < WorkbenchContainer.CRYSTAL_SLOTS; i++) {
-            ItemStack stack = menu.inventory().getItem(WorkbenchContainer.CRAFTING_SLOTS + i);
-            AspectInstance aspect = TTItemData.getCrystalAspect(stack);
-            if (aspect != null) {
-                list.add(new OverlayCrystal(aspect.aspectId()));
-            }
-        }
-        return list;
-    }
-
-    private AspectList clientRecipeCrystals() {
-        Level level = minecraft != null ? minecraft.level : null;
-        if (level == null) {
-            return AspectList.EMPTY;
-        }
-        WorkbenchCraftingContainer grid = new WorkbenchCraftingContainer(menu.inventory());
-        Optional<ArcaneCraftingRecipe> match = level.getRecipeManager()
-                .getRecipeFor(TTRecipeTypes.ARCANE_CRAFTING.get(), grid, level);
-        return match.map(ArcaneCraftingRecipe::crystals).orElse(AspectList.EMPTY);
-    }
-
     private static int aspectColor(ResourceLocation id) {
         IAspect aspect = TTAspects.get(id);
         return aspect != null ? aspect.color() : 0xFFFFFF;
@@ -146,14 +99,22 @@ public class ArcaneWorkbenchScreen extends AbstractContainerScreen<ArcaneWorkben
 
         int available = menu.getCachedVis();
         int required = menu.getRequiredVis();
-        drawCenteredScaled(graphics, available + " vis", VIS_TEXT_CENTER_X, VIS_AVAILABLE_Y, VIS_AVAILABLE_COLOR);
+        drawCenteredScaled(graphics, availableAura(available), VIS_TEXT_CENTER_X, VIS_AVAILABLE_Y, VIS_AVAILABLE_COLOR);
         if (required > 0) {
             int color = required > available ? VIS_SHORT_COLOR : VIS_REQUIRED_COLOR;
-            drawCenteredScaled(graphics, required + " cost", VIS_TEXT_CENTER_X, VIS_REQUIRED_Y, color);
+            drawCenteredScaled(graphics, requiredAura(required), VIS_TEXT_CENTER_X, VIS_REQUIRED_Y, color);
         }
     }
 
-    private void drawCenteredScaled(GuiGraphics graphics, String text, int centerX, int y, int color) {
+    private static Component availableAura(int available) {
+        return Component.translatable("gui.thaumaturge.arcane_workbench.aura_available", available);
+    }
+
+    private static Component requiredAura(int required) {
+        return Component.translatable("gui.thaumaturge.arcane_workbench.aura_required", required);
+    }
+
+    private void drawCenteredScaled(GuiGraphics graphics, Component text, int centerX, int y, int color) {
         PoseStack pose = graphics.pose();
         float width = font.width(text) * VIS_TEXT_SCALE;
         pose.pushPose();
@@ -173,20 +134,13 @@ public class ArcaneWorkbenchScreen extends AbstractContainerScreen<ArcaneWorkben
     }
 
     private void renderWandCostRow(GuiGraphics graphics, int mouseX, int mouseY) {
-        AspectList crystals = clientRecipeCrystals();
-        if (crystals.isEmpty()) {
-            return;
-        }
-        ItemStack wand = menu.inventory().getItem(WorkbenchContainer.WAND_SLOT);
-        if (wand.isEmpty()) {
-            return;
-        }
         MutableComponent amounts = null;
-        for (AspectInstance entry : crystals.entries()) {
-            IAspect aspect = TTAspects.get(entry.aspectId());
-            int color = aspect != null ? aspect.color() : 0xFFFFFF;
-            Component chunk = Component.literal(Integer.toString(entry.amount() * CRYSTAL_SUBSTITUTE_VIS))
-                    .withStyle(style -> style.withColor(color));
+        for (int index = 0; index < ArcaneWorkbenchMenu.PRIMAL_ORDER.size(); index++) {
+            int amount = menu.wandVisToSpend(index);
+            if (amount == 0)
+                continue;
+            int color = aspectColor(ArcaneWorkbenchMenu.PRIMAL_ORDER.get(index));
+            Component chunk = Component.literal(Integer.toString(amount)).withStyle(style -> style.withColor(color));
             if (amounts == null) {
                 amounts = Component.empty().append(chunk);
             } else {
@@ -209,28 +163,24 @@ public class ArcaneWorkbenchScreen extends AbstractContainerScreen<ArcaneWorkben
         pose.popPose();
         int hoverHalfWidth = Math.max(amountsWidth / 4, WAND_COST_HOVER_MIN_HALF_WIDTH);
         if (overText(mouseX, mouseY, lineCenterX, lineY, hoverHalfWidth)) {
-            graphics.renderComponentTooltip(font, List.of(
-                    Component.translatable("gui.thaumaturge.arcane_workbench.wand_pay.tooltip.title").withStyle(ChatFormatting.AQUA),
-                    Component.translatable("gui.thaumaturge.arcane_workbench.wand_pay.tooltip", CRYSTAL_SUBSTITUTE_VIS).withStyle(ChatFormatting.GRAY)
-            ), mouseX, mouseY);
+            graphics.renderComponentTooltip(font, List.of(Component.translatable("gui.thaumaturge.arcane_workbench.wand_pay.tooltip.title").withStyle(ChatFormatting.AQUA),
+                    Component.translatable("gui.thaumaturge.arcane_workbench.wand_pay.tooltip", ArcaneWorkbenchMenu.CRYSTAL_SUBSTITUTE_VIS).withStyle(ChatFormatting.GRAY)), mouseX, mouseY);
         }
     }
 
     private void renderWorkbenchTooltips(GuiGraphics graphics, int mouseX, int mouseY) {
         int left = (width - imageWidth) / 2;
         int top = (height - imageHeight) / 2;
-        AspectList crystals = clientRecipeCrystals();
-        for (AspectInstance entry : crystals.entries()) {
-            int index = ArcaneWorkbenchMenu.PRIMAL_ORDER.indexOf(entry.aspectId());
-            if (index < 0) {
+        for (int index = 0; index < ArcaneWorkbenchMenu.PRIMAL_ORDER.size(); index++) {
+            int count = menu.crystalsToConsume(index);
+            if (count == 0)
                 continue;
-            }
             int slotX = left + ArcaneWorkbenchMenu.CRYSTAL_X[index];
             int slotY = top + ArcaneWorkbenchMenu.CRYSTAL_Y[index];
             if (mouseX < slotX || mouseX >= slotX + SLOT_SIZE || mouseY < slotY || mouseY >= slotY + SLOT_SIZE) {
                 continue;
             }
-            Component hint = Component.translatable("gui.thaumaturge.arcane_workbench.crystal_needed.tooltip", CRYSTAL_SUBSTITUTE_VIS);
+            Component hint = Component.translatable("gui.thaumaturge.arcane_workbench.crystal_payment", count);
             ItemStack crystal = menu.inventory().getItem(WorkbenchContainer.CRAFTING_SLOTS + index);
             if (crystal.isEmpty()) {
                 graphics.renderTooltip(font, hint, mouseX, mouseY);
@@ -243,7 +193,7 @@ public class ArcaneWorkbenchScreen extends AbstractContainerScreen<ArcaneWorkben
         int available = menu.getCachedVis();
         int required = menu.getRequiredVis();
         boolean lacking = required > available;
-        if (overScaledCenter(mouseX, mouseY, left + VIS_TEXT_CENTER_X, top + VIS_AVAILABLE_Y, Integer.toString(available).length() + 4)) {
+        if (overScaledCenter(mouseX, mouseY, left + VIS_TEXT_CENTER_X, top + VIS_AVAILABLE_Y, availableAura(available))) {
             List<Component> lines = new ArrayList<>();
             lines.add(Component.translatable("gui.thaumaturge.arcane_workbench.vis_available.tooltip.title").withStyle(ChatFormatting.AQUA));
             lines.add(Component.translatable("gui.thaumaturge.arcane_workbench.vis_available.tooltip").withStyle(ChatFormatting.GRAY));
@@ -253,7 +203,7 @@ public class ArcaneWorkbenchScreen extends AbstractContainerScreen<ArcaneWorkben
             graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
             return;
         }
-        if (required > 0 && overScaledCenter(mouseX, mouseY, left + VIS_TEXT_CENTER_X, top + VIS_REQUIRED_Y, Integer.toString(required).length() + 6)) {
+        if (required > 0 && overScaledCenter(mouseX, mouseY, left + VIS_TEXT_CENTER_X, top + VIS_REQUIRED_Y, requiredAura(required))) {
             List<Component> lines = new ArrayList<>();
             lines.add(Component.translatable("gui.thaumaturge.arcane_workbench.required_vis.tooltip.title").withStyle(ChatFormatting.AQUA));
             lines.add(Component.translatable("gui.thaumaturge.arcane_workbench.required_vis.tooltip").withStyle(ChatFormatting.GRAY));
@@ -261,8 +211,8 @@ public class ArcaneWorkbenchScreen extends AbstractContainerScreen<ArcaneWorkben
         }
     }
 
-    private boolean overScaledCenter(int mouseX, int mouseY, int centerX, int top, int approxChars) {
-        int half = Math.max(8, Math.round(approxChars * 3 * VIS_TEXT_SCALE));
+    private boolean overScaledCenter(int mouseX, int mouseY, int centerX, int top, Component label) {
+        int half = Math.max(8, Math.round(font.width(label) * 0.5F * VIS_TEXT_SCALE));
         return overText(mouseX, mouseY, centerX, top, half);
     }
 
@@ -270,5 +220,4 @@ public class ArcaneWorkbenchScreen extends AbstractContainerScreen<ArcaneWorkben
         return mouseX >= centerX - halfWidth && mouseX < centerX + halfWidth && mouseY >= top && mouseY < top + 8;
     }
 
-    private record OverlayCrystal(ResourceLocation aspectId) {}
 }

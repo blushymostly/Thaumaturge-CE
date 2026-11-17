@@ -23,6 +23,8 @@
     {
       "text": "research.thaumaturge.sceptre.stage_0",
       "recipes": [
+        "thaumaturge:wand/part/primal_charm",
+
         "thaumaturge:wand/sceptre/gold_greatwood",
         "thaumaturge:wand/sceptre/thaumium_silverwood",
         "thaumaturge:wand/sceptre/iron_wood"

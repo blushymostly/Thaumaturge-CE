@@ -2,6 +2,7 @@ package com.leclowndu93150.thaumaturge.client.render.item;
 
 import com.leclowndu93150.thaumaturge.TTIds;
 import com.leclowndu93150.thaumaturge.content.item.WandItem;
+import com.leclowndu93150.thaumaturge.content.item.WandParts;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
@@ -32,11 +33,11 @@ public final class WandHandRenderer {
 
     public static @Nullable Vec3 tip(InteractionHand hand) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (projectedTip == null || minecraft.level != tipLevel || hand != tipHand || Util.getMillis() - tipTime > 250) return null;
+        if (projectedTip == null || minecraft.level != tipLevel || hand != tipHand || Util.getMillis() - tipTime > 250)
+            return null;
         var camera = minecraft.gameRenderer.getMainCamera();
         // Forge draws the hand after the world with a separate field of view.
-        Vector3f offset = new Matrix4f(RenderSystem.getProjectionMatrix()).invert()
-                .transformProject(new Vector3f(projectedTip));
+        Vector3f offset = new Matrix4f(RenderSystem.getProjectionMatrix()).invert().transformProject(new Vector3f(projectedTip));
         RenderSystem.getInverseViewRotationMatrix().transform(offset);
         return camera.getPosition().add(offset.x, offset.y, offset.z);
     }
@@ -45,8 +46,8 @@ public final class WandHandRenderer {
     public static void renderHand(RenderHandEvent event) {
         var player = Minecraft.getInstance().player;
         var stack = event.getItemStack();
-        if (player == null || !(stack.getItem() instanceof WandItem)
-                || !(IClientItemExtensions.of(stack).getCustomRenderer() instanceof WandRenderer wand)) return;
+        if (player == null || !(stack.getItem() instanceof WandItem) || !(IClientItemExtensions.of(stack).getCustomRenderer() instanceof WandRenderer wand))
+            return;
         event.setCanceled(true);
         var arm = event.getHand() == InteractionHand.MAIN_HAND ? player.getMainArm() : player.getMainArm().getOpposite();
         float side = arm == HumanoidArm.RIGHT ? 1 : -1;
@@ -56,7 +57,8 @@ public final class WandHandRenderer {
         var pose = event.getPoseStack();
         pose.pushPose();
         boolean using = player.isUsingItem() && player.getUsedItemHand() == event.getHand();
-        if (!using) pose.translate(-side * arc * 0.4F, vertical * 0.2F, -Mth.sin(swing * Mth.PI) * 0.2F);
+        if (!using)
+            pose.translate(-side * arc * 0.4F, vertical * 0.2F, -Mth.sin(swing * Mth.PI) * 0.2F);
         pose.translate(side * 0.56F, -0.52F - event.getEquipProgress() * 0.6F, -0.72F);
         pose.mulPose(Axis.YP.rotationDegrees(side * (45 - Mth.sin(swing * swing * Mth.PI) * 20)));
         pose.mulPose(Axis.ZP.rotationDegrees(-side * arc * 20));
@@ -71,7 +73,8 @@ public final class WandHandRenderer {
             float ticks = Math.max(0, useTicks - 1);
             float draw = ticks / 20F;
             draw = Math.min(1, (draw * draw + draw * 2) / 3F);
-            if (draw > 0.1F) pose.translate(0, Mth.sin((ticks - 0.1F) * 1.3F) * 0.01F * (draw - 0.1F), 0);
+            if (draw > 0.1F)
+                pose.translate(0, Mth.sin((ticks - 0.1F) * 1.3F) * 0.01F * (draw - 0.1F), 0);
             pose.translate(0, 0, draw * 0.1F);
             pose.mulPose(Axis.ZP.rotationDegrees(-335 * side));
             pose.mulPose(Axis.YP.rotationDegrees(-50 * side));
@@ -81,7 +84,7 @@ public final class WandHandRenderer {
             pose.mulPose(Axis.YP.rotationDegrees(50 * side));
             pose.mulPose(Axis.ZP.rotationDegrees(335 * side));
         }
-        pose.translate(0, 1, 0);
+        pose.translate(0, WandParts.rod(stack).staff() ? 1.5F : 1F, 0);
         pose.scale(1, 1.1F, 1);
         pose.mulPose(Axis.XP.rotationDegrees(180));
         if (using) {

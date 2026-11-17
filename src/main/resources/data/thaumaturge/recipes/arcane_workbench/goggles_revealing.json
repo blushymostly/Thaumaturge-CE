@@ -8,12 +8,5 @@
     "M": { "item": "thaumaturge:thaumometer" }
   },
   "result": { "item": "thaumaturge:goggles_revealing", "count": 1 },
-  "vis": [
-    { "aspect": "thaumaturge:aer", "amount": 8 },
-    { "aspect": "thaumaturge:terra", "amount": 8 },
-    { "aspect": "thaumaturge:ignis", "amount": 8 },
-    { "aspect": "thaumaturge:aqua", "amount": 8 },
-    { "aspect": "thaumaturge:ordo", "amount": 9 },
-    { "aspect": "thaumaturge:perditio", "amount": 9 }
-  ]
+  "vis": 50
 }

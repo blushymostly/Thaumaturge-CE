@@ -2,6 +2,7 @@ package com.leclowndu93150.thaumaturge.registry;
 
 import com.leclowndu93150.thaumaturge.TTIds;
 import com.leclowndu93150.thaumaturge.content.particle.BlockRunesParticleOptions;
+import com.leclowndu93150.thaumaturge.content.particle.BoltParticleOptions;
 import com.leclowndu93150.thaumaturge.content.particle.SparkleParticleOptions;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.SimpleParticleType;
@@ -22,6 +23,7 @@ public final class TTParticles {
             () -> new TTParticleType<>(SparkleParticleOptions.DESERIALIZER, SparkleParticleOptions.CODEC));
     public static final RegistryObject<TTParticleType<BlockRunesParticleOptions>> BLOCK_RUNES = PARTICLES.register("block_runes",
             () -> new TTParticleType<>(BlockRunesParticleOptions.DESERIALIZER, BlockRunesParticleOptions.CODEC));
+    public static final RegistryObject<TTParticleType<BoltParticleOptions>> BOLT = PARTICLES.register("bolt", () -> new TTParticleType<>(BoltParticleOptions.DESERIALIZER, BoltParticleOptions.CODEC));
 
     private TTParticles() {}
 

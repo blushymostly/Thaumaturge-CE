@@ -1,0 +1,1 @@
+{"type": "thaumaturge:arcane_crafting", "research": "thaumaturge:staves", "pattern": ["  C", " R ", "C  "], "key": {"C": {"item": "thaumaturge:wand_cap_silver"}, "R": {"item": "thaumaturge:staff_rod_obsidian"}}, "vis": 336, "crystals": [], "result": {"item": "thaumaturge:wand", "nbt": {"Thaumaturge": {"Cap": "silver", "Rod": "obsidian_staff"}}}}

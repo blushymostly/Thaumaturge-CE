@@ -52,6 +52,12 @@ public final class BlockNode extends net.minecraft.world.level.block.Block imple
     }
 
     @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState replacement, boolean moving) {
+        NodeBiomeSpread.onNodeBlockRemoved(level, pos, state, replacement);
+        super.onRemove(state, level, pos, replacement, moving);
+    }
+
+    @Override
     public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof BlockEntityNode node) {
             node.burstAndClear(player);
@@ -71,9 +77,7 @@ public final class BlockNode extends net.minecraft.world.level.block.Block imple
         if (type != TTBlockEntities.NODE.get()) {
             return null;
         }
-        return level.isClientSide()
-                ? null
-                : (tickLevel, pos, tickState, be) -> ((BlockEntityNode) be).serverTick(tickLevel, pos);
+        return level.isClientSide() ? null : (tickLevel, pos, tickState, be) -> ((BlockEntityNode) be).serverTick(tickLevel, pos);
     }
 
 }

@@ -1,5 +1,6 @@
 package com.leclowndu93150.thaumaturge.registry;
 
+import com.leclowndu93150.thaumaturge.content.item.AmuletVisItem;
 import com.leclowndu93150.thaumaturge.content.item.CelestialNotesItem;
 import com.leclowndu93150.thaumaturge.content.taint.CausalityCollapser;
 import net.minecraft.world.item.BucketItem;
@@ -18,8 +19,8 @@ public final class TTBulkItems {
         register("amber");
         register("amulet_fancy");
         register("amulet_mundane");
-        register("amulet_vis");
-        register("amulet_vis_crafted");
+        ITEMS.put("amulet_vis", TTItems.ITEMS.register("amulet_vis", () -> new AmuletVisItem(new Item.Properties(), 100)));
+        ITEMS.put("amulet_vis_crafted", TTItems.ITEMS.register("amulet_vis_crafted", () -> new AmuletVisItem(new Item.Properties(), 20)));
         register("arcane_armor_trim_smithing_template");
         register("arcane_key_gold");
         register("arcane_key_iron");
@@ -27,8 +28,7 @@ public final class TTBulkItems {
         register("bottle_taint");
         register("brain");
         register("rare_earth");
-        ITEMS.put("causality_collapser", TTItems.ITEMS.register("causality_collapser",
-                () -> new CausalityCollapser.ChargeItem(new Item.Properties())));
+        ITEMS.put("causality_collapser", TTItems.ITEMS.register("causality_collapser", () -> new CausalityCollapser.ChargeItem(new Item.Properties())));
         register("chunk_beef");
         register("chunk_chicken");
         register("chunk_pork");
@@ -66,8 +66,7 @@ public final class TTBulkItems {
         register("elemental_shovel");
         register("elemental_spear");
         register("elemental_sword");
-        ITEMS.put("flux_goo_bucket", TTItems.ITEMS.register("flux_goo_bucket",
-                () -> new BucketItem(TTFluids.GOO_SOURCE, new Item.Properties().craftRemainder(Items.BUCKET).stacksTo(1))));
+        ITEMS.put("flux_goo_bucket", TTItems.ITEMS.register("flux_goo_bucket", () -> new BucketItem(TTFluids.GOO_SOURCE, new Item.Properties().craftRemainder(Items.BUCKET).stacksTo(1))));
         registerFocus("focus_1");
         registerFocus("focus_2");
         registerFocus("focus_3");
@@ -126,9 +125,8 @@ public final class TTBulkItems {
         register("thaumonomicon_sharing");
         register("thaumostatic_harness");
         register("traveller_boots");
-        ITEMS.put("triple_meat_treat", TTItems.ITEMS.register("triple_meat_treat", () -> new Item(new Item.Properties().food(
-                new net.minecraft.world.food.FoodProperties.Builder().nutrition(6).saturationMod(0.8F).alwaysEat()
-                        .effect(() -> new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.REGENERATION, 100), 0.66F).build()))));
+        ITEMS.put("triple_meat_treat", TTItems.ITEMS.register("triple_meat_treat", () -> new Item(new Item.Properties().food(new net.minecraft.world.food.FoodProperties.Builder().nutrition(6)
+                .saturationMod(0.8F).alwaysEat().effect(() -> new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.REGENERATION, 100), 0.66F).build()))));
         register("turret_advanced");
         register("turret_basic");
         register("verdant_charm");
@@ -153,6 +151,14 @@ public final class TTBulkItems {
         register("wand_cap_gold");
         // wand_cap_iron registered in TTItems (Wave 2)
         register("wand_cap_silver");
+        register("wand_cap_silver_inert");
+        register("wand_cap_thaumium_inert");
+        register("wand_cap_void_inert");
+        register("nugget_copper");
+        // Keep the legacy silver items readable in existing Forge saves.
+        register("ingot_silver");
+        register("nugget_silver");
+        register("nugget_void");
         register("wand_cap_thaumium");
         register("wand_cap_void");
         register("wand_rod_blaze");
@@ -183,8 +189,7 @@ public final class TTBulkItems {
         ITEMS.put(name, TTItems.ITEMS.register(name, () -> new SalvagedItem(new Item.Properties())));
     }
     private static void registerFocus(String name) {
-        ITEMS.put(name, TTItems.ITEMS.register(name,
-                () -> new com.leclowndu93150.thaumaturge.content.item.StarterFocusItem(new Item.Properties().stacksTo(1))));
+        ITEMS.put(name, TTItems.ITEMS.register(name, () -> new com.leclowndu93150.thaumaturge.content.item.StarterFocusItem(new Item.Properties().stacksTo(1))));
     }
 
     private static void registerCelestial(String variant, CelestialNotesItem.Kind kind) {

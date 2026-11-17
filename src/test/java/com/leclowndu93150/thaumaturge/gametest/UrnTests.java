@@ -41,13 +41,13 @@ public final class UrnTests {
         var aura = AuraManager.chunkAt(level, pos);
         helper.runAfterDelay(52, () -> {
             var handler = FluidUtil.getFluidHandler(level, pos, Direction.UP).orElseThrow(AssertionError::new);
-            helper.assertTrue(urn.water() == 1000 && handler.fill(new FluidStack(Fluids.LAVA, 100), FluidAction.SIMULATE) == 0,
-                    "Urn did not generate a bucket or accepted lava");
+            helper.assertTrue(urn.water() == 1000 && handler.fill(new FluidStack(Fluids.LAVA, 100), FluidAction.SIMULATE) == 0, "Urn did not generate a bucket or accepted lava");
             var player = helper.makeMockSurvivalPlayer();
             var hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false);
             player.setItemInHand(InteractionHand.MAIN_HAND, Items.BUCKET.getDefaultInstance());
-            helper.assertTrue(block.use(block.defaultBlockState(), level, pos, player, InteractionHand.MAIN_HAND, hit).consumesAction()
-                    && player.getMainHandItem().is(Items.WATER_BUCKET) && urn.water() == 0, "Urn did not fill a bucket");
+            helper.assertTrue(
+                    block.use(block.defaultBlockState(), level, pos, player, InteractionHand.MAIN_HAND, hit).consumesAction() && player.getMainHandItem().is(Items.WATER_BUCKET) && urn.water() == 0,
+                    "Urn did not fill a bucket");
             handler.fill(new FluidStack(Fluids.WATER, 666), FluidAction.EXECUTE);
             player.setItemInHand(InteractionHand.MAIN_HAND, Items.GLASS_BOTTLE.getDefaultInstance());
             helper.assertTrue(block.use(block.defaultBlockState(), level, pos, player, InteractionHand.MAIN_HAND, hit).consumesAction()
@@ -75,9 +75,10 @@ public final class UrnTests {
             @Override
             public void run() {
                 var state = level.getBlockState(pos);
-                var ticker = ((com.leclowndu93150.thaumaturge.content.device.EverfullUrnBlock) state.getBlock())
-                        .getTicker(level, state, com.leclowndu93150.thaumaturge.registry.TTBlockEntities.EVERFULL_URN.get());
-                for (int i = 0; i < 5; i++) ticker.tick(level, pos, state, urn);
+                var ticker = ((com.leclowndu93150.thaumaturge.content.device.EverfullUrnBlock) state.getBlock()).getTicker(level, state,
+                        com.leclowndu93150.thaumaturge.registry.TTBlockEntities.EVERFULL_URN.get());
+                for (int i = 0; i < 5; i++)
+                    ticker.tick(level, pos, state, urn);
             }
         };
         float savedVis = aura.getVis();
@@ -86,7 +87,8 @@ public final class UrnTests {
             tick.run();
             helper.assertTrue(urn.water() == 0, "Urn created water without aura");
             aura.setVis(1);
-            for (int i = 0; i < 10; i++) tick.run();
+            for (int i = 0; i < 10; i++)
+                tick.run();
             helper.assertTrue(urn.water() == 1000 && aura.getVis() < 0.0001F, "Urn did not exchange exactly one vis for one bucket");
         } finally {
             aura.setVis(savedVis);
@@ -103,11 +105,9 @@ public final class UrnTests {
         helper.setBlock(crucible, TTBlocks.CRUCIBLE.get());
         helper.setBlock(cauldron, Blocks.CAULDRON);
         helper.succeedWhen(() -> {
-            helper.assertTrue(((CrucibleBlockEntity) helper.getBlockEntity(crucible)).waterTank().getFluidAmount() > 0,
-                    "Urn did not feed the crucible through its upper face");
+            helper.assertTrue(((CrucibleBlockEntity) helper.getBlockEntity(crucible)).waterTank().getFluidAmount() > 0, "Urn did not feed the crucible through its upper face");
             var state = helper.getBlockState(cauldron);
-            helper.assertTrue(state.is(Blocks.WATER_CAULDRON) && state.getValue(LayeredCauldronBlock.LEVEL) == 3,
-                    "Urn did not fill all three cauldron levels");
+            helper.assertTrue(state.is(Blocks.WATER_CAULDRON) && state.getValue(LayeredCauldronBlock.LEVEL) == 3, "Urn did not fill all three cauldron levels");
         });
     }
 }

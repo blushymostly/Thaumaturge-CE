@@ -1,0 +1,1 @@
+{"type": "thaumaturge:arcane_crafting", "research": "thaumaturge:sceptre", "pattern": [" CP", " RC", "C  "], "key": {"C": {"item": "thaumaturge:wand_cap_iron"}, "R": {"item": "minecraft:stick"}, "P": {"item": "thaumaturge:primal_charm"}}, "vis": 6, "crystals": [], "result": {"item": "thaumaturge:wand", "nbt": {"Thaumaturge": {"Cap": "iron", "Rod": "wood", "Sceptre": true}}}}

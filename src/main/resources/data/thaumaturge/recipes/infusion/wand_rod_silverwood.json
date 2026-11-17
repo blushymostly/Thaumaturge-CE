@@ -2,10 +2,14 @@
   "type": "thaumaturge:infusion",
   "research": "thaumaturge:rod_silverwood",
   "central": {
-    "item": "thaumaturge:log_silverwood"
+    "tag": "thaumaturge:silverwood_logs"
   },
   "components": [
     {
+      "item": "thaumaturge:salis_mundus"
+    },
+    {
+      "type": "forge:partial_nbt",
       "item": "thaumaturge:essentia_crystal",
       "nbt": {
         "Thaumaturge": {
@@ -13,10 +17,10 @@
             "aspect": "thaumaturge:aer"
           }
         }
-      },
-      "type": "forge:partial_nbt"
+      }
     },
     {
+      "type": "forge:partial_nbt",
       "item": "thaumaturge:essentia_crystal",
       "nbt": {
         "Thaumaturge": {
@@ -24,21 +28,10 @@
             "aspect": "thaumaturge:terra"
           }
         }
-      },
-      "type": "forge:partial_nbt"
+      }
     },
     {
-      "item": "thaumaturge:essentia_crystal",
-      "nbt": {
-        "Thaumaturge": {
-          "CrystalAspect": {
-            "aspect": "thaumaturge:aqua"
-          }
-        }
-      },
-      "type": "forge:partial_nbt"
-    },
-    {
+      "type": "forge:partial_nbt",
       "item": "thaumaturge:essentia_crystal",
       "nbt": {
         "Thaumaturge": {
@@ -46,10 +39,21 @@
             "aspect": "thaumaturge:ignis"
           }
         }
-      },
-      "type": "forge:partial_nbt"
+      }
     },
     {
+      "type": "forge:partial_nbt",
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:aqua"
+          }
+        }
+      }
+    },
+    {
+      "type": "forge:partial_nbt",
       "item": "thaumaturge:essentia_crystal",
       "nbt": {
         "Thaumaturge": {
@@ -57,10 +61,10 @@
             "aspect": "thaumaturge:ordo"
           }
         }
-      },
-      "type": "forge:partial_nbt"
+      }
     },
     {
+      "type": "forge:partial_nbt",
       "item": "thaumaturge:essentia_crystal",
       "nbt": {
         "Thaumaturge": {
@@ -68,38 +72,37 @@
             "aspect": "thaumaturge:perditio"
           }
         }
-      },
-      "type": "forge:partial_nbt"
+      }
     }
   ],
   "aspects": [
     {
-      "amount": 9,
-      "aspect": "thaumaturge:aer"
+      "aspect": "thaumaturge:aer",
+      "amount": 9
     },
     {
-      "amount": 9,
-      "aspect": "thaumaturge:terra"
+      "aspect": "thaumaturge:terra",
+      "amount": 9
     },
     {
-      "amount": 9,
-      "aspect": "thaumaturge:aqua"
+      "aspect": "thaumaturge:ignis",
+      "amount": 9
     },
     {
-      "amount": 9,
-      "aspect": "thaumaturge:ignis"
+      "aspect": "thaumaturge:aqua",
+      "amount": 9
     },
     {
-      "amount": 9,
-      "aspect": "thaumaturge:ordo"
+      "aspect": "thaumaturge:ordo",
+      "amount": 9
     },
     {
-      "amount": 9,
-      "aspect": "thaumaturge:perditio"
+      "aspect": "thaumaturge:perditio",
+      "amount": 9
     },
     {
-      "amount": 9,
-      "aspect": "thaumaturge:praecantatio"
+      "aspect": "thaumaturge:praecantatio",
+      "amount": 9
     }
   ],
   "instability": 5,

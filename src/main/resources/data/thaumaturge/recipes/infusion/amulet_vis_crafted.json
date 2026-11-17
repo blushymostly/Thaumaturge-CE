@@ -1,0 +1,85 @@
+{
+  "type": "thaumaturge:infusion",
+  "research": "thaumaturge:vis_amulet",
+  "central": {
+    "item": "thaumaturge:amulet_mundane"
+  },
+  "components": [
+    {
+      "item": "thaumaturge:vis_resonator"
+    },
+    {
+      "type": "forge:partial_nbt",
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:aer"
+          }
+        }
+      }
+    },
+    {
+      "type": "forge:partial_nbt",
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:ignis"
+          }
+        }
+      }
+    },
+    {
+      "type": "forge:partial_nbt",
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:aqua"
+          }
+        }
+      }
+    },
+    {
+      "type": "forge:partial_nbt",
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:terra"
+          }
+        }
+      }
+    },
+    {
+      "type": "forge:partial_nbt",
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:ordo"
+          }
+        }
+      }
+    }
+  ],
+  "aspects": [
+    {
+      "aspect": "thaumaturge:auram",
+      "amount": 50
+    },
+    {
+      "aspect": "thaumaturge:potentia",
+      "amount": 100
+    },
+    {
+      "aspect": "thaumaturge:vacuos",
+      "amount": 50
+    }
+  ],
+  "instability": 6,
+  "result": {
+    "item": "thaumaturge:amulet_vis_crafted"
+  }
+}

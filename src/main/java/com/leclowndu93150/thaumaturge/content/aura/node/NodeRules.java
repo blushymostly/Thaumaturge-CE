@@ -34,4 +34,15 @@ final class NodeRules {
             case PALE, FADING -> NodeModifier.FADING;
         };
     }
+
+    @Nullable
+    static NodeModifier improve(@Nullable NodeModifier modifier) {
+        if (modifier == null)
+            return NodeModifier.BRIGHT;
+        return switch (modifier) {
+            case FADING -> NodeModifier.PALE;
+            case PALE -> null;
+            case BRIGHT -> NodeModifier.BRIGHT;
+        };
+    }
 }

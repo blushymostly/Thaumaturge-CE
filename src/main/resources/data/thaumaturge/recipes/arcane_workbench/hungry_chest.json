@@ -7,7 +7,8 @@
     "T": { "tag": "minecraft:wooden_trapdoors" }
   },
   "result": { "item": "thaumaturge:hungry_chest", "count": 1 },
-  "vis": [
+  "vis": 15,
+  "crystals": [
     { "aspect": "thaumaturge:terra", "amount": 1 },
     { "aspect": "thaumaturge:aqua", "amount": 1 }
   ]

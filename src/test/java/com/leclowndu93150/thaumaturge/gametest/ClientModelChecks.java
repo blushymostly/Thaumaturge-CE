@@ -57,8 +57,7 @@ public final class ClientModelChecks {
         if (!failures.isEmpty()) {
             throw new IllegalStateException("Thaumaturge model checks failed: " + String.join(", ", failures));
         }
-        Thaumaturge.LOGGER.info("Model checks passed for {} items, {} block states and worn goggles",
-                TTItems.ITEMS.getEntries().size(), states);
+        Thaumaturge.LOGGER.info("Model checks passed for {} items, {} block states and worn goggles", TTItems.ITEMS.getEntries().size(), states);
     }
 
     private static void checkSpecificModels(Map<ResourceLocation, BakedModel> baked, List<String> failures) {
@@ -71,8 +70,7 @@ public final class ClientModelChecks {
             for (ItemDisplayContext context : ItemDisplayContext.values()) {
                 var pose = shield.getTransforms().getTransform(context);
                 var vanillaPose = vanillaShield.getTransforms().getTransform(context);
-                if (!pose.rotation.equals(vanillaPose.rotation) || !pose.translation.equals(vanillaPose.translation)
-                        || !pose.scale.equals(vanillaPose.scale)) {
+                if (!pose.rotation.equals(vanillaPose.rotation) || !pose.translation.equals(vanillaPose.translation) || !pose.scale.equals(vanillaPose.scale)) {
                     failures.add("thaumium shield differs from the vanilla pose in " + context);
                 }
             }
@@ -91,8 +89,9 @@ public final class ClientModelChecks {
         var chargerBlock = TTBulkContent.BLOCKS.get("arcane_workbench_charger").get();
         var chargerState = chargerBlock.defaultBlockState();
         var charger = baked.get(BlockModelShaper.stateToModelLocation(chargerState));
-        if (charger == null || (!charger.getRenderTypes(chargerState, random, ModelData.EMPTY).contains(RenderType.cutout())
-                || charger.getRenderTypes(chargerState, random, ModelData.EMPTY).contains(RenderType.translucent()))
+        if (charger == null
+                || (!charger.getRenderTypes(chargerState, random, ModelData.EMPTY).contains(RenderType.cutout())
+                        || charger.getRenderTypes(chargerState, random, ModelData.EMPTY).contains(RenderType.translucent()))
                 || charger.getQuads(chargerState, null, random).stream().anyMatch(quad -> !quad.isShade())) {
             failures.add("workbench charger must use one cutout layer and shaded mesh faces");
         }
@@ -105,16 +104,14 @@ public final class ClientModelChecks {
         var lit = baked.get(BlockModelShaper.stateToModelLocation(lampState));
         var unlit = baked.get(BlockModelShaper.stateToModelLocation(lampState.setValue(BlockStateProperties.ENABLED, false)));
         var inventory = baked.get(new ModelResourceLocation(TTItems.LAMP_ARCANE.getId(), "inventory"));
-        if (lit == unlit || lit != null && lit.getQuads(lampState, null, random).size() <= 6
-                || inventory != null && inventory.getQuads(null, null, random).size() <= 6) {
+        if (lit == unlit || lit != null && lit.getQuads(lampState, null, random).size() <= 6 || inventory != null && inventory.getQuads(null, null, random).size() <= 6) {
             failures.add("arcane lamp is missing distinct lit/unlit or inventory geometry");
         }
         if (lit != null && !lit.getRenderTypes(lampState, random, ModelData.EMPTY).contains(RenderType.cutout())) {
             failures.add("arcane lamp does not use the cutout layer for its animated texture");
         }
         var table = baked.get(new ModelResourceLocation(TTItems.DECONSTRUCTION_TABLE.getId(), "inventory"));
-        if (table == null || !table.isCustomRenderer()
-                || TTBlocks.DECONSTRUCTION_TABLE.get().defaultBlockState().getRenderShape() != RenderShape.ENTITYBLOCK_ANIMATED) {
+        if (table == null || !table.isCustomRenderer() || TTBlocks.DECONSTRUCTION_TABLE.get().defaultBlockState().getRenderShape() != RenderShape.ENTITYBLOCK_ANIMATED) {
             failures.add("deconstruction table is missing its shared world and inventory model");
         }
         var relayState = TTBlocks.REDSTONE_RELAY.get().defaultBlockState();
@@ -130,8 +127,7 @@ public final class ClientModelChecks {
         var infernal = com.leclowndu93150.thaumaturge.registry.TTBulkContent.BLOCKS.get("infernal_furnace").get();
         for (var state : infernal.getStateDefinition().getPossibleStates()) {
             var furnace = baked.get(BlockModelShaper.stateToModelLocation(state));
-            if (furnace == null || furnace.getQuads(state, null, random).size() <= 20
-                    || !furnace.getRenderTypes(state, random, ModelData.EMPTY).contains(RenderType.cutout())) {
+            if (furnace == null || furnace.getQuads(state, null, random).size() <= 20 || !furnace.getRenderTypes(state, random, ModelData.EMPTY).contains(RenderType.cutout())) {
                 failures.add("infernal furnace model lost its shell or transparent flame in " + state);
             }
         }
@@ -151,17 +147,16 @@ public final class ClientModelChecks {
         }
         for (String material : List.of("arcane", "ancient", "eldritch")) {
             var pillar = TTBulkContent.BLOCKS.get("pillar_" + material).get();
-            for (BlockPos corner : List.of(new BlockPos(-1, 0, -1), new BlockPos(1, 0, -1),
-                    new BlockPos(-1, 0, 1), new BlockPos(1, 0, 1))) {
+            for (BlockPos corner : List.of(new BlockPos(-1, 0, -1), new BlockPos(1, 0, -1), new BlockPos(-1, 0, 1), new BlockPos(1, 0, 1))) {
                 var facing = InfusionPillarBlock.faceMatrix(pillar.defaultBlockState(), corner);
                 var placedModel = baked.get(BlockModelShaper.stateToModelLocation(facing));
                 if (placedModel != null && !pillarTipPointsIn(placedModel, facing, corner)) {
                     failures.add(material + " pillar mesh leans away from the matrix at " + corner);
                 }
             }
-            var models = pillar.getStateDefinition().getPossibleStates().stream()
-                    .map(state -> baked.get(BlockModelShaper.stateToModelLocation(state))).distinct().count();
-            if (models != 4) failures.add(material + " pillar has no four directional models");
+            var models = pillar.getStateDefinition().getPossibleStates().stream().map(state -> baked.get(BlockModelShaper.stateToModelLocation(state))).distinct().count();
+            if (models != 4)
+                failures.add(material + " pillar has no four directional models");
             var state = pillar.defaultBlockState();
             var model = baked.get(BlockModelShaper.stateToModelLocation(state));
             if (model == null || !model.getRenderTypes(state, random, ModelData.EMPTY).asList().equals(List.of(RenderType.cutout()))) {
@@ -179,6 +174,8 @@ public final class ClientModelChecks {
 
     private static void checkNodeDevice(Map<ResourceLocation, BakedModel> baked, String id, boolean ceiling, List<String> failures) {
         var state = TTBulkContent.BLOCKS.get(id).get().defaultBlockState();
+        if (state.getRenderShape() != RenderShape.ENTITYBLOCK_ANIMATED)
+            failures.add(id + " needs its animated renderer in the world");
         var model = baked.get(BlockModelShaper.stateToModelLocation(state));
         if (model == null) {
             failures.add(id + " has no placed model");
@@ -193,11 +190,13 @@ public final class ClientModelChecks {
             int stride = vertices.length / 4;
             for (int i = 0; i < vertices.length; i += stride) {
                 float y = Float.intBitsToFloat(vertices[i + 1]);
-                if (Math.abs(y - (ceiling ? 1.0F : 0.0F)) > 0.001F) return false;
+                if (Math.abs(y - (ceiling ? 1.0F : 0.0F)) > 0.001F)
+                    return false;
             }
             return true;
         });
-        if (!baseAtAnchor) failures.add(id + " base must be flush with its mounting face");
+        if (!baseAtAnchor)
+            failures.add(id + " base must be flush with its mounting face");
     }
 
     private static boolean pillarTipPointsIn(BakedModel model, net.minecraft.world.level.block.state.BlockState state, BlockPos corner) {
@@ -207,7 +206,8 @@ public final class ClientModelChecks {
             int[] vertices = quad.getVertices();
             int stride = vertices.length / 4;
             for (int i = 0; i < vertices.length; i += stride) {
-                if (Float.intBitsToFloat(vertices[i + 1]) <= 1.9F) continue;
+                if (Float.intBitsToFloat(vertices[i + 1]) <= 1.9F)
+                    continue;
                 tipX += Float.intBitsToFloat(vertices[i]) - 0.5F;
                 tipZ += Float.intBitsToFloat(vertices[i + 2]) - 0.5F;
                 count++;
@@ -216,8 +216,7 @@ public final class ClientModelChecks {
         return count > 0 && tipX * corner.getX() < 0 && tipZ * corner.getZ() < 0;
     }
 
-    private static void checkPillarUvs(String material, BakedModel model, net.minecraft.world.level.block.state.BlockState state,
-            List<String> failures) {
+    private static void checkPillarUvs(String material, BakedModel model, net.minecraft.world.level.block.state.BlockState state, List<String> failures) {
         var quads = model.getQuads(state, null, RandomSource.create(0));
         if (quads.isEmpty()) {
             failures.add(material + " pillar has no geometry");

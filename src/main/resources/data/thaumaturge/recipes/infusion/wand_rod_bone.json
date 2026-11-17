@@ -1,0 +1,41 @@
+{
+  "type": "thaumaturge:infusion",
+  "research": "thaumaturge:rod_bone",
+  "central": {
+    "tag": "forge:bones"
+  },
+  "components": [
+    {
+      "item": "thaumaturge:salis_mundus"
+    },
+    {
+      "type": "forge:partial_nbt",
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:perditio"
+          }
+        }
+      }
+    }
+  ],
+  "aspects": [
+    {
+      "aspect": "thaumaturge:perditio",
+      "amount": 12
+    },
+    {
+      "aspect": "thaumaturge:praecantatio",
+      "amount": 6
+    },
+    {
+      "aspect": "thaumaturge:exanimis",
+      "amount": 6
+    }
+  ],
+  "instability": 3,
+  "result": {
+    "item": "thaumaturge:wand_rod_bone"
+  }
+}

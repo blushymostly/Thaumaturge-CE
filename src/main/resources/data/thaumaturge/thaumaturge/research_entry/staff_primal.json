@@ -30,6 +30,8 @@
     {
       "text": "research.thaumaturge.staff_primal.stage_0",
       "recipes": [
+        "thaumaturge:wand/assembly/gold_primal_staff",
+
         "thaumaturge:infusion/staff_rod_primal"
       ]
     }

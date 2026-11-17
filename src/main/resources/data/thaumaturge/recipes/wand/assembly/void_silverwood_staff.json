@@ -1,0 +1,1 @@
+{"type": "thaumaturge:arcane_crafting", "research": "thaumaturge:staves", "pattern": ["  C", " R ", "C  "], "key": {"C": {"item": "thaumaturge:wand_cap_void"}, "R": {"item": "thaumaturge:staff_rod_silverwood"}}, "vis": 1296, "crystals": [], "result": {"item": "thaumaturge:wand", "nbt": {"Thaumaturge": {"Cap": "void", "Rod": "silverwood_staff"}}}}

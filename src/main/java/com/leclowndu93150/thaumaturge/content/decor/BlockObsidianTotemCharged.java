@@ -1,6 +1,7 @@
 package com.leclowndu93150.thaumaturge.content.decor;
 
 import com.leclowndu93150.thaumaturge.content.aura.node.BlockEntityNode;
+import com.leclowndu93150.thaumaturge.content.aura.node.NodeBiomeSpread;
 import com.leclowndu93150.thaumaturge.registry.TTBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
@@ -31,8 +32,15 @@ public final class BlockObsidianTotemCharged extends BlockObsidianTotem implemen
     }
 
     @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState replacement, boolean moving) {
+        NodeBiomeSpread.onNodeBlockRemoved(level, pos, state, replacement);
+        super.onRemove(state, level, pos, replacement, moving);
+    }
+
+    @Override
     public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (!level.isClientSide && level.getBlockEntity(pos) instanceof BlockEntityNode node) node.burstAndClear(player);
+        if (!level.isClientSide && level.getBlockEntity(pos) instanceof BlockEntityNode node)
+            node.burstAndClear(player);
         super.playerWillDestroy(level, pos, state, player);
     }
 }

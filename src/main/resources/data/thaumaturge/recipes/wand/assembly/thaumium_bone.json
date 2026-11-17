@@ -1,0 +1,1 @@
+{"type": "thaumaturge:arcane_crafting", "research": "thaumaturge:rod_bone", "pattern": ["  C", " R ", "C  "], "key": {"C": {"item": "thaumaturge:wand_cap_thaumium"}, "R": {"item": "thaumaturge:wand_rod_bone"}}, "vis": 216, "crystals": [], "result": {"item": "thaumaturge:wand", "nbt": {"Thaumaturge": {"Cap": "thaumium", "Rod": "bone"}}}}

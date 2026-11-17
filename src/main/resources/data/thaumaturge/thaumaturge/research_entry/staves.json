@@ -23,6 +23,9 @@
     {
       "text": "research.thaumaturge.staves.stage_0",
       "recipes": [
+        "thaumaturge:wand/part/primal_charm",
+        "thaumaturge:wand/assembly/gold_greatwood_staff",
+
         "thaumaturge:wand/part/staff_rod_greatwood",
         "thaumaturge:wand/part/staff_rod_obsidian",
         "thaumaturge:wand/part/staff_rod_ice",

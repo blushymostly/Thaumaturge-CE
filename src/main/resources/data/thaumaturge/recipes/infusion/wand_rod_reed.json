@@ -1,0 +1,41 @@
+{
+  "type": "thaumaturge:infusion",
+  "research": "thaumaturge:rod_reed",
+  "central": {
+    "item": "minecraft:sugar_cane"
+  },
+  "components": [
+    {
+      "item": "thaumaturge:salis_mundus"
+    },
+    {
+      "type": "forge:partial_nbt",
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:aer"
+          }
+        }
+      }
+    }
+  ],
+  "aspects": [
+    {
+      "aspect": "thaumaturge:aer",
+      "amount": 12
+    },
+    {
+      "aspect": "thaumaturge:praecantatio",
+      "amount": 6
+    },
+    {
+      "aspect": "thaumaturge:motus",
+      "amount": 6
+    }
+  ],
+  "instability": 3,
+  "result": {
+    "item": "thaumaturge:wand_rod_reed"
+  }
+}

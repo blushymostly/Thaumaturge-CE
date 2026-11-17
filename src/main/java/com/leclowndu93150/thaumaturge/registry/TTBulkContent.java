@@ -58,8 +58,7 @@ public final class TTBulkContent {
         registerBlock("arcane_workbench_charger", com.leclowndu93150.thaumaturge.content.workbench.ArcaneWorkbenchChargerBlock::new);
         registerBlock("banner_crimson_cult");
         registerBlock("barrier");
-        registerBlock("bellows", () -> new com.leclowndu93150.thaumaturge.content.essentia.bellows.BlockBellows(
-                BlockBehaviour.Properties.copy(Blocks.OAK_PLANKS).strength(1F, 20F).noOcclusion()));
+        registerBlock("bellows", () -> new com.leclowndu93150.thaumaturge.content.essentia.bellows.BlockBellows(BlockBehaviour.Properties.copy(Blocks.OAK_PLANKS).strength(1F, 20F).noOcclusion()));
         registerBlock("brain_box");
         registerBlock("button_greatwood");
         registerBlock("button_silverwood");
@@ -74,8 +73,10 @@ public final class TTBulkContent {
         registerBlock("condenser_lattice");
         registerBlock("condenser_lattice_dirty");
         // deconstruction_table registered in TTBlocks (Wave 3.0)
-        registerBlock("deepslate_ore_amber", () -> new net.minecraft.world.level.block.DropExperienceBlock(BlockBehaviour.Properties.copy(Blocks.DEEPSLATE).strength(3).requiresCorrectToolForDrops(), net.minecraft.util.valueproviders.UniformInt.of(2, 5)));
-        registerBlock("deepslate_ore_quartz", () -> new net.minecraft.world.level.block.DropExperienceBlock(BlockBehaviour.Properties.copy(Blocks.DEEPSLATE).strength(3).requiresCorrectToolForDrops(), net.minecraft.util.valueproviders.UniformInt.of(2, 5)));
+        registerBlock("deepslate_ore_amber", () -> new net.minecraft.world.level.block.DropExperienceBlock(BlockBehaviour.Properties.copy(Blocks.DEEPSLATE).strength(3).requiresCorrectToolForDrops(),
+                net.minecraft.util.valueproviders.UniformInt.of(2, 5)));
+        registerBlock("deepslate_ore_quartz", () -> new net.minecraft.world.level.block.DropExperienceBlock(BlockBehaviour.Properties.copy(Blocks.DEEPSLATE).strength(3).requiresCorrectToolForDrops(),
+                net.minecraft.util.valueproviders.UniformInt.of(2, 5)));
         // dioptra registered in TTBlocks (Wave 2b)
         registerDoor("door_greatwood", Blocks.DARK_OAK_DOOR, BlockSetType.DARK_OAK);
         registerDoor("door_silverwood", Blocks.BIRCH_DOOR, BlockSetType.BIRCH);
@@ -115,7 +116,7 @@ public final class TTBulkContent {
         registerBlock("flux_gas", () -> new BlockFluxGas(BlockBehaviour.Properties.of().replaceable().noCollission().noOcclusion().noLootTable()));
         registerBlock("flux_goo", () -> new BlockFluxGoo(BlockBehaviour.Properties.copy(Blocks.WATER).randomTicks()));
         registerBlock("flux_scrubber");
-        registerBlock("focal_manipulator", com.leclowndu93150.thaumaturge.content.item.StarterFocus::new);
+        registerBlock("focal_manipulator", com.leclowndu93150.thaumaturge.content.item.FocalManipulatorBlock::new);
         registerBlock("golem_builder");
         registerBlock("golem_fetter");
         registerBlock("grass_ambient", () -> new net.minecraft.world.level.block.GrassBlock(BlockBehaviour.Properties.copy(Blocks.GRASS_BLOCK)));
@@ -129,8 +130,7 @@ public final class TTBulkContent {
 
         registerBlock("jar_brain", com.leclowndu93150.thaumaturge.content.essentia.jar.BrainJarBlock::new, com.leclowndu93150.thaumaturge.content.essentia.jar.BrainJarItem::new);
         registerBlock("jar_creative");
-        registerBlock("jar_node", com.leclowndu93150.thaumaturge.content.aura.node.JarNodeBlock::new,
-                (block, props) -> new BlockItem(block, props.stacksTo(1)));
+        registerBlock("jar_node", com.leclowndu93150.thaumaturge.content.aura.node.JarNodeBlock::new, (block, props) -> new BlockItem(block, props.stacksTo(1)));
         registerBlock("jar_void");
         // lamp_arcane registered in TTBlocks (Wave 4)
 
@@ -154,8 +154,10 @@ public final class TTBulkContent {
         registerBlock("obsidian_tile", () -> new Block(BlockBehaviour.Properties.copy(Blocks.OBSIDIAN)));
         registerBlock("obsidian_totem", () -> new com.leclowndu93150.thaumaturge.content.decor.BlockObsidianTotem(BlockBehaviour.Properties.copy(Blocks.OBSIDIAN)));
         registerBlock("obsidian_totem_charged", () -> new com.leclowndu93150.thaumaturge.content.decor.BlockObsidianTotemCharged(BlockBehaviour.Properties.copy(Blocks.OBSIDIAN)));
-        registerBlock("ore_amber", () -> new net.minecraft.world.level.block.DropExperienceBlock(BlockBehaviour.Properties.copy(Blocks.STONE).strength(3).requiresCorrectToolForDrops(), net.minecraft.util.valueproviders.UniformInt.of(2, 5)));
-        registerBlock("ore_quartz", () -> new net.minecraft.world.level.block.DropExperienceBlock(BlockBehaviour.Properties.copy(Blocks.STONE).strength(3).requiresCorrectToolForDrops(), net.minecraft.util.valueproviders.UniformInt.of(2, 5)));
+        registerBlock("ore_amber", () -> new net.minecraft.world.level.block.DropExperienceBlock(BlockBehaviour.Properties.copy(Blocks.STONE).strength(3).requiresCorrectToolForDrops(),
+                net.minecraft.util.valueproviders.UniformInt.of(2, 5)));
+        registerBlock("ore_quartz", () -> new net.minecraft.world.level.block.DropExperienceBlock(BlockBehaviour.Properties.copy(Blocks.STONE).strength(3).requiresCorrectToolForDrops(),
+                net.minecraft.util.valueproviders.UniformInt.of(2, 5)));
         registerBlock("pattern_crafter");
         registerBlock("paving_stone_barrier");
         registerBlock("paving_stone_travel");
@@ -194,20 +196,16 @@ public final class TTBulkContent {
         registerBlock("slab_greatwood", () -> new SlabBlock(BlockBehaviour.Properties.copy(Blocks.DARK_OAK_PLANKS)));
         registerBlock("slab_silverwood", () -> new SlabBlock(BlockBehaviour.Properties.copy(Blocks.BIRCH_PLANKS)));
         registerBlock("smelter_aux");
-        registerBlock("smelter_thaumium", () -> new com.leclowndu93150.thaumaturge.content.essentia.smeltery.SmelterBlock(
-                BlockBehaviour.Properties.copy(Blocks.FURNACE)));
+        registerBlock("smelter_thaumium", () -> new com.leclowndu93150.thaumaturge.content.essentia.smeltery.SmelterBlock(BlockBehaviour.Properties.copy(Blocks.FURNACE)));
         registerBlock("smelter_vent");
-        registerBlock("smelter_void", () -> new com.leclowndu93150.thaumaturge.content.essentia.smeltery.SmelterBlock(
-                BlockBehaviour.Properties.copy(Blocks.FURNACE)));
+        registerBlock("smelter_void", () -> new com.leclowndu93150.thaumaturge.content.essentia.smeltery.SmelterBlock(BlockBehaviour.Properties.copy(Blocks.FURNACE)));
         registerBlock("spa");
         registerBlock("stabilizer", com.leclowndu93150.thaumaturge.content.infusion.InfusionStabilizer::new);
         registerBlock("stairs_ancient", () -> new StairBlock(Blocks.STONE_BRICKS::defaultBlockState, BlockBehaviour.Properties.copy(Blocks.STONE_BRICKS)));
         registerBlock("stairs_ancient_rock", () -> new StairBlock(Blocks.STONE_BRICKS::defaultBlockState, BlockBehaviour.Properties.copy(Blocks.STONE_BRICKS)));
         registerBlock("stairs_ancient_tile", () -> new StairBlock(Blocks.STONE_BRICKS::defaultBlockState, BlockBehaviour.Properties.copy(Blocks.STONE_BRICKS)));
-        registerBlock("stairs_arcane", () -> new StairBlock(
-                () -> TTBlocks.ARCANE_STONE.get().defaultBlockState(), BlockBehaviour.Properties.copy(Blocks.STONE_STAIRS)));
-        registerBlock("stairs_arcane_brick", () -> new StairBlock(
-                () -> TTBlocks.ARCANE_STONE_BRICK.get().defaultBlockState(), BlockBehaviour.Properties.copy(Blocks.STONE_BRICK_STAIRS)));
+        registerBlock("stairs_arcane", () -> new StairBlock(() -> TTBlocks.ARCANE_STONE.get().defaultBlockState(), BlockBehaviour.Properties.copy(Blocks.STONE_STAIRS)));
+        registerBlock("stairs_arcane_brick", () -> new StairBlock(() -> TTBlocks.ARCANE_STONE_BRICK.get().defaultBlockState(), BlockBehaviour.Properties.copy(Blocks.STONE_BRICK_STAIRS)));
         registerBlock("stairs_eldritch", () -> new StairBlock(Blocks.STONE_BRICKS::defaultBlockState, BlockBehaviour.Properties.copy(Blocks.STONE_BRICKS)));
         registerBlock("stairs_eldritch_rock", () -> new StairBlock(Blocks.STONE_BRICKS::defaultBlockState, BlockBehaviour.Properties.copy(Blocks.STONE_BRICKS)));
         registerBlock("stairs_eldritch_tile", () -> new StairBlock(Blocks.STONE_BRICKS::defaultBlockState, BlockBehaviour.Properties.copy(Blocks.STONE_BRICKS)));
@@ -246,17 +244,15 @@ public final class TTBulkContent {
         registerBlock("tallow_block");
         registerBlock("thaumatorium");
         registerBlock("thaumatorium_top");
-        registerBlock("trapdoor_greatwood", () -> new TrapDoorBlock(
-                BlockBehaviour.Properties.copy(Blocks.DARK_OAK_TRAPDOOR), BlockSetType.DARK_OAK));
-        registerBlock("trapdoor_silverwood", () -> new TrapDoorBlock(
-                BlockBehaviour.Properties.copy(Blocks.BIRCH_TRAPDOOR), BlockSetType.BIRCH));
+        registerBlock("trapdoor_greatwood", () -> new TrapDoorBlock(BlockBehaviour.Properties.copy(Blocks.DARK_OAK_TRAPDOOR), BlockSetType.DARK_OAK));
+        registerBlock("trapdoor_silverwood", () -> new TrapDoorBlock(BlockBehaviour.Properties.copy(Blocks.BIRCH_TRAPDOOR), BlockSetType.BIRCH));
         registerBlock("tube_buffer");
         registerBlock("tube_filter");
         registerBlock("tube_oneway");
         registerBlock("tube_restrict");
         registerBlock("tube_valve");
         registerBlock("vis_battery", com.leclowndu93150.thaumaturge.content.device.VisBatteryBlock::new);
-        registerBlock("vis_generator");
+        registerBlock("vis_generator", com.leclowndu93150.thaumaturge.content.device.BlockVisGenerator::new);
         registerBlock("vis_relay", com.leclowndu93150.thaumaturge.content.aura.relay.VisRelay::new);
         registerBlock("vishroom", () -> new BushBlock(BlockBehaviour.Properties.copy(Blocks.FERN)));
         registerBlock("void_siphon");
@@ -336,8 +332,7 @@ public final class TTBulkContent {
         registerBlock(name, () -> new DoorBlock(BlockBehaviour.Properties.copy(base), type), DoubleHighBlockItem::new);
     }
 
-    private static void registerBlock(String name, Supplier<? extends Block> factory,
-            BiFunction<Block, Item.Properties, BlockItem> itemFactory) {
+    private static void registerBlock(String name, Supplier<? extends Block> factory, BiFunction<Block, Item.Properties, BlockItem> itemFactory) {
         RegistryObject<Block> block = TTBlocks.BLOCKS.register(name, factory);
         BLOCKS.put(name, block);
         BLOCK_ITEMS.put(name, TTItems.ITEMS.register(name, () -> itemFactory.apply(block.get(), new Item.Properties())));

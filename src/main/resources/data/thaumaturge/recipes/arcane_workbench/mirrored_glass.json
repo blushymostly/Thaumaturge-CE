@@ -7,7 +7,8 @@
     "G": { "tag": "forge:glass_panes" }
   },
   "result": { "item": "thaumaturge:mirrored_glass", "count": 1 },
-  "vis": [
+  "vis": 50,
+  "crystals": [
     { "aspect": "thaumaturge:aqua", "amount": 1 },
     { "aspect": "thaumaturge:ordo", "amount": 1 }
   ]

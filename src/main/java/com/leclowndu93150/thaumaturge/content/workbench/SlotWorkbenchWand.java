@@ -1,7 +1,7 @@
 package com.leclowndu93150.thaumaturge.content.workbench;
 
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import com.leclowndu93150.thaumaturge.content.item.WandItem;
+import com.leclowndu93150.thaumaturge.content.item.WandParts;
 import net.minecraft.world.Container;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -13,12 +13,7 @@ final class SlotWorkbenchWand extends Slot {
 
     @Override
     public boolean mayPlace(ItemStack stack) {
-        if (stack.isEmpty()) {
-            return false;
-        }
-        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        String path = id.getPath();
-        return path.contains("wand") || path.contains("staff") || path.contains("scepter");
+        return stack.getItem() instanceof WandItem && !WandParts.rod(stack).staff();
     }
 
     @Override

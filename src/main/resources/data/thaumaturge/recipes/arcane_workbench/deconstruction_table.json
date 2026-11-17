@@ -9,7 +9,8 @@
     "P": { "item": "minecraft:golden_pickaxe" }
   },
   "result": { "item": "thaumaturge:deconstruction_table", "count": 1 },
-  "vis": [
+  "vis": 20,
+  "crystals": [
     { "aspect": "thaumaturge:perditio", "amount": 1 }
   ]
 }

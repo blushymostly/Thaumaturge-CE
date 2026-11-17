@@ -1,0 +1,40 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:vis_generator",
+  "pattern": [
+    "WSW",
+    "EPE",
+    "WRW"
+  ],
+  "key": {
+    "W": {
+      "tag": "minecraft:planks"
+    },
+    "S": {
+      "tag": "forge:dusts/redstone"
+    },
+    "E": {
+      "tag": "forge:nuggets/brass"
+    },
+    "P": {
+      "item": "minecraft:piston"
+    },
+    "R": {
+      "item": "thaumaturge:vis_resonator"
+    }
+  },
+  "result": {
+    "item": "thaumaturge:vis_generator"
+  },
+  "vis": 25,
+  "crystals": [
+    {
+      "aspect": "thaumaturge:ignis",
+      "amount": 1
+    },
+    {
+      "aspect": "thaumaturge:ordo",
+      "amount": 1
+    }
+  ]
+}

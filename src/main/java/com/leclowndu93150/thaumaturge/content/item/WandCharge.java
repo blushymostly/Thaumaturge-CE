@@ -11,20 +11,20 @@ import net.minecraft.world.item.ItemStack;
 
 public final class WandCharge {
     public static final int CENTIVIS_PER_VIS = 100;
-    public static final List<ResourceLocation> PRIMALS = List.of(TTAspects.AER, TTAspects.TERRA, TTAspects.IGNIS,
-            TTAspects.AQUA, TTAspects.ORDO, TTAspects.PERDITIO);
+    public static final List<ResourceLocation> PRIMALS = List.of(TTAspects.AER, TTAspects.TERRA, TTAspects.IGNIS, TTAspects.AQUA, TTAspects.ORDO, TTAspects.PERDITIO);
     private static final String CHARGE = "PrimalVis";
 
     private WandCharge() {}
 
     public static int capacity(ItemStack wand) {
-        return (int) WandItem.capacity(wand) * CENTIVIS_PER_VIS;
+        return Math.round(WandItem.capacity(wand) * CENTIVIS_PER_VIS);
     }
 
     public static int stored(ItemStack wand, ResourceLocation aspect) {
         int index = PRIMALS.indexOf(aspect);
         var tag = wand.getTagElement(TTItemData.ROOT);
-        if (index < 0 || tag == null) return 0;
+        if (index < 0 || tag == null)
+            return 0;
         if (tag.contains(CHARGE, Tag.TAG_COMPOUND)) {
             return Mth.clamp(tag.getCompound(CHARGE).getInt(aspect.getPath()), 0, capacity(wand));
         }
@@ -38,7 +38,8 @@ public final class WandCharge {
     }
 
     public static int add(ItemStack wand, ResourceLocation aspect, int wanted) {
-        if (!PRIMALS.contains(aspect) || wanted <= 0) return 0;
+        if (!PRIMALS.contains(aspect) || wanted <= 0)
+            return 0;
         int amount = Math.min(wanted, room(wand, aspect));
         if (amount > 0) {
             CompoundTag charge = snapshot(wand);
@@ -50,7 +51,8 @@ public final class WandCharge {
 
     public static boolean spendExact(ItemStack wand, ResourceLocation aspect, int amount) {
         int balance = stored(wand, aspect);
-        if (amount <= 0 || balance < amount || !PRIMALS.contains(aspect)) return false;
+        if (amount <= 0 || balance < amount || !PRIMALS.contains(aspect))
+            return false;
         CompoundTag charge = snapshot(wand);
         charge.putInt(aspect.getPath(), balance - amount);
         save(wand, charge);
@@ -62,12 +64,13 @@ public final class WandCharge {
     }
 
     static int[] focusCosts(ResourceLocation delivery, ResourceLocation effect, int cost) {
-        return focusCosts(List.of(delivery, effect), cost);
+        return focusCosts(ItemStack.EMPTY, List.of(delivery, effect), cost);
     }
 
-    static int[] focusCosts(List<ResourceLocation> aspects, int cost) {
+    static int[] focusCosts(ItemStack wand, List<ResourceLocation> aspects, int cost) {
         int[] weights = new int[PRIMALS.size()];
-        for (var aspect : aspects) addWeights(weights, aspect);
+        for (var aspect : aspects)
+            addWeights(weights, aspect);
         int totalWeight = java.util.Arrays.stream(weights).sum();
         int remainder = cost;
         int[] shares = new int[weights.length];
@@ -76,19 +79,20 @@ public final class WandCharge {
             remainder -= shares[i];
         }
         for (int i = 0; i < weights.length; i++) {
-            if (weights[i] == 0) continue;
+            if (weights[i] == 0)
+                continue;
             int share = shares[i];
             if (remainder > 0) {
                 share++;
                 remainder--;
             }
-            shares[i] = share * 11 / 10; // Iron caps have a 10% surcharge.
+            shares[i] = share * WandParts.costPercent(wand, PRIMALS.get(i)) / 100;
         }
         return shares;
     }
 
     public static boolean payTouchFocus(ItemStack wand, ResourceLocation effect, int cost, boolean commit) {
-        return payFocus(wand, touchFocusCosts(effect, cost), commit);
+        return payFocus(wand, focusCosts(wand, List.of(TTAspects.AVERSIO, effect), cost), commit);
     }
 
     static boolean payFocus(ItemStack wand, int[] costs, boolean commit) {
@@ -97,10 +101,12 @@ public final class WandCharge {
             String key = PRIMALS.get(i).getPath();
             int owed = costs[i];
             int available = after.getInt(key);
-            if (available < owed) return false;
+            if (available < owed)
+                return false;
             after.putInt(key, available - owed);
         }
-        if (commit) save(wand, after);
+        if (commit)
+            save(wand, after);
         return true;
     }
 
@@ -111,14 +117,16 @@ public final class WandCharge {
         } else {
             var aspect = TTAspects.get(id);
             if (aspect != null) {
-                for (var component : aspect.componentIds()) addWeights(weights, component);
+                for (var component : aspect.componentIds())
+                    addWeights(weights, component);
             }
         }
     }
 
     private static CompoundTag snapshot(ItemStack wand) {
         CompoundTag charge = new CompoundTag();
-        for (var primal : PRIMALS) charge.putInt(primal.getPath(), stored(wand, primal));
+        for (var primal : PRIMALS)
+            charge.putInt(primal.getPath(), stored(wand, primal));
         return charge;
     }
 

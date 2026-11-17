@@ -1,0 +1,41 @@
+{
+  "type": "thaumaturge:infusion",
+  "research": "thaumaturge:rod_blaze",
+  "central": {
+    "item": "minecraft:blaze_rod"
+  },
+  "components": [
+    {
+      "item": "thaumaturge:salis_mundus"
+    },
+    {
+      "type": "forge:partial_nbt",
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:ignis"
+          }
+        }
+      }
+    }
+  ],
+  "aspects": [
+    {
+      "aspect": "thaumaturge:ignis",
+      "amount": 12
+    },
+    {
+      "aspect": "thaumaturge:praecantatio",
+      "amount": 6
+    },
+    {
+      "aspect": "thaumaturge:bestia",
+      "amount": 6
+    }
+  ],
+  "instability": 3,
+  "result": {
+    "item": "thaumaturge:wand_rod_blaze"
+  }
+}

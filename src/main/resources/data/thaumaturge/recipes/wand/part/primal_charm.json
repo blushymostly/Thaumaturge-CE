@@ -1,0 +1,88 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:unlock_artifice",
+  "pattern": [
+    "123",
+    "ISI",
+    "456"
+  ],
+  "key": {
+    "1": {
+      "type": "forge:partial_nbt",
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:aer"
+          }
+        }
+      }
+    },
+    "2": {
+      "type": "forge:partial_nbt",
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:ignis"
+          }
+        }
+      }
+    },
+    "3": {
+      "type": "forge:partial_nbt",
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:aqua"
+          }
+        }
+      }
+    },
+    "4": {
+      "type": "forge:partial_nbt",
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:terra"
+          }
+        }
+      }
+    },
+    "5": {
+      "type": "forge:partial_nbt",
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:ordo"
+          }
+        }
+      }
+    },
+    "6": {
+      "type": "forge:partial_nbt",
+      "item": "thaumaturge:essentia_crystal",
+      "nbt": {
+        "Thaumaturge": {
+          "CrystalAspect": {
+            "aspect": "thaumaturge:perditio"
+          }
+        }
+      }
+    },
+    "I": {
+      "tag": "forge:ingots/gold"
+    },
+    "S": {
+      "item": "thaumaturge:salis_mundus"
+    }
+  },
+  "vis": 150,
+  "crystals": [],
+  "result": {
+    "item": "thaumaturge:primal_charm"
+  }
+}

@@ -9,6 +9,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
@@ -19,6 +20,10 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 public final class ArcaneWorkbenchChargerBlock extends Block {
     private static final VoxelShape SHAPE = Shapes.or(box(0.0, 0.0, 0.0, 2.0, 11.0, 2.0), box(14.0, 0.0, 0.0, 16.0, 11.0, 2.0), box(0.0, 0.0, 14.0, 2.0, 11.0, 16.0),
@@ -31,6 +36,23 @@ public final class ArcaneWorkbenchChargerBlock extends Block {
         super(Properties.of().strength(2).noOcclusion());
     }
 
+    public static List<BlockPos> auraAnchors(Level level, BlockPos host) {
+        if (!(level.getBlockState(host.above()).getBlock() instanceof ArcaneWorkbenchChargerBlock)) {
+            return List.of(host);
+        }
+        ChunkPos origin = new ChunkPos(host);
+        List<BlockPos> anchors = new ArrayList<>(9);
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                BlockPos anchor = new ChunkPos(origin.x + dx, origin.z + dz).getMiddleBlockPosition(host.getY());
+                if (level.hasChunkAt(anchor))
+                    anchors.add(anchor);
+            }
+        }
+        anchors.sort(Comparator.comparingLong(BlockPos::asLong));
+        return anchors;
+    }
+
     @Override
     public boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
         return level.getBlockState(pos.below()).is(TTBlockTags.WORKBENCH_CHARGER_HOSTS);
@@ -38,8 +60,7 @@ public final class ArcaneWorkbenchChargerBlock extends Block {
 
     @Override
     public BlockState updateShape(BlockState state, Direction dir, BlockState neighbor, LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
-        return dir == Direction.DOWN && !canSurvive(state, level, pos) ? Blocks.AIR.defaultBlockState()
-                : super.updateShape(state, dir, neighbor, level, pos, neighborPos);
+        return dir == Direction.DOWN && !canSurvive(state, level, pos) ? Blocks.AIR.defaultBlockState() : super.updateShape(state, dir, neighbor, level, pos, neighborPos);
     }
 
     @Override

@@ -13,6 +13,7 @@ import com.leclowndu93150.thaumaturge.content.aura.node.BlockEntityNode;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.ClipContext;
@@ -37,9 +38,7 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
-
 public class WandItem extends Item {
-    public static final float MAX_VIS = 25.0F;
     private static final int USE_DURATION = 72000;
     private static final int CHARGE_INTERVAL = 5;
     private static final int REFINE_CENTIVIS = 10;
@@ -55,13 +54,12 @@ public class WandItem extends Item {
     @Override
     public void initializeClient(Consumer<IClientItemExtensions> consumer) {
         consumer.accept(new IClientItemExtensions() {
-            private static final HumanoidModel.ArmPose AIMING =
-                    HumanoidModel.ArmPose.create("THAUMATURGE_WAND", false, (model, entity, arm) -> {
-                        var castingArm = arm == HumanoidArm.RIGHT ? model.rightArm : model.leftArm;
-                        castingArm.xRot = model.head.xRot - Mth.PI / 4;
-                        castingArm.yRot = model.head.yRot;
-                        castingArm.zRot = 0;
-                    });
+            private static final HumanoidModel.ArmPose AIMING = HumanoidModel.ArmPose.create("THAUMATURGE_WAND", false, (model, entity, arm) -> {
+                var castingArm = arm == HumanoidArm.RIGHT ? model.rightArm : model.leftArm;
+                castingArm.xRot = model.head.xRot - Mth.PI / 4;
+                castingArm.yRot = model.head.yRot;
+                castingArm.zRot = 0;
+            });
             private WandRenderer renderer;
 
             @Override
@@ -71,7 +69,8 @@ public class WandItem extends Item {
 
             @Override
             public BlockEntityWithoutLevelRenderer getCustomRenderer() {
-                if (renderer == null) renderer = new WandRenderer();
+                if (renderer == null)
+                    renderer = new WandRenderer();
                 return renderer;
             }
         });
@@ -87,8 +86,8 @@ public class WandItem extends Item {
 
     @Override
     public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
-        return slotChanged || !(newStack.getItem() instanceof WandItem) || !rod(oldStack).equals(rod(newStack))
-                || !ItemStack.matches(focus(oldStack), focus(newStack));
+        return slotChanged || !(newStack.getItem() instanceof WandItem) || WandParts.rod(oldStack) != WandParts.rod(newStack) || WandParts.cap(oldStack) != WandParts.cap(newStack)
+                || WandParts.sceptre(oldStack) != WandParts.sceptre(newStack) || !ItemStack.matches(focus(oldStack), focus(newStack));
     }
 
     public static int focusColor(ItemStack wand) {
@@ -118,8 +117,7 @@ public class WandItem extends Item {
             player.startUsingItem(hand);
             return InteractionResultHolder.consume(stack);
         }
-        return new InteractionResultHolder<>(player.isShiftKeyDown() ? InteractionResult.PASS
-                : StarterFocus.cast(level, player, hand, stack), stack);
+        return new InteractionResultHolder<>(player.isShiftKeyDown() ? InteractionResult.PASS : StarterFocus.cast(level, player, hand, stack), stack);
     }
 
     @Override
@@ -134,8 +132,8 @@ public class WandItem extends Item {
 
     @Override
     public void onUseTick(Level level, LivingEntity user, ItemStack wand, int remaining) {
-        if (!(level instanceof ServerLevel server) || !(user instanceof Player player)
-                || remaining % CHARGE_INTERVAL != 0) return;
+        if (!(level instanceof ServerLevel server) || !(user instanceof Player player) || remaining % CHARGE_INTERVAL != 0)
+            return;
         BlockHitResult hit = target(player);
         BlockEntityNode node = targetNode(level, hit);
         if (node != null) {
@@ -150,12 +148,11 @@ public class WandItem extends Item {
 
     private static void refineFromAura(ServerLevel level, Player player, ItemStack wand, BlockHitResult hit) {
         var block = hit.getType() == HitResult.Type.BLOCK ? level.getBlockState(hit.getBlockPos()).getBlock() : null;
-        ResourceLocation crystal = block instanceof BlockCrystal cluster && WandCharge.PRIMALS.contains(cluster.aspect())
-                ? cluster.aspect() : null;
-        ResourceLocation aspect = crystal != null ? crystal : WandCharge.PRIMALS.stream()
-                .min(Comparator.comparingInt(id -> WandCharge.stored(wand, id))).orElseThrow();
+        ResourceLocation crystal = block instanceof BlockCrystal cluster && WandCharge.PRIMALS.contains(cluster.aspect()) ? cluster.aspect() : null;
+        ResourceLocation aspect = crystal != null ? crystal : WandCharge.PRIMALS.stream().min(Comparator.comparingInt(id -> WandCharge.stored(wand, id))).orElseThrow();
         int wanted = Math.min(REFINE_CENTIVIS, WandCharge.room(wand, aspect));
-        if (wanted <= 0) return;
+        if (wanted <= 0)
+            return;
         float rawCost = wanted * RAW_VIS_RATIO / (float) WandCharge.CENTIVIS_PER_VIS;
         double drawn = AuraHelper.drainVis(level, player.blockPosition(), rawCost, false);
         int gained = WandCharge.add(wand, aspect, (int) (drawn * WandCharge.CENTIVIS_PER_VIS / RAW_VIS_RATIO));
@@ -169,13 +166,11 @@ public class WandItem extends Item {
 
     private static BlockHitResult target(Player player) {
         Vec3 eye = player.getEyePosition();
-        return player.level().clip(new ClipContext(eye, eye.add(player.getLookAngle().scale(4.5)),
-                ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
+        return player.level().clip(new ClipContext(eye, eye.add(player.getLookAngle().scale(4.5)), ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
     }
 
     private static @Nullable BlockEntityNode targetNode(Level level, BlockHitResult hit) {
-        return hit.getType() == HitResult.Type.BLOCK && level.getBlockEntity(hit.getBlockPos()) instanceof BlockEntityNode node
-                ? node : null;
+        return hit.getType() == HitResult.Type.BLOCK && level.getBlockEntity(hit.getBlockPos()) instanceof BlockEntityNode node ? node : null;
     }
 
     public static boolean drawFromNode(ItemStack wand, BlockEntityNode node) {
@@ -183,18 +178,19 @@ public class WandItem extends Item {
     }
 
     private static @Nullable ResourceLocation tapNode(ServerLevel level, Player player, ItemStack wand, BlockEntityNode node) {
-        if (node.isEnergized()) return drainPrimal(wand, node);
+        if (node.isEnergized())
+            return drainPrimal(wand, node);
 
         var knowledge = TTAttachments.knowledge(player);
         int strength = 1;
-        if (knowledge.isComplete(ADVANCED_TAPPING)) strength++;
-        if (knowledge.isComplete(MASTER_TAPPING)) strength++;
-        int reserve = !player.isShiftKeyDown() && !rod(wand).equals("wood") && knowledge.isComplete(NODE_PRESERVATION) ? 1 : 0;
-        var eligible = WandCharge.PRIMALS.stream()
-                .filter(aspect -> node.getAspects().amountOf(aspect) > reserve
-                        && WandCharge.room(wand, aspect) >= WandCharge.CENTIVIS_PER_VIS)
-                .toList();
-        if (eligible.isEmpty()) return null;
+        if (knowledge.isComplete(ADVANCED_TAPPING))
+            strength++;
+        if (knowledge.isComplete(MASTER_TAPPING))
+            strength++;
+        int reserve = !player.isShiftKeyDown() && (WandParts.rod(wand) != WandParts.Rod.WOOD || WandParts.cap(wand) != WandParts.Cap.IRON) && knowledge.isComplete(NODE_PRESERVATION) ? 1 : 0;
+        var eligible = WandCharge.PRIMALS.stream().filter(aspect -> node.getAspects().amountOf(aspect) > reserve && WandCharge.room(wand, aspect) >= WandCharge.CENTIVIS_PER_VIS).toList();
+        if (eligible.isEmpty())
+            return null;
 
         ResourceLocation aspect = eligible.get(level.random.nextInt(eligible.size()));
         int room = WandCharge.room(wand, aspect) / WandCharge.CENTIVIS_PER_VIS;
@@ -227,40 +223,52 @@ public class WandItem extends Item {
     }
 
     public static float capacity(ItemStack wand) {
-        return switch (rod(wand)) {
-            case "silverwood" -> 100;
-            case "greatwood" -> 50;
-            default -> MAX_VIS;
-        };
+        return WandParts.rod(wand).capacity() * (WandParts.sceptre(wand) ? 1.5F : 1F);
     }
 
-    public static String rod(ItemStack wand) {
-        var tag = wand.getTagElement(TTItemData.ROOT);
-        return switch (tag == null ? "" : tag.getString("Rod")) {
-            case "greatwood" -> "greatwood";
-            case "silverwood" -> "silverwood";
-            default -> "wood";
-        };
+    @Override
+    public void inventoryTick(ItemStack stack, Level level, Entity owner, int slot, boolean selected) {
+        if (!(level instanceof ServerLevel server) || !(owner instanceof Player))
+            return;
+        var rod = WandParts.rod(stack);
+        ResourceLocation aspect = rod.recharge();
+        boolean primal = rod == WandParts.Rod.PRIMAL_STAFF;
+        if ((!primal && aspect == null) || server.getGameTime() % (primal ? 20 : 60) != 0)
+            return;
+        int threshold = WandCharge.capacity(stack) / 10;
+        if (primal) {
+            var candidates = WandCharge.PRIMALS.stream().filter(id -> WandCharge.stored(stack, id) < threshold).toList();
+            if (candidates.isEmpty())
+                return;
+            aspect = candidates.get(server.random.nextInt(candidates.size()));
+        }
+        if (WandCharge.stored(stack, aspect) < threshold) {
+            WandCharge.add(stack, aspect, WandCharge.CENTIVIS_PER_VIS);
+        }
     }
 
     @Override
     public Component getName(ItemStack stack) {
-        return Component.translatable("item.thaumaturge.wand.named", Component.translatable("wand.thaumaturge.cap.iron"),
-                Component.translatable("wand.thaumaturge.rod." + rod(stack)));
+        var rod = WandParts.rod(stack);
+        String form = rod.staff() ? "staff" : WandParts.sceptre(stack) ? "sceptre" : "named";
+        return Component.translatable("item.thaumaturge.wand." + form, Component.translatable("wand.thaumaturge.cap." + WandParts.cap(stack).id()),
+                Component.translatable("wand.thaumaturge.rod." + rod.material()));
     }
 
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+        String capacity = java.text.NumberFormat.getNumberInstance().format(capacity(stack));
         for (var id : WandCharge.PRIMALS) {
             var aspect = TTAspects.get(id);
-            if (aspect == null) continue;
+            if (aspect == null)
+                continue;
             String amount = String.format(Locale.ROOT, "%.2f", WandCharge.stored(stack, id) / 100F);
-            tooltip.add(Component.translatable("tooltip.thaumaturge.wand.primal_vis",
-                    Component.translatable("aspect.thaumaturge." + id.getPath()), amount, (int) capacity(stack))
+            tooltip.add(Component.translatable("tooltip.thaumaturge.wand.primal_vis", Component.translatable("aspect.thaumaturge." + id.getPath()), amount, capacity, WandParts.costPercent(stack, id))
                     .withStyle(style -> style.withColor(aspect.color())));
         }
         String spell = StarterFocus.spell(StarterFocus.socket(stack));
-        if (!spell.isEmpty()) tooltip.add(Component.translatable("tooltip.thaumaturge.focus." + spell));
+        if (!spell.isEmpty())
+            tooltip.add(Component.translatable("tooltip.thaumaturge.focus." + spell));
     }
 
     @Override

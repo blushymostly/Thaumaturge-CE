@@ -1,0 +1,18 @@
+{
+  "type": "thaumaturge:arcane_crafting",
+  "research": "thaumaturge:cap_thaumium",
+  "pattern": [
+    "NNN",
+    "N N"
+  ],
+  "key": {
+    "N": {
+      "tag": "forge:nuggets/thaumium"
+    }
+  },
+  "vis": 18,
+  "crystals": [],
+  "result": {
+    "item": "thaumaturge:wand_cap_thaumium_inert"
+  }
+}

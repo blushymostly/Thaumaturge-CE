@@ -8,7 +8,8 @@
     "S": { "item": "minecraft:stone_slab" }
   },
   "result": { "item": "thaumaturge:redstone_relay", "count": 1 },
-  "vis": [
+  "vis": 10,
+  "crystals": [
     { "aspect": "thaumaturge:ordo", "amount": 1 }
   ]
 }

@@ -10,7 +10,8 @@
     "G": { "item": "thaumaturge:mechanism_simple" }
   },
   "result": { "item": "thaumaturge:levitator", "count": 1 },
-  "vis": [
+  "vis": 35,
+  "crystals": [
     { "aspect": "thaumaturge:aer", "amount": 1 }
   ]
 }

@@ -1,0 +1,67 @@
+{
+  "type": "thaumaturge:infusion",
+  "research": "thaumaturge:staff_primal",
+  "central": {
+    "item": "thaumaturge:wand_rod_silverwood"
+  },
+  "components": [
+    {
+      "item": "thaumaturge:primal_charm"
+    },
+    {
+      "item": "thaumaturge:wand_rod_obsidian"
+    },
+    {
+      "item": "thaumaturge:wand_rod_ice"
+    },
+    {
+      "item": "thaumaturge:wand_rod_quartz"
+    },
+    {
+      "item": "thaumaturge:primal_charm"
+    },
+    {
+      "item": "thaumaturge:wand_rod_reed"
+    },
+    {
+      "item": "thaumaturge:wand_rod_blaze"
+    },
+    {
+      "item": "thaumaturge:wand_rod_bone"
+    }
+  ],
+  "aspects": [
+    {
+      "aspect": "thaumaturge:aer",
+      "amount": 32
+    },
+    {
+      "aspect": "thaumaturge:terra",
+      "amount": 32
+    },
+    {
+      "aspect": "thaumaturge:ignis",
+      "amount": 32
+    },
+    {
+      "aspect": "thaumaturge:aqua",
+      "amount": 32
+    },
+    {
+      "aspect": "thaumaturge:ordo",
+      "amount": 32
+    },
+    {
+      "aspect": "thaumaturge:perditio",
+      "amount": 32
+    },
+    {
+      "aspect": "thaumaturge:praecantatio",
+      "amount": 64
+    }
+  ],
+  "instability": 8,
+  "result": {
+    "item": "thaumaturge:staff_rod_primal"
+  }
+}
