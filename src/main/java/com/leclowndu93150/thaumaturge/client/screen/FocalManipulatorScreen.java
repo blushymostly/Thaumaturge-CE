@@ -21,6 +21,12 @@ import java.util.List;
 import java.util.Locale;
 
 public final class FocalManipulatorScreen extends AbstractContainerScreen<FocalManipulatorMenu> {
+    private static final float WINDOW_FRACTION = 0.7F;
+    private static final int MIN_WINDOW_WIDTH = 340;
+    private static final int CABINET_HEIGHT = 239;
+    private static final int MIN_EDITOR_HEIGHT = 216;
+    private static final int POWER_Y = 82;
+    private static final int DURATION_Y = 96;
     private static final int LABEL = 0xFFCEBA80;
     private static final int WHITE = 0xFFFFFFFF;
     private static final int GREY = 0xFFAAAAAA;
@@ -46,6 +52,7 @@ public final class FocalManipulatorScreen extends AbstractContainerScreen<FocalM
     private int right;
     private int inspectorWidth;
     private int paletteWidth;
+    private int editorHeight;
 
     public FocalManipulatorScreen(FocalManipulatorMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -53,15 +60,16 @@ public final class FocalManipulatorScreen extends AbstractContainerScreen<FocalM
 
     @Override
     protected void init() {
-        imageWidth = width;
-        imageHeight = height;
+        imageWidth = Math.min(width, Math.max(MIN_WINDOW_WIDTH, Math.round(width * WINDOW_FRACTION)));
+        editorHeight = Math.min(height, Math.max(MIN_EDITOR_HEIGHT, Math.round(height * WINDOW_FRACTION)));
+        imageHeight = Math.min(height, Math.max(CABINET_HEIGHT, editorHeight));
         super.init();
-        boolean compact = width < 370;
+        boolean compact = imageWidth < 370;
         paletteWidth = compact ? 80 : 108;
         inspectorWidth = compact ? 96 : 124;
-        right = width - 18 - inspectorWidth;
+        right = imageWidth - 18 - inspectorWidth;
         int graphX = 96 + paletteWidth;
-        graph = new Bounds(graphX, 42, right - 6 - graphX, height - 60);
+        graph = new Bounds(graphX, 42, right - 6 - graphX, editorHeight - 60);
 
         if (!initialized) {
             focusVersion = menu.focusVersion();
@@ -69,7 +77,7 @@ public final class FocalManipulatorScreen extends AbstractContainerScreen<FocalM
             name = menu.draftName();
             initialized = true;
         }
-        nameBox = new EditBox(font, 117, 23, Math.max(20, width - 170), 12, text("name"));
+        nameBox = new EditBox(font, leftPos + 117, topPos + 23, Math.max(20, imageWidth - 170), 12, text("name"));
         nameBox.setBordered(false);
         nameBox.setMaxLength(FocalManipulatorBlockEntity.MAX_NAME_LENGTH);
         nameBox.setHint(text("name"));
@@ -81,7 +89,7 @@ public final class FocalManipulatorScreen extends AbstractContainerScreen<FocalM
             }
         });
         addRenderableWidget(nameBox);
-        searchBox = new EditBox(font, 95, 68, paletteWidth - 10, 12, text("search"));
+        searchBox = new EditBox(font, leftPos + 95, topPos + 68, paletteWidth - 10, 12, text("search"));
         searchBox.setBordered(false);
         searchBox.setMaxLength(40);
         searchBox.setHint(text("search"));
@@ -154,14 +162,23 @@ public final class FocalManipulatorScreen extends AbstractContainerScreen<FocalM
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        FocalTextures.cabinet(graphics);
-        FocalTextures.frame(graphics, 72, 0, width - 72, height);
-        FocalTextures.sprite(graphics, "slot", 90, 18, 18, 18);
-        FocalTextures.field(graphics, 112, 20, width - 160, 14);
-        drawIconButton(graphics, confirm(), "glyph_check", 10, mouseX, mouseY, menu.busy(), canSubmit() || menu.busy());
-        drawPalette(graphics, mouseX, mouseY);
-        canvas.render(graphics, draft, graph, mouseX, mouseY, font);
-        drawInspector(graphics, mouseX, mouseY);
+        int localX = mouseX - leftPos;
+        int localY = mouseY - topPos;
+        var pose = graphics.pose();
+        pose.pushPose();
+        try {
+            pose.translate(leftPos, topPos, 0);
+            FocalTextures.cabinet(graphics);
+            FocalTextures.frame(graphics, 72, 0, imageWidth - 72, editorHeight);
+            FocalTextures.sprite(graphics, "slot", 90, 18, 18, 18);
+            FocalTextures.field(graphics, 112, 20, imageWidth - 160, 14);
+            drawIconButton(graphics, confirm(), "glyph_check", 10, localX, localY, menu.busy(), canSubmit() || menu.busy());
+            drawPalette(graphics, localX, localY);
+            canvas.render(graphics, draft, graph, graphClip(), localX, localY, font);
+            drawInspector(graphics, localX, localY);
+        } finally {
+            pose.popPose();
+        }
     }
 
     @Override
@@ -174,13 +191,18 @@ public final class FocalManipulatorScreen extends AbstractContainerScreen<FocalM
         if (styleOpen)
             drawStyleOptions(graphics);
         renderTooltip(graphics, mouseX, mouseY);
-        Component tooltip = editorTooltip(mouseX, mouseY);
+        Component tooltip = editorTooltip(mouseX - leftPos, mouseY - topPos);
         if (tooltip != null)
             graphics.renderTooltip(font, tooltip, mouseX, mouseY);
     }
 
+    private Bounds graphClip() {
+        // GuiGraphics applies scissor rectangles in screen coordinates.
+        return new Bounds(leftPos + graph.x() + 3, topPos + graph.y() + 3, graph.width() - 6, graph.height() - 6);
+    }
+
     private Bounds confirm() {
-        return new Bounds(width - 42, 19, 24, 16);
+        return new Bounds(imageWidth - 42, 19, 24, 16);
     }
 
     private void drawPalette(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -192,7 +214,7 @@ public final class FocalManipulatorScreen extends AbstractContainerScreen<FocalM
             FocalTextures.sprite(graphics, "icon_" + CATEGORIES.get(index) + selected, tab.x() + (tab.width() - 12) / 2, tab.y() + 4, 12, 12);
         }
         FocalTextures.field(graphics, 90, 65, paletteWidth, 14);
-        FocalTextures.well(graphics, 90, 82, paletteWidth, height - 100);
+        FocalTextures.well(graphics, 90, 82, paletteWidth, editorHeight - 100);
         var parts = visibleParts();
         for (int index = 0; index < parts.size(); index++) {
             Part part = parts.get(index);
@@ -224,7 +246,7 @@ public final class FocalManipulatorScreen extends AbstractContainerScreen<FocalM
 
     private void drawInspector(GuiGraphics graphics, int mouseX, int mouseY) {
         draw(graphics, text("selected"), right, 42, LABEL);
-        FocalTextures.field(graphics, right, 53, inspectorWidth, 30);
+        FocalTextures.field(graphics, right, 53, inspectorWidth, 26);
         var selected = canvas.selected(draft);
         if (selected == null) {
             draw(graphics, text("empty"), right + 5, 64, GREY);
@@ -234,8 +256,8 @@ public final class FocalManipulatorScreen extends AbstractContainerScreen<FocalM
             drawClipped(graphics, text(selected.kind().category()), right + 25, 69, inspectorWidth - 30, GREY);
         }
         if (selected != null && selected.kind().isEffect()) {
-            drawSetting(graphics, "power", selected.power(), 86, mouseX, mouseY);
-            drawSetting(graphics, "duration", selected.duration(), 100, mouseX, mouseY);
+            drawSetting(graphics, "power", selected.power(), POWER_Y, mouseX, mouseY);
+            drawSetting(graphics, "duration", selected.duration(), DURATION_Y, mouseX, mouseY);
         }
         int top = summaryY();
         if (selected != null) {
@@ -274,10 +296,10 @@ public final class FocalManipulatorScreen extends AbstractContainerScreen<FocalM
             draw(graphics, text("progress", menu.progressPercent()), right, top + 82, 0xFF55FFFF);
         } else if (status != FocalManipulatorMenu.Status.READY) {
             int lineY = top + 82;
-            if (lineY + 9 < height - 14) {
+            if (lineY + 9 < editorHeight - 14) {
                 FocalTextures.sprite(graphics, "warn", right, lineY, 9, 9);
                 for (var line : font.split(statusText(), inspectorWidth - 12)) {
-                    if (lineY + 9 >= height - 14)
+                    if (lineY + 9 >= editorHeight - 14)
                         break;
                     graphics.drawString(font, line, right + 12, lineY, GREY, false);
                     lineY += 11;
@@ -303,7 +325,7 @@ public final class FocalManipulatorScreen extends AbstractContainerScreen<FocalM
 
     private int summaryY() {
         var selected = canvas.selected(draft);
-        return selected == null ? 90 : selected.kind().isEffect() ? 132 : 103;
+        return selected == null ? 90 : selected.kind().isEffect() ? 127 : 103;
     }
 
     private Bounds styleBounds() {
@@ -318,7 +340,7 @@ public final class FocalManipulatorScreen extends AbstractContainerScreen<FocalM
 
     private void drawStyleOptions(GuiGraphics graphics) {
         graphics.pose().pushPose();
-        graphics.pose().translate(0, 0, 400);
+        graphics.pose().translate(leftPos, topPos, 400);
         for (int index = 0; index < 3; index++) {
             var option = styleOption(index);
             String key = switch (index) {
@@ -378,8 +400,10 @@ public final class FocalManipulatorScreen extends AbstractContainerScreen<FocalM
     }
 
     @Override
-    public boolean mouseClicked(double x, double y, int button) {
-        if (!nameBox.isMouseOver(x, y) && !searchBox.isMouseOver(x, y))
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        double x = mouseX - leftPos;
+        double y = mouseY - topPos;
+        if (!nameBox.isMouseOver(mouseX, mouseY) && !searchBox.isMouseOver(mouseX, mouseY))
             setFocused(null);
         if (styleOpen) {
             styleOpen = false;
@@ -416,12 +440,12 @@ public final class FocalManipulatorScreen extends AbstractContainerScreen<FocalM
                 }
             }
             for (int delta : new int[]{-1, 1}) {
-                if (stepButton(86, delta).contains(x, y)) {
+                if (stepButton(POWER_Y, delta).contains(x, y)) {
                     if (editable())
                         edit(canvas.adjust(draft, "power", delta));
                     return true;
                 }
-                if (stepButton(100, delta).contains(x, y)) {
+                if (stepButton(DURATION_Y, delta).contains(x, y)) {
                     if (editable())
                         edit(canvas.adjust(draft, "duration", delta));
                     return true;
@@ -430,16 +454,16 @@ public final class FocalManipulatorScreen extends AbstractContainerScreen<FocalM
         }
         if (new Bounds(90, 18, 18, 18).contains(x, y))
             flush(false);
-        return super.mouseClicked(x, y, button);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
-    public boolean mouseScrolled(double x, double y, double amount) {
-        if (graph.contains(x, y) && !styleOpen) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+        if (graph.contains(mouseX - leftPos, mouseY - topPos) && !styleOpen) {
             canvas.zoom((int) Math.signum(amount));
             return true;
         }
-        return super.mouseScrolled(x, y, amount);
+        return super.mouseScrolled(mouseX, mouseY, amount);
     }
 
     @Override

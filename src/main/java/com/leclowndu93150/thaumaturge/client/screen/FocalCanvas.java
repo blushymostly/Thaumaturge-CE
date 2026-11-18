@@ -122,9 +122,9 @@ final class FocalCanvas {
         return List.copyOf(path);
     }
 
-    void render(GuiGraphics graphics, FocusSpell spell, Bounds area, int mouseX, int mouseY, net.minecraft.client.gui.Font font) {
+    void render(GuiGraphics graphics, FocusSpell spell, Bounds area, Bounds clip, int mouseX, int mouseY, net.minecraft.client.gui.Font font) {
         FocalTextures.well(graphics, area.x(), area.y(), area.width(), area.height());
-        graphics.enableScissor(area.x() + 3, area.y() + 3, area.right() - 3, area.bottom() - 3);
+        graphics.enableScissor(clip.x(), clip.y(), clip.right(), clip.bottom());
         FocalTextures.sprite(graphics, "sigil", area.x() + area.width() / 2 - 64, area.y() + area.height() / 2 - 64, 128, 128);
         var nodes = new ArrayList<Placed>();
         layout(nodes, spell.root(), List.of(), 0, 0, null);
